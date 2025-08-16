@@ -95,17 +95,19 @@ first-order beliefs:
 最终检查belief...
 zero-order beliefs:  
 - target_object
-  - location[in_room, in_container, in_hand]
-  - completion[complete, incomplete]
+	- location [?room ?container ?hand]
+  	- completion[complete, incomplete]
 
 - container
-  - location[in_room, in_hand]
+  - location[?room, ?hand]
   - capacity[max_3_objects]
 
 - agent
   - location[in_room]
   - carried_items[count: 0 to 2]
-  - subgoal
+  - subgoal #推理bob的subgoal 如果是none 阈值很大的话 直接不管 执行下一步 或者 bob 更新了subgoal给我说
+            取值：[推理不出来，推理得到当前的subgoal（需要不需要更新）]
+            推理的输入：[bob的（+历史）subgoal 和 alice视角的bob状态 以及任务完成情况] = 0阶信念
 
 - room
   - exploration_state[None, Part, All]
@@ -113,26 +115,26 @@ zero-order beliefs:
 - bed_location
   - location[in_room]
 
-first-order beliefs:
+first-order beliefs (alice belief about bob's internal states):
 - know_target_object
   - location[yes, no]
   - completion[yes, no]
 
-- know_container
+- other_know_container(?agent1 ?container)
   - location[yes, no]
-  - num_objects_inside[0, 1, 2, 3]
+  - objects_inside[?object,?object,?object]
 
 - know_agent
   - location[yes, no]
   - subgoal[yes, no]
-  - objects_on_hand[list]
+  - objects_on_hand[list] #具体什么物体 还是 数量 物体比较好一点
 
 - know_room
   - exploration_state[yes, no]
 
 - know_bed_location
   - location[yes, no]
-``` 
+```
 
 ### Qwen3-30b-a3b-thinking
 ``` 
@@ -183,4 +185,4 @@ first-order beliefs:
   - location[yes, no]
   - subgoal[yes, no]
   - hand[list]
-``` 
+```
