@@ -1,0 +1,137 @@
+type,prompt
+zero-stage,"You are extracting entities in a specific domain given a challeng description below. The entities may include the instance that interact within the domain.
+After you have extract the entities, you are required to reason about the attribution of the entities and their restrained content if there is any described in the domain. 
+
+Here is an example about different domain to help to understand the demand.
+example:
+```
+Challenge_description:
+In this domain, two agents must cooperate to deliver keys to locked doors in order to unlock them, achieving a shared goal. Each door corresponds to a task, which is completed only when its matching key is delivered and used. Agents can plan subgoals.
+Keys, doors, and agents all have a location attribute. Initially, keys are placed in various rooms, and each door is fixed in a specific room. A key can only be used on its matching door, and agents must carry the key to the door’s location to unlock it. Each agent can hold up to two items at a time, which may be keys or tools (e.g., a tool required for certain doors), but cannot perform unlocking unless both the correct key and any required tool are in hand.
+The domain consists of multiple rooms, and agents operate within this space, moving freely and exploring. Each room’s exploration state is None (unexplored), Part (partially explored), or All (fully explored). Since agents do not initially know the locations of keys or doors, they must explore, share information, and coordinate efficiently to complete all tasks as quickly as possible.
+
+task:extract entities and reason about the attribution of the entities and their restrained content if there is any described in the domain.
+
+output:
+- key
+  - location[in_room, in_hand]
+- locked_door
+  - location[in_room]
+  - comletion[complete, incomplete]
+- agent
+  - location[in_room]
+  - subgoal
+
+```
+
+Here is the task:
+Challenge_description:
+$Challenge_des$"
+refine,"You are checking and refining the entities and their attributions.Given the information above you are required to check the whole content again.
+1. Delete the redundant entities if they are not necessary.
+Here is an example to help you figure out what is redundant entity.
+example:
+```
+1. In this domain desk is a destination, agents are transporting things to desk.
+However, the desk is fixed in the living room, so there is no need to create a entity to present desk.
+2. In this domain, agents are transporting target objects to the hearth.
+However, the hearth is fixed in the kitchen, so there is no need to create a entity to present hearth.
+```
+2. Delete the redundant attributions if they are not necessary.
+Here is an example to help you figure out what is redundant attribution.
+example:
+```
+when talking about the an instance that can hold or contain something, we can use capacity as the only attribution that denote containment.
+- bowl
+ - location[in_hand, in_room]
+ - capacity[max three]
+ - content[0-3 objects]
+can be changed to:
+- bowl
+ - location[in_hand, in_room]
+ - capacity[max three]
+here is the redundant attribution: content[0-3 objects]
+```
+3. If you decide to delete something, make careful decisions.
+4. Only entities and attributions, no reasoning processes."
+one-stage,"You are trying to create new entities and attributions on the base of the given input.
+However, this time you are required to create entities that denote one stage belief with corresponding entities and attributions with the input given the extra instructions.
+
+Here is an example about different domaint to help you understand the demand.
+example:
+```
+input:
+- key
+  - location[in_room, in_hand]
+- locked_door
+  - location[in_room]
+  - comletion[complete, incomplete]
+- agent
+  - location[in_room]
+  - subgoal
+
+extra instruction:
+In this domain, the additional entity denote the belief of whether others partners know something or not so it can mostly set to yes or no. 
+output:
+- key
+  - location[in_room, in_hand]
+- locked_door
+  - location[in_room]
+  - comletion[complete, incomplete]
+- agent
+  - location[in_room]
+  - subgoal
+- know_key
+  - location[yes, no]
+- know_locked_door
+  - location[yes, no]
+  - comletion[yes, no]
+- know_agent
+  - location[yes,no]
+  - subgoal[yes, no]
+Notice that given three origin entities,  another three corresponding entities are created in this step.
+So when given another input , the  whole entities numbers should double of the input 
+```
+Here is the task:
+Extra instruction:
+In one stage belief, the additional entity denote the belief of whether others partners know something or not so it can mostly set to yes or no. What's more, in this domains, the belief of whether others partners know number of objects in the container and whether others partners know what's on my hand should be respectively a number and a list."
+final-check,"You are checking and refining the entities and their attributions.Given the information above you are required to check the whole content again.
+1. Check the entities if they meet the requirement.
+2. Check the attributions if they have strange meaning.
+Here is an different domain example to help you figure out what is strange meaning attribution.
+example:
+```
+...
+- bowl
+ - location[in_hand, in_room]
+ - capacity[max three]
+...
+...
+- know_bowl
+ - location[yes, no]
+ - content[integer]
+ - capacity[yes, no]
+here the the know_bowl entity do not need a capacity attribution cause it is informed above.
+changed it to be:
+- know_bowl
+ - location[yes, no]
+ - content[integer]
+```
+3.Delete the redundant attribution if they are not necessary.
+Here is an different domain example to help you figure out what is redundant attribution
+```
+example:
+...
+...
+... 
+- know_worker
+ - location[yes, no]
+ - objects_on_hand[list]
+ - task[yes, no]
+ - carried_item[yes, no]
+...
+here carried_item is redundant attribution because it is already included by objects_on_hand attribution
+
+```
+4. If you decide to delete something, make careful decisions.
+5. Only entities and attributions, no reasoning processes."
