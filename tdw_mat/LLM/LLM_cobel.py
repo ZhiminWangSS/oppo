@@ -74,6 +74,7 @@ class LLM:
         self.prompt_template_path = prompt_template_path
         self.single = "single" in self.prompt_template_path
         df = pd.read_csv(self.prompt_template_path)
+
         self.prompt_template = (
             df["prompt"][0]
             .replace("$AGENT_NAME$", self.agent_name)
@@ -177,7 +178,7 @@ class LLM:
                             model=self.lm_id, messages=prompt, **sampling_params
                         )
                         self.api += 1
-                        usage = response.usage.completion_tokens## generated response tokens
+                        usage = response.usage.completion_tokens ## input:prompt output completion total:total
                         self.tokens += response.usage.completion_tokens
                         if self.debug:
                             with open(f"LLM/chat_raw.json", "a") as f:
@@ -190,14 +191,14 @@ class LLM:
                         generated_samples = [
                             response.choices[i].message.content
                             for i in range(sampling_params["n"])
-                        ]
-                        if "gpt-4" or "gpt4" in self.lm_id:
-                            usage = (
-                                response.usage.prompt_tokens * 0.03 / 1000
-                                + response.usage.completion_tokens * 0.06 / 1000
-                            )
-                        elif "gpt-3.5" in self.lm_id:
-                            usage = response.usage.total_tokens * 0.002 / 1000
+                        ]   
+                        # if "gpt-4" or "gpt4" in self.lm_id:
+                        #     usage = (
+                        #         response.usage.prompt_tokens * 0.03 / 1000
+                        #         + response.usage.completion_tokens * 0.06 / 1000
+                        #     )
+                        # elif "gpt-3.5" in self.lm_id:
+                        #     usage = response.usage.total_tokens * 0.002 / 1000
                     # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
                     #                   range(sampling_params['n'])]
                     elif "text-" in lm_id:
@@ -701,7 +702,34 @@ class LLM:
         return plans, len(available_plans), available_plans
 
 
+    def update_first_order_beleifs(self,first_order_beliefs, message, belief_rules):
+        """
+        更新信念状态
 
+        参数:
+            zero_order_beliefs: 零阶信念
+            first_orderbeliefs: 一阶信念
+            belief_rules: 信念规则
+
+        返回:
+            更新后的信念状态
+        """
+        #TODO completed the prompt
+        prompt = (
+            self.df["prompt"][0] 
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$BELIEF_RULES$", belief_rules)
+            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$MESSAGE$", message)
+        )
+
+        chat_prompt = None #TODO
+        updated_first_order_beliefs, usage = self.generator(
+                    prompt, self.sampling_params
+                ) # usage token cost
+        
+        return updated_first_order_beliefs
 
     def run(
         self,

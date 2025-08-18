@@ -932,6 +932,7 @@ class LLM_capo:
         dialogue_history,
         opponent_grabbed_objects=None,
         opponent_last_room=None,
+        episode_logger=None
     ):
         """
         运行模型生成规划
@@ -1069,6 +1070,7 @@ class LLM_capo:
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
+            
             self.total_cost += usage
             # info['usage_step_1'] = usage
             if self.debug:

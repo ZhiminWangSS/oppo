@@ -24,7 +24,7 @@ from datetime import datetime
 
 
 
-class LLM:
+class LLM_tom:
     """
     大语言模型接口类
     主要功能：
@@ -716,7 +716,6 @@ class LLM:
         dialogue_history,
         opponent_grabbed_objects=None,
         opponent_last_room=None,
-        episode_logger = None
     ):
         """
         运行模型生成规划
@@ -787,7 +786,6 @@ class LLM:
                 if self.debug:
                     print(f"prompt_comm:\n{gen_prompt}")
                 print(f"output_comm:\n{message}")
-                episode_logger.info(f"output_message:\n{message}")
 
         available_plans, num, available_plans_list = self.get_available_plans(message) #因为要传入消息,only for message in the available plans
         if num == 0 or (message is not None and num == 1):
@@ -802,7 +800,6 @@ class LLM:
             prompt = prompt + " Let's think step by step."
             if self.debug:
                 print(f"cot_prompt:\n{prompt}")
-            
             chat_prompt = [{"role": "user", "content": prompt}]
             outputs, usage = self.generator(
                 chat_prompt if self.chat else prompt, self.sampling_params
@@ -833,19 +830,16 @@ class LLM:
                 + output
                 + " Answer with only one best next action. So the answer is option"
             )
-            episode_logger.info(f"input_prompt:\n{normal_prompt}")
             outputs, usage = self.generator(
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            episode_logger.info(f"output_plan:\n{output}")
             self.total_cost += usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
                 print(f"total cost: {self.total_cost}")
         else:
             normal_prompt = prompt
-            episode_logger.info(f"input_prompt:\n{normal_prompt}")
             chat_prompt = [{"role": "user", "content": prompt}]
             if self.debug:
                 print(f"base_prompt:\n{prompt}")
@@ -853,10 +847,10 @@ class LLM:
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            episode_logger.info(f"output_plan:\n{output}")
             self.total_cost += usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
+            
         plan, flags = self.parse_answer(available_plans_list, output)
         #这里plan就是包含消息的动作
         if flags == "COMMUNICATION":
