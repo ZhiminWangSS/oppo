@@ -1,2 +1,25 @@
 type,prompt
-measurement-first-order,
+measurement_first_order,"Visual Observation: $VISUAL_OBSERVATION$
+Message: $MESSAGE$
+$OPPO_NAME$'s Historic Mental knowledge: $FIRST_ORDER_BELIEFS$
+I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. Based on the message and my own visual observation, what $OPPO_NAME$'s mental knowledge now about object and my state? Use the rules below to refine and update $OPPO_NAME$'s mental knowledge:
+Belief rules: $BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name include the id such as (12312). If you think $OPPO_NAME$ don't no any information, just put ""Unknown"" in the ()."
+measurement_zero_order,"Visual Observation: $VISUAL_OBSERVATION$
+Message: $MESSAGE$
+My Own Historic Mental knowledge: $ZERO_ORDER_BELIEFS$
+I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. Based on the message and my own visual observation, what information I should know? Use the rules below to refine and update my own historic mental knowledge:
+Belief rules: $BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name include the id such as (12312). If you think I don't no any information, just put ""Unknown"" in the ()."
+prediction_first_order,"I'm $OPPO_NAME$. My friend $AGENT_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. Given my mental knowledge organized in a structured format. Please reason over these information and predict the goals’ perhaps states and then infer what should i will do next to maximize the efficiency. First give your reasons and answer me  with the subgoal only.
+
+My own Mental Knowledge: $FIRST_ORDER_BELIEFS$
+Reasons：
+Subgoal："
+prediction_zero_order,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. Given my mental knowledge and the $OPPO_NAME$’s mental knowledge I believe. Please reason over these information and predict the goals’ perhaps states and then infer what should i will do next to maximize the efficiency. First give your reasons and answer me  with the subgoal only.
+My own Mental Knowledge: $ZERO_ORDER_BELIEFS$
+$OPPO_NAME$.’s Knowledge: $FIRST_ORDER_BELIEFS$
+Reasons：
+Subgoal："
+belief_awareness,
+intuitive_planning,
