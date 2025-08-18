@@ -138,6 +138,8 @@ class lm_agent:
         # print(f"是否启用通信：{self.communication}")
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
+        self.visible_obj = {}
+        self.new_visible_obj = {}
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -269,6 +271,14 @@ class lm_agent:
             if object_id not in self.object_info:#can know that the object_info is personlize
                 self.object_info[object_id] = {}
                 new_obj = True
+
+            if object_id not in self.visible_obj.keys():
+                if o_dict["type"] < 4:
+                    self.visible_obj[object_id] = {}
+            # else:
+            #     if self.env_api["belongs_to_which_room"](position) != self.visible_obj[object_id]["position"] and self.env_api["belongs_to_which_room"](position) != None:
+            #         new = True
+            
             self.object_info[object_id]["id"] = object_id
             self.object_info[object_id]["type"] = o_dict["type"]
             self.object_info[object_id]["name"] = o_dict["name"]
@@ -280,10 +290,19 @@ class lm_agent:
                         oppo_last_room = self.env_api["belongs_to_which_room"](position)
                         if oppo_last_room is not None:
                             self.oppo_last_room = oppo_last_room
+                            self.visible_obj[object_id]["id"] = object_id
+                            self.visible_obj[object_id]["type"] = o_dict["type"]
+                            self.visible_obj[object_id]["name"] = o_dict["name"]
+                            self.visible_obj[object_id]["position"] = str(self.num_frames) + " at " + oppo_last_room
                 continue
             if object_id in self.satisfied or object_id in self.with_character:
                 continue
             self.object_info[object_id]["position"] = position
+            if o_dict["type"] < 3:
+                self.visible_obj[object_id]["id"] = object_id
+                self.visible_obj[object_id]["type"] = o_dict["type"]
+                self.visible_obj[object_id]["name"] = o_dict["name"]
+                self.visible_obj[object_id]["position"] = self.env_api["belongs_to_which_room"](position)
             if o_dict["type"] == 0:
                 x, y, z = self.object_info[object_id]["position"]
 
@@ -792,12 +811,13 @@ class lm_agent:
 
         info = {
             "satisfied": self.satisfied,# maintain in agent level
-            "object_list": self.object_list,
-            "new_object_list": self.new_object_list,
+            #"object_list": self.object_list,
+            #"new_object_list": self.new_object_list,
             "current_room": self.current_room,
-            "visible_objects": self.filtered(self.obs["visible_objects"]),
-            "object_per_rooms":self.object_per_room,
+            #"visible_objects": self.filtered(self.obs["visible_objects"]),
+            #"object_per_rooms":self.object_per_room,
             "room_explored":self.rooms_explored,
+            "visible_objects":self.visible_obj,
             "obs": {
                 k: v
                 for k, v in self.obs.items()
