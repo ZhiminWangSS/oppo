@@ -11,13 +11,13 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-from LLM.LLM import LLM
+from LLM.LLM_cobel import LLM_cobel
 
 CELL_SIZE = 0.125
 ANGLE = 15
 import logging
 
-class lm_agent:
+class lm_agent_cobel:
     """
     大模型驱动的智能体类
     主要功能：
@@ -51,7 +51,17 @@ class lm_agent:
         self.container_held = None  # 持有的容器
         self.gt_mask = None  # 是否使用真实掩码
         self.episode = None
-        self.info = None
+
+
+
+        # COBEL-zhimin
+        self.belief_rules = None
+        self.zero_order_beliefs = None
+        self.first_order_beliefs = None
+        self.subgoal_done = True  # 是否完成子目标
+        self.belief_threshold = 0.5
+
+
         # 物体信息存储
         self.object_info = (
             {}
@@ -629,6 +639,76 @@ class lm_agent:
             self.episode_logger #add logger to recorde llm input and output
         )
 
+    #COBEL-zhimin
+    def measurement_update(self,visual_observation,message):
+        """
+        更新观测数据
+
+        参数:
+            visual_observation: 视觉观测数据
+            message: 接收到的消息
+            self.belief_rules: 信念更新规则
+            self.zero_order_beliefs: 零阶信念
+            self.first_order_beliefs: 一阶信念
+
+        返回:
+            updated_beliefs
+        """
+        self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs,visual_observation, message, self.belief_rules)
+        self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, message, self.belief_rules)
+
+
+    #COBEL-zhimin
+    def prediction(self):
+        """
+        通过TOM reasoning 推理协作者的subgoal
+        再通过deliberate planning 确定自己的subgoal
+
+
+        """
+        self.first_order_beliefs = self.LLM.TOM_reasoning(self.first_order_beliefs, self.zero_order_beliefs, self.belief_rules)
+        self.zero_order_beliefs = self.LLM.deliberate_planning(self.zero_order_beliefs, self.first_order_beliefs, self.belief_rules)
+
+
+    #COBEL-zhimin
+    def belief_awareness(self):
+        """
+        信念意识，基于当前信念差异输出阈值
+
+        返回:
+            belief_threshold
+        """
+        belief_misalignment = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
+        return belief_misalignment
+
+    #COBEL-zhimin
+    def intuitive_planning(self):
+        """
+        直观规划，基于当前信念和目标生成计划
+
+        返回:
+            plan: 生成的计划 = 论文中的low-level plan
+        """
+
+        plan = self.LLM.intuitive_planning(self.zero_order_beliefs)
+        return plan
+
+
+    #COBEL-zhimin
+    def adaptive_communication(self):
+        """
+        自适应通信，基于当前信念差异生成通信内容
+
+        返回:
+            communication: 生成的通信内容 应该是一个多人的字典
+        """
+        communication = self.LLM.adaptive_communication(self.first_order_beliefs, self.zero_order_beliefs)
+        return communication
+
+
+
+
+
     def act(self, obs):
         """
         执行动作
@@ -637,14 +717,14 @@ class lm_agent:
             obs: 环境观察
 
         返回:
-            action: 要执行的动作
+            action: 要执行的动作 / 发送消息
         """
         self.obs = obs.copy()
         self.obs["rgb"] = self.obs["rgb"].transpose(1, 2, 0)
         self.num_frames = obs["current_frames"]
         self.steps += 1
 
-        if not self.gt_mask:# using dectection model to get visble object
+        if not self.gt_mask:
             self.obs["visible_objects"], self.obs["seg_mask"] = self.detect()
 
         if obs["valid"] == False:#how to be invalid?
@@ -656,8 +736,6 @@ class lm_agent:
             self.plan = None
             assert self.invalid_count < 10, "invalid action for 10 times"
 
-        # print(f"是否启用通信：{self.communication}")
-        # 处理通信消息
         if self.communication:
 
             # 遍历所有接收到的消息
@@ -668,6 +746,7 @@ class lm_agent:
                     self.dialogue_history.append(
                         f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
                     )
+        #dialogue_history = message
 
         self.position = self.obs["agent"][:3]
         self.forward = self.obs["agent"][3:]
@@ -795,13 +874,11 @@ class lm_agent:
         self.get_object_list()
 
         info = {
-            "satisfied": self.satisfied,# maintain in agent level
+            "satisfied": self.satisfied,
             "object_list": self.object_list,
             "new_object_list": self.new_object_list,
             "current_room": self.current_room,
             "visible_objects": self.filtered(self.obs["visible_objects"]),
-            "object_per_rooms":self.object_per_room,
-            "room_explored":self.rooms_explored,
             "obs": {
                 k: v
                 for k, v in self.obs.items()
@@ -819,19 +896,53 @@ class lm_agent:
                     print(info)
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
-                plan, a_info = self.LLM_plan()
-                self.episode_logger.debug(
-                    f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                
+                #COBEL-zhimin begin
+                #首先根据观测进行更新 TODO：self.obs -> COBEL需要的观测 TODO: self.dialogue_history -> message
+                measurement_update = self.LLM.measurement_update(
+                    self.obs, self.dialogue_history, self.zero_order_beliefs, self.first_order_beliefs, self.belief_rules
                 )
+
+                #如果subgoal做完了,则进行TOM reasoning 和 deliberate planning更新subgoal
+                while self.subgoal_done is True:
+                    self.prediction()
+
+
+                #plan, a_info = self.LLM_plan()
+
+                if self.belief_awareness() > self.belief_threshold:
+                    plan = self.adaptive_communication() #实际上是通信内容 这里是做计划 相当于action type6
+                else:
+                    plan = self.intuitive_planning()
+                    
+                if plan == "SUBGOAL_DONE": #TODO:需要更鲁棒的解析
+                    self.subgoal_done = True
+                    self.action_history = [] # 清空动作历史
+                
+
+                self.episode_logger.debug(
+                    f"agent_name: {self.agent_names[self.agent_id]}:low_level_plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                )
+
+
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
+
+
+                
                 self.plan = plan
                 self.action_history.append(
                     f"{'send a message' if plan.startswith('send a message:') else plan} at step {self.num_frames}"
                 )
-                a_info.update({"Frames": self.num_frames})
-                info.update({"LLM": a_info})
+
+                #COBEL-zhimin end
+
+
+                # a_info.update({"Frames": self.num_frames})
+                # info.update({"LLM": a_info})
+
+
                 lm_times += 1
             if self.plan.startswith("go to"):
                 action = self.gotoroom()
@@ -865,7 +976,6 @@ class lm_agent:
             self.logger.info(self.plan)
             self.logger.debug(info)
         self.last_action = action
-        self.info = info
         return action
     
     def get_tokens(self):

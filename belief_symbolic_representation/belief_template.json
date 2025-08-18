@@ -1,0 +1,90 @@
+{
+    "my belief": {
+        "goal_objects_states": {
+            "orange_0": "Unknown",
+            "orange_1": "Unknown",
+            "orange_2": "Unknown",
+            "apple_0": "Unknown",
+            "apple_1": "Unknown",
+            "apple_2": "Unknown",
+            "apple_3": "Unknown",
+            "banana_0": "Unknown",
+            "banana_1": "Unknown",
+            "bread_0": "Unknown",
+            "bread_1": "Unknown",
+            "bread_2": "Unknown",
+            "bread_3": "Unknown",
+            "burger_0": "Unknown",
+            "burger_1": "Unknown"
+        },
+
+        "completed_goal":{
+
+        },
+
+        "env_states": {
+            "explored_livingroom": "Unknown",
+            "explored_bathroom": "Unknown",
+            "explored_bedroom": "Unknown",
+            "explored_kitchen": "Unknown"
+        },
+        "intention": {
+            "shared_goal": "Transport 1 apple 2 banana to bedroom", 
+            "my_subgoal": "Unknown",
+            "partner_subgoal": "Unknown"
+        },
+
+        "observation_history": {
+            "my_subgoal_history": "Unknown",
+            "partner1_subgoal_history": "Unknown",
+            "i_last_saw_partner1": "Unknown"
+        },
+
+        "agent_state": {
+            "my_location": "Unknown",
+            "my_hand": {
+                "left": "Unknown", 
+                "right": "Unknown"
+            },
+            "partner1_location": "Unknown",
+            "partner1_hand": ["Unknown","Unknown"]
+        },
+
+        "current_time": "Unknown"
+
+    },
+    "belief about partner_1": {
+        "goal_objects_states": {
+            "orange_0": "Unknown",
+            "orange_1": "Unknown",
+            "orange_2": "Unknown",
+            "apple_0": "Unknown",
+            "apple_1": "Unknown",
+            "apple_2": "Unknown",
+            "apple_3": "Unknown",
+            "banana_0": "Unknown",
+            "banana_1": "Unknown",
+            "bread_0": "Unknown",
+            "bread_1": "Unknown",
+            "bread_2": "Unknown",
+            "bread_3": "Unknown",
+            "burger_0": "Unknown",
+            "burger_1": "Unknown"
+        },
+
+        "completed_goal":{
+
+        },
+        
+        "env_states": {
+            "explored_livingroom": "Unknown",
+            "explored_bathroom": "Unknown",
+            "explored_bedroom": "Unknown",
+            "explored_kitchen": "Unknown"
+        },
+        "intention": {
+            "knows_my_subgoal": "Unknown",
+            "knows_my_location": "Unknown"
+        }
+    }
+}

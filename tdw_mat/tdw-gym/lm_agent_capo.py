@@ -642,6 +642,7 @@ class lm_agent_capo:
             self.obs["oppo_held_objects"],
             self.oppo_last_room,
         )
+    
     def LLM_send_progress(self):
         output = self.LLM.progress_sending(
             self.num_frames,

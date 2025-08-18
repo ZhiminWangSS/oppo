@@ -128,8 +128,8 @@ class LLM_capo:
         if self.source == "openai":
             # OpenAI模型初始化
             client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1",
+                api_key="sk-57d87ae693d94216971bc2905b0a2647",
+                base_url="https://api.deepseek.com",
             )
             if self.chat:
                 self.sampling_params = {
@@ -150,8 +150,8 @@ class LLM_capo:
         elif self.source == "deepseek":
             # DeepSeek模型初始化
             client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1",
+                api_key="sk-57d87ae693d94216971bc2905b0a2647",
+                base_url="https://api.deepseek.com",
             )
             if self.chat:
                 self.sampling_params = {
@@ -932,6 +932,7 @@ class LLM_capo:
         dialogue_history,
         opponent_grabbed_objects=None,
         opponent_last_room=None,
+        episode_logger=None
     ):
         """
         运行模型生成规划
@@ -1069,6 +1070,7 @@ class LLM_capo:
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
+            
             self.total_cost += usage
             # info['usage_step_1'] = usage
             if self.debug:
