@@ -1,9 +1,12 @@
 type,prompt
-zero-order,"You are extracting entities for zero-order belief construction in a specific domain given a challenge description below. The entities may include the instance that interact within the domain.
-The entities extract here denote the zero-order belief in the view of one agent.
-After you have extract the entities, you are required to reason about the attribution of the entities and their restrained content if there is any described in the domain. 
 
-Here is an example about different domain to help to understand the demand.
+zero-order,"You are extracting entity classes for zero stage belief construction in a specific domain given a challenge description below. The entity classes should include the instances that interact within the domain.
+The entity classes extracted here denote the zero stage belief in the view of one agent. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity.
+After you have extracted the entity classes, you are required to reason about the attributions of the entity class and their parameters with quantity restriction demand if there is any described in the domain, you can use a annotation to describe the demand. 
+The parameters can be only one entity, one of a few entities, two entity with some kind of relation, a list of entities or a short description with an entity inside. 
+Notice that the shared goal is to complish several target objects. so there is no need to construct an entity class to denote the shared goal or other semancit-like entity class.
+Here is an example about different domain to help to understand the demand above.
+
 example:
 ```
 Challenge_description:
@@ -11,134 +14,125 @@ In this domain, two agents must cooperate to deliver keys to locked doors in ord
 Keys, doors, and agents all have a location attribute. Initially, keys are placed in various rooms, and each door is fixed in a specific room. A key can only be used on its matching door, and agents must carry the key to the door’s location to unlock it. Each agent can hold up to two items at a time.
 The domain consists of multiple rooms, and agents operate within this space, moving freely and exploring. Each room’s exploration state is None (unexplored), Part (partially explored), or All (fully explored).
 
-task:extract entities and reason about the attribution of the entities and their restrained content if there is any described in the domain.
+
+task:extract entity classes and reason about the attributions of the entity classes and the corresponding parameters with their restrained demand if there is any described in the domain.
 
 output:
-zero-order beliefs:
-- key
-  - location[in_room, in_hand]
-- locked_door
-  - location[in_room]
-  - comletion[complete, incomplete]
-- agent
-  - location[in_room]
-  - subgoal
+zero-order belief:
+- key_state(?key)
+  - location(?room or ?hand)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?object,?object]#at most two
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
+
 
 ```
 
 Here is the task:
 Challenge_description:
 $Challenge_des$"
-first-check,"You are checking and refining the entities and their attributions.Given the information above you are required to check the whole content again.
-1. Check the given input if there are missing entities and attributions. Especially, check if the quantity limitation attribution is omited.
-2. Delete the redundant entities if they are not necessary.
-Here is an example to help you figure out what is redundant entity.
+
+first-check,"You are checking and refining the entitiey classes and their attributions.Given the information above you are required to check the whole content again.
+1. Check the given input if there is any missing entity class and attributions. Especially, check if the quantity limitation demand of the attributions is omitted.
+2. Delete the redundant entity class if they are not necessary.
+Here is an example to help you figure out what is redundant entity class and attributions or what is omitted entity class.
 example:
 ```
 - In this domain desk is a destination, agents are transporting things to desk.
-However, the desk is fixed in the living room, so there is no need to create a entity to present desk.
+However, the desk is fixed in somewhere, so, an entity class to present desk as destination with the only attribution:location(?room) is needed . 
+Then, there is no need to contruct an entity class for agents' shared goal. 
+
 - In this domain, agents are transporting target objects to the hearth.
-However, the hearth is fixed in the kitchen, so there is no need to create a entity to present hearth.
+However, the hearth is fixed in somewhere, so an entity class to present hearth with the only attribution:location(?room) is needed. 
+Then, there is no need to contruct an entity class for agents' shared goal.
+
 ```
 3. Delete the redundant attributions if they are not necessary.
 Here is an example to help you figure out what is redundant attribution.
 example:
 ```
-when talking about the an instance that can hold or contain something, we can use capacity as the only attribution that denote containment.
-- bowl
- - location[in_hand, in_room]
- - capacity[max three]
- - content[0-3 objects]
+
+when talking about the an instance that can hold or contain something, there is no need to construct an attribution to denote the if the instance is full.
+- bowl_state(?bowl)
+  - location(?room or ?agent)
+  - content(?object,?object,?object)# at most three 
+  - is_full(?yes or ?no)
 can be changed to:
-- bowl
- - location[in_hand, in_room]
- - capacity[max three]
-here is the redundant attribution: content[0-3 objects]
-```
+- bowl_state(?bowl)
+  - location(?room or ?agent)
+  - content(?object,?object,?object)# at most three 
+ here is the redundant attribution: - is_full(?yes or ?no)
+
+When talking about the place that can contained many objects or containers like a room, we do not need a content attribution to display what items are in it.
+ ```
 4. If you decide to delete something, make careful decisions.
 5. Only entities and attributions, no reasoning processes."
-first-order,"You are trying to create new entities and attributions on the base of the given input.
-However, this time you are required to create entities that denote first-order belief with corresponding entities and attributions with the input given the extra instructions.
+first-order,"You are trying to create new entity class and attributions with quantative restriction on the base of the given input to denote the one stage belief.you can use a annotation to describe the restriction. 
+However, this time you are required to create entity class that denote one stage belief with corresponding entity classes and attributions with the input given the extra instructions.
+Use first-order_belief(?agent) to denote belief of ?agent's internal state. What's more, you can use ?item to denote two entities while an annotation is needed to explain what a set of entities ?item represents   
 
-Here is an example about different domaint to help you understand the demand.
+Here is an example about different domain to help you understand the demand.
 example:
 ```
 input:
-zero-order beliefs:
-- key
-  - location[in_room, in_hand]
-- locked_door
-  - location[in_room]
-  - comletion[complete, incomplete]
-- agent
-  - location[in_room]
-  - subgoal
+zero-order belief:
+- key_state(?key)
+  - location(?room or ?hand)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?object,?object]#at most two
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
 
 extra instruction:
-In this domain, the additional entity denote the belief of whether others partners know something or not so it can mostly set to yes or no. 
+In this domain, the additional entity class denote the belief of whether others partners know something or not so the parameters of its attribution can mostly be set to yes or no. 
 output:
-zero-order beliefs:
-- key
-  - location[in_room, in_hand]
-- locked_door
-  - location[in_room]
-  - comletion[complete, incomplete]
-- agent
-  - location[in_room]
-  - subgoal
-first-order beliefs:
-- know_key
-  - location[yes, no]
-- know_locked_door
-  - location[yes, no]
-  - completion[yes, no]
-- know_agent
-  - location[yes,no]
-  - subgoal[yes, no]
-```
-When given another input, the entities contained in first-order beliefs should be semantically the same as those in zero-order beliefs. e.g. if input:has three entities, pen, room, locked_gate, the first-order belief construction process should add know_pen, know_room, know_locked_gate respectively.
-Here is the task:
-Extra instruction:
-In first-order belief, the additional entity denote the belief of whether others partners know something or not so it's attribution can mostly be set to yes or no. What's more, in this domains, the belief of whether others partners know number of objects in the container and whether others partners know what's on my hand should be respectively a number and a list."
-final-check,"You are checking and refining the entities and their attributions.Given the information above you are required to check the whole content again.
-1. Check the entities if they meet the requirement.
-first-order beleif requirement: the entities contained in first-order beliefs should be semantically the same as those in zero-order beliefs.
-2. Check the attributions if they have strange meaning.
-Here is an different domain example to help you figure out what is strange meaning attribution.
-example:
-```
-...
-- bowl
- - location[in_hand, in_room]
- - capacity[max three]
-...
-...
-- know_bowl
- - location[yes, no]
- - content[integer]
- - capacity[yes, no]
-here the the know_bowl entity do not need a capacity attribution cause it is informed above.
-changed it to be:
-- know_bowl
- - location[yes, no]
- - content[integer]
-```
-3.Check if any important entities and attribution is missing. Confirm that if zero-order belief and first-order belief are paired as required above. If not, fix it.
-Then, Delete the redundant attribution if they are not necessary. 
-Here is an different domain example to help you figure out what is redundant attribution
-```
-example:
-...
-...
-... 
-- know_worker
- - location[yes, no]
- - objects_on_hand[list]
- - task[yes, no]
- - carried_item[yes, no]
-...
-here carried_item is redundant attribution because it is already included by objects_on_hand attribution
+zero-order_belief:
+- key_state(?key)
+  - location(?room or ?hand)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?object,?object]#at most two
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
+
+first-order_belief(?agent)# belief of ?agent internal state
+- other_know_key(?key)
+  - location(?know or ?unknow) 
+- other_know_locked_door(?locked_door)
+  - location(?know or ?unknow) 
+  - comletion(?know or ?unknow) 
+- other_know_agent()
+  - location(?know or ?unknow)
+  - subgoal(?know or ?unknow)
+  - object_in_hand(?object,?object)#at most two
+- other_know_room_state(?room)
+  - exploration_state(?know or ?unkonw)
 
 ```
+When given another input, the whole entity classes quantity should be double of that in the input. e.g. if input:has three entity classes, pen, room, locked_gate, the one stage belief construction process should add know_pen, know_room, know_locked_gate respectively.
+Here is the task:
+Extra instruction:
+In one stage belief, the additional entity classes denote the belief of whether others partners know something or not so it's attribution can mostly be set to know or unkonw. What's more, in this domains, the belief of whether others partners know the content of objects in the container and whether others partners know what's on my hand should be a list with entity as element."
+final-check,"You are checking and refining the entity class and their attributions. Given the information above you are required to check the whole content again.
+1. Check the entity classes if they meet the requirement.
+2. Check the attributions if they have strange meaning.
+3.Check if any important entity classes and attributions is missing. Confirm that if zero stage belief and one stage belief are paired as required above. If not, fix it.
+Then, Delete the redundant attribution if they are not necessary. 
 4. If you decide to delete something, make careful decisions.
 5. Only entities and attributions, no reasoning processes."
+
