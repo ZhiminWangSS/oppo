@@ -37,3 +37,9 @@ capo : discussion 3 steps
 1. go to livingroom
 2. 模糊
 3. 模糊
+
+
+UPDATE 0814：
+Module1 : measurement update
+根据info和message更新belief内容
+info更新：

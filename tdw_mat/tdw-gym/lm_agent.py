@@ -38,7 +38,10 @@ class lm_agent:
             args: 配置参数
             output_dir: 输出目录
         """
-        # 环境状态相关变量
+                #counting
+        self.characters = 0 # model-generated-characters
+        self.comm_num = 0 # agent-communication-times
+                # 环境状态相关变量
         self.with_oppo = None  # 对手持有的物体
         self.oppo_pos = None  # 对手位置
         self.with_character = None  # 角色持有的物体
@@ -375,8 +378,8 @@ class lm_agent:
         episode_logger=None
     ):
         self.force_ignore = []
-        self.LLM.tokens = 0
-        self.LLM.communication_cost = 0
+        self.characters = 0 
+        self.comm_num = 0 
         self.agent_memory = AgentMemory(
             agent_id=self.agent_id,
             agent_color=agent_color,
@@ -623,6 +626,7 @@ class lm_agent:
             self.dialogue_history,  # 对话历史作为上下文输入
             self.obs["oppo_held_objects"],
             self.oppo_last_room,
+            self.episode_logger #add logger to recorde llm input and output
         )
 
     def act(self, obs):
@@ -814,9 +818,9 @@ class lm_agent:
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 plan, a_info = self.LLM_plan()
-                # self.episode_logger.debug(
-                #     f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
-                # )
+                self.episode_logger.debug(
+                    f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                )
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
