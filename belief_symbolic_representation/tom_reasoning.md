@@ -1,5 +1,11 @@
 tom reasoning - infer collaboraters' subgoal
 
+- first-zero subgoal update prompt completed
+
+- zero-order belief update
+
+
+
 ```
 - know_agent(Alice)
   - location(kitchen(10001))
@@ -46,6 +52,7 @@ Alice:
   - location(kitchen(10001))
   - subgoal(go to kitchen(10001))
   - object_in_hand[Unknown, Unknown]
+
 
 
 Reasons：

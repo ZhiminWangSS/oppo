@@ -2,7 +2,10 @@ All observation needed:include visual observation and message;
 
 visual observation by shaokang TODO
 
+measurement update prompt:
 
+- zero-order completed
+- first-order completed
 
 ### a template of observation
 
@@ -17,15 +20,53 @@ Bob: "Alice, I found 2 apples and 1 burger in Livingroom (8000). I’ll grab the
 
 ```
 
+zero-order
+
+```
+Bob 's Visual observation: I'm holding a container <plate> (7818192) and a target object <apple> (3205029). The container <plate> (7818192) contains nothing. I see <banana> (10210312) in the in the <Livingroom> (8000). I'm in the <Livingroom> (8000). I see Alice holding nothing. 
+
+
+Message:
+Alice: "I will go to kitchen(10001)."
+Bob: "Alice, I am holding <apple> (3205029) and <plate> (7818192). I am in <Livingroom>(8000). And i found <banana> (10210312) in livingroom,too. I’ll go to <bedroom>(2000)." 
+
+
+You are Bob. You are cooperating with Alice to transport objects to the bed. Based on your visual observation and message, what information do you know now? Use the rules below to construct your known information.
+
+Rules:
+zero-order_belief:  
+- target_object_state(?object)
+  - location(?room or ?hand or ?container)
+  - completion(?complete or ?incomplete)
+
+- container_state(?container)
+  - location(?room or ?hand)
+  - contents[?object, ?object, ?object]  # at most three objects; no containers allowed
+
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?item, ?item]  # at most two items; ?item is object or container
+
+- room_state(?room)
+  - exploration_state(?None or ?Part or ?All)
+
+- bed_location()
+  - location(?room)
+
+Just answer in the rules form, without any analysis and reasoning progress. Remember the full name include the id such as (12312). If you don't no any information, just put "Unknwon" in the ().
+```
+
 message construction - first-order
 
 ``` 
-message construction:
+Message:
 Alice: "I will go to kitchen(10001)."
 Bob: "Alice, I am holding <apple>(1131231) and burger<123123123>. I am in <Livingroom>(8000). And i found pen in livingroom,too. I’ll go to <bedroom>(2000)." 
 
-Bob and Alice are two agents cooperate to finish tasks. Based on the message,  what bob believe about alice's knowledge after the message received by Alice,? Use the rules below to construct what Bob believe Alice know including bob:
-rules:
+Bob and Alice are two agents cooperate to finish tasks. Based on the message,  what bob believe about alice's knowledge after the message received by Alice? Use the rules below to construct what Bob believe Alice know including bob:
+
+Rules:
 - know_target_object(?object)
   - location(?room or ?hand or ?container)
   - completion(?completed or ?incompleted)
