@@ -24,7 +24,7 @@ from datetime import datetime
 
 
 
-class LLM:
+class LLM_cobel:
     """
     大语言模型接口类
     主要功能：
