@@ -11,7 +11,7 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-from LLM.LLM_cobel import LLM_cobel
+from LLM.LLM_cobel import LLM
 
 CELL_SIZE = 0.125
 ANGLE = 15
@@ -61,6 +61,7 @@ class lm_agent_cobel:
         self.subgoal_done = True  # 是否完成子目标
         self.belief_threshold = 0.5
 
+        
 
         # 物体信息存储
         self.object_info = (
@@ -672,8 +673,8 @@ class lm_agent_cobel:
         返回:
             updated_beliefs
         """
-        self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs,visual_observation, message, self.belief_rules)
-        self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, message, self.belief_rules)
+        self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+        self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
 
 
     #COBEL-zhimin
@@ -684,9 +685,9 @@ class lm_agent_cobel:
 
 
         """
-        self.first_order_beliefs = self.LLM.TOM_reasoning(self.first_order_beliefs, self.zero_order_beliefs, self.belief_rules)
-        self.zero_order_beliefs = self.LLM.deliberate_planning(self.zero_order_beliefs, self.first_order_beliefs, self.belief_rules)
-
+        opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs)
+        my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
+        return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
     def belief_awareness(self):
@@ -724,6 +725,9 @@ class lm_agent_cobel:
         return communication
     
 
+    #COBEL -zhimin
+    def process_obs(self,obs):
+        pass
 
     def observation2text(self,info):
         measurement_observation = {}
@@ -781,9 +785,263 @@ class lm_agent_cobel:
         return measurement_observation
 
 
-
-
     def act(self, obs):
+        """
+        执行动作
+
+
+        参数:
+            obs: 环境观察
+
+        返回:
+            action: 要执行的动作
+        """
+        self.obs = obs.copy()
+        self.obs["rgb"] = self.obs["rgb"].transpose(1, 2, 0)
+        self.num_frames = obs["current_frames"]
+        self.steps += 1
+
+        if not self.gt_mask:
+            self.obs["visible_objects"], self.obs["seg_mask"] = self.detect()
+
+        if obs["valid"] == False:#how to be invalid?
+            if self.last_action is not None and "object" in self.last_action:
+                self.object_map[np.where(self.id_map == self.last_action["object"])] = 0
+                self.id_map[np.where(self.id_map == self.last_action["object"])] = 0
+                self.satisfied.append(self.last_action["object"])
+            self.invalid_count += 1
+            self.plan = None
+            assert self.invalid_count < 10, "invalid action for 10 times"
+
+        # print(f"是否启用通信：{self.communication}")
+        # 处理通信消息
+        if self.communication:
+
+            # 遍历所有接收到的消息
+            for i in range(len(obs["messages"])):
+                if obs["messages"][i] is not None:
+                    # 将消息添加到对话历史中，格式为"智能体名称: 消息内容"
+                    # 使用copy.deepcopy确保消息内容不会被意外修改
+                    self.dialogue_history.append(
+                        f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
+                    )
+
+        self.position = self.obs["agent"][:3]
+        self.forward = self.obs["agent"][3:]
+        current_room = self.env_api["belongs_to_which_room"](self.position)
+        if current_room is not None:
+            self.current_room = current_room
+        self.room_distance = self.env_api["get_room_distance"](self.position)
+        if (
+            self.current_room not in self.rooms_explored
+            or self.rooms_explored[self.current_room] != "all"
+        ):
+            self.rooms_explored[self.current_room] = "part"
+        if self.agent_id not in self.with_character:
+            self.with_character.append(
+                self.agent_id
+            )  # DWH: buggy env, need to solve later.
+        self.holding_objects_id = []
+        self.with_oppo = []
+        self.oppo_holding_objects_id = []
+        for x in self.obs["held_objects"]:
+            if x["type"] == 0:
+                self.holding_objects_id.append(x["id"])
+                if x["id"] not in self.with_character:
+                    self.with_character.append(
+                        x["id"]
+                    )  # DWH: buggy env, need to solve later.
+                # self.with_character.append(x['id'])
+            elif x["type"] == 1:
+                self.holding_objects_id.append(x["id"])
+                if x["id"] not in self.with_character:
+                    self.with_character.append(
+                        x["id"]
+                    )  # DWH: buggy env, need to solve later.
+                # self.with_character.append(x['id'])
+                for y in x["contained"]:
+                    if y is None:
+                        break
+                    if y not in self.with_character:
+                        self.with_character.append(y)
+                    # self.with_character.append(y)
+        oppo_name = {}
+        oppo_type = {}
+        for x in self.obs["oppo_held_objects"]:
+            if x["type"] == 0:
+                self.oppo_holding_objects_id.append(x["id"])
+                self.with_oppo.append(x["id"])
+                oppo_name[x["id"]] = x["name"]
+                oppo_type[x["id"]] = x["type"]
+            elif x["type"] == 1:
+                self.oppo_holding_objects_id.append(x["id"])
+                self.with_oppo.append(x["id"])
+                oppo_name[x["id"]] = x["name"]
+                oppo_type[x["id"]] = x["type"]
+                for i, y in enumerate(x["contained"]):
+                    if y is None:
+                        break
+                    self.with_oppo.append(y)
+                    oppo_name[y] = x["contained_name"][i]
+                    oppo_type[y] = 0
+        for obj in self.with_oppo:
+            if obj not in self.satisfied:
+                self.satisfied.append(obj)
+                self.object_info[obj] = {
+                    "name": oppo_name[obj],
+                    "id": obj,
+                    "type": oppo_type[obj],
+                }
+                self.object_map[np.where(self.id_map == obj)] = 0
+                self.id_map[np.where(self.id_map == obj)] = 0
+        if not self.obs["valid"]:  # invalid, the object is not there
+            if self.last_action is not None and "object" in self.last_action:
+                self.object_map[np.where(self.id_map == self.last_action["object"])] = 0
+                self.id_map[np.where(self.id_map == self.last_action["object"])] = 0
+        if len(self.dropping_object) > 0 and self.obs["status"] == 1:
+            self.logger.info(f"Drop object: {self.dropping_object}")
+            self.satisfied += self.dropping_object
+            self.dropping_object = []
+            if len(self.holding_objects_id) == 0:
+                self.logger.info("successful drop!")
+                self.plan = None
+
+        ignore_obstacles = []
+        ignore_ids = []
+        self.with_character = [self.agent_id]
+        temp_with_oppo = []
+        for x in self.obs["held_objects"]:
+            if x is None or x["id"] is None:
+                continue
+            self.with_character.append(x["id"])
+            if "contained" in x:
+                for y in x["contained"]:
+                    if y is not None:
+                        self.with_character.append(y)
+
+        for x in self.force_ignore:
+            self.with_character.append(x)
+
+        for x in self.obs["oppo_held_objects"]:
+            if x is None or x["id"] is None:
+                continue
+            temp_with_oppo.append(x["id"])
+            if "contained" in x:
+                for y in x["contained"]:
+                    if y is not None:
+                        temp_with_oppo.append(y)
+
+        ignore_obstacles = self.with_character + ignore_obstacles
+        ignore_ids = self.with_character + ignore_ids
+        ignore_ids = temp_with_oppo + ignore_ids
+        ignore_ids += self.satisfied
+        ignore_obstacles += self.satisfied
+
+        self.agent_memory.update(
+            obs,
+            ignore_ids=ignore_ids,
+            ignore_obstacles=ignore_obstacles,
+            save_img=self.save_img,
+        )
+
+        if self.obs["status"] == 0:  # ongoing###
+            return {"type": "ongoing"}
+
+        self.get_new_object_list()
+        # print(self.new_object_list)
+        self.get_object_list()
+
+        info = {
+            "satisfied": self.satisfied,
+            "object_list": self.object_list,
+            "new_object_list": self.new_object_list,
+            "current_room": self.current_room,
+            "visible_objects": self.filtered(self.obs["visible_objects"]),
+            "obs": {
+                k: v
+                for k, v in self.obs.items()
+                if k
+                not in ["rgb", "depth", "seg_mask", "camera_matrix", "visible_objects"]
+            },
+        }
+
+        action = None
+        lm_times = 0
+        while action is None:
+            if self.plan is None:
+                self.target_pos = None
+                if lm_times > 0:
+                    print(info)
+                if lm_times > 3:
+                    raise Exception(f"retrying LM_plan too many times")
+                
+                #COBEL - zhimin begin 从这里开始维护belief
+
+                #TODO process_obs() -> return visual_observation, message by shaokang
+
+                visual_observation = None
+                message = None
+
+                #measurement update
+                self.measurement_update(visual_observation, message)
+
+                #prediction update
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
+
+                #TODO update the belief with subgoal by shaokang
+
+
+                #COBEL - zhimin end
+                plan, a_info = self.LLM_plan()
+                self.episode_logger.debug(
+                    f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                )
+                if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
+                    print("No more things to do!")
+                    plan = f"[wait]"
+                self.plan = plan
+                self.action_history.append(
+                    f"{'send a message' if plan.startswith('send a message:') else plan} at step {self.num_frames}"
+                )
+                a_info.update({"Frames": self.num_frames})
+                info.update({"LLM": a_info})
+                lm_times += 1
+            if self.plan.startswith("go to"):
+                action = self.gotoroom()
+            elif self.plan.startswith("explore"):
+                self.explore_count = 0
+                action = self.goexplore()
+            elif self.plan.startswith("go grasp"):
+                action = self.gograsp()
+            elif self.plan.startswith("put"):
+                action = self.putin()
+            elif self.plan.startswith("transport"):
+                action = self.goput()
+            #    self.with_character = [self.agent_id]
+            elif self.plan.startswith("send a message:"):
+                # 发送消息动作
+                action = {
+                    "type": 6,  # 动作类型6表示发送消息
+                    "message": " ".join(
+                        self.plan.split(" ")[3:]
+                    ),  # 提取消息内容，去掉"send a message:"前缀
+                }
+                self.plan = None  # 清除当前计划，准备执行下一个动作,other actions will maintain the plan
+            elif self.plan.startswith("wait"):
+                action = None
+                break
+            else:
+                raise ValueError(f"unavailable plan {self.plan}")
+
+        info.update({"action": action, "plan": self.plan})
+        if self.debug:
+            self.logger.info(self.plan)
+            self.logger.debug(info)
+        self.last_action = action
+        return action
+
+    #COBEL - zhimin 这里用来以后当作自己的act 我会先copy一个 coela的 act用                 
+    def act_cobel(self, obs):
         """
         执行动作
 
@@ -973,11 +1231,18 @@ class lm_agent_cobel:
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 
+                #TODO observation process return obs
+                #process_obs(self.obs) return obs,messge
+
                 #COBEL-zhimin begin
                 #首先根据观测进行更新 TODO：self.obs -> COBEL需要的观测 TODO: self.dialogue_history -> message
+
                 observation = self.observation2text(info)
                 self.logger.debug(
                     f"observation :{observation} "
+
+                measurement_update = self.LLM.measurement_update(
+                    self.obs, self.dialogue_history
                 )
                 #origin plan
                 plan, a_info = self.LLM_plan()

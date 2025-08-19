@@ -74,7 +74,10 @@ class LLM_cobel:
         self.prompt_template_path = prompt_template_path
         self.single = "single" in self.prompt_template_path
         df = pd.read_csv(self.prompt_template_path)
+        rules_df = pd.read_csv("./LLM/belief_rules.csv")
 
+        self.first_order_rules = rules_df['rules'][0]
+        self.zero_order_rules = rules_df['rules'][1]
         self.prompt_template = (
             df["prompt"][0]
             .replace("$AGENT_NAME$", self.agent_name)
@@ -702,7 +705,8 @@ class LLM_cobel:
         return plans, len(available_plans), available_plans
 
 
-    def update_first_order_beleifs(self,first_order_beliefs, message, belief_rules):
+    #COBEL-zhimin
+    def update_first_order_beleifs(self,first_order_beliefs,visual_observation, message, belief_rules):
         """
         更新信念状态
 
@@ -719,9 +723,10 @@ class LLM_cobel:
             self.df["prompt"][0] 
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$BELIEF_RULES$", belief_rules)
-            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$BELIEF_RULES$", self.first_order_rules)
+            .replace("$FIRST_ORDER_BELIEFS$", self.first_order_beliefs)
             .replace("$MESSAGE$", message)
+            .replace("$VISUAL_OBSERVATION$", visual_observation)
         )
 
         chat_prompt = None #TODO
@@ -730,6 +735,82 @@ class LLM_cobel:
                 ) # usage token cost
         
         return updated_first_order_beliefs
+
+    #COBEL-zhimin
+    def update_zero_order_beleifs(self,first_order_beliefs, visual_observation, message, belief_rules):
+        """
+        更新信念状态
+
+        参数:
+            zero_order_beliefs: 零阶信念
+            first_orderbeliefs: 一阶信念
+            belief_rules: 信念规则
+
+        返回:
+            更新后的信念状态
+        """
+        #TODO completed the prompt
+        prompt = (
+            self.df["prompt"][1] 
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$BELIEF_RULES$", self.first_order_rules)
+            .replace("$ZERO_ORDER_BELIEFS$", self.zero_order_beliefs)
+            .replace("$MESSAGE$", message)
+            .replace("$VISUAL_OBSERVATION$", visual_observation)
+        )
+
+        chat_prompt = None #TODO
+        updated_zero_order_beliefs, usage = self.generator(
+                    prompt, self.sampling_params
+                ) # usage token cost
+        
+        return updated_zero_order_beliefs
+
+    #COBEL-zhimin
+    def prediction_first_order(self, first_order_beliefs):
+        prompt = (
+            self.df["prompt"][3] 
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$First_ORDER_BELIEFS$", first_order_beliefs)
+        )
+
+        chat_prompt = None #TODO
+        reason_subgoal, usage = self.generator(
+                    prompt, self.sampling_params
+                ) # usage token cost
+        #这里的结果是Reason: ... Subgoal: ... 
+
+        #TODO parse the subgoal by shaokang
+
+        opponent_subgoal = None
+
+        return opponent_subgoal
+    
+    #COBEL-zhimin
+    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs):
+        prompt = (
+            self.df["prompt"][4] 
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$First_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
+        )
+
+        chat_prompt = None #TODO
+        reason_subgoal, usage = self.generator(
+                    prompt, self.sampling_params
+                ) # usage token cost
+        
+
+        #TODO parse the subgoal by shaokang
+
+        my_subgoal = None
+
+        return my_subgoal
+
+    
 
     def run(
         self,
