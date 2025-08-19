@@ -30,6 +30,7 @@ class Challenge:
     def __init__(
         self,
         logger,
+        time_logger,
         port,
         data_path,
         output_dir,
@@ -70,6 +71,7 @@ class Challenge:
         )
         self.gt_mask = gt_mask
         self.logger = logger
+        self.time_logger = time_logger
         self.logger.debug(port)
         self.logger.info("Environment Created")
         self.output_dir = output_dir
@@ -101,6 +103,9 @@ class Challenge:
         total_tokens = [0,0]
         total_com = [0,0]
         for i, episode in enumerate(eval_episodes):
+            #COBEL belief info logger
+            episode_logger = init_episode_logs(self.output_dir, episode)
+
             print(f"当前执行的episode为：{episode}")
             start_time = time.time()
             # 检查是否已经评估过该回合
@@ -172,7 +177,7 @@ class Challenge:
                             rooms_name=info["rooms_name"],
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
-                            episode_logger=logger
+                            episode_logger=episode_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -253,13 +258,13 @@ class Challenge:
         """
         self.env.close()
 
-
+#COBEL basic logger for llm 
 def init_logs(output_dir, name="simple_example"):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(os.path.join(output_dir, "output.log"))
     fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
+    ch = logging.StreamHandler() # 控制台输出
     ch.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
@@ -269,7 +274,44 @@ def init_logs(output_dir, name="simple_example"):
     ch.setFormatter(formatter)
     logger.addHandler(fh)
     logger.addHandler(ch)
-    return logger
+
+    # 新增一个logger用于记录时间信息
+    time_logger = logging.getLogger(f"{name}_time")
+    time_logger.setLevel(logging.DEBUG)
+    time_fh = logging.FileHandler(os.path.join(output_dir, "time.log"))
+    time_fh.setLevel(logging.DEBUG)
+    time_formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s"
+    )
+    time_fh.setFormatter(time_formatter)
+    time_logger.addHandler(time_fh)
+    
+    
+
+    return logger, time_logger
+
+#COBEL logger for belief and observation
+def init_episode_logs(output_dir, episode):
+    """
+    初始化每个episode的日志记录器
+    """
+    episode_dir = os.path.join(output_dir, str(episode))
+    os.makedirs(episode_dir, exist_ok=True)
+    
+    episode_logger = logging.getLogger(f"episode_{episode}")
+    episode_logger.setLevel(logging.DEBUG)
+    
+    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+    fh.setLevel(logging.DEBUG)
+    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    fh.setFormatter(formatter)
+    
+    episode_logger.addHandler(fh)
+    
+    return episode_logger
 
 
 def main():
@@ -335,11 +377,12 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     args.output_dir = os.path.join(args.output_dir, args.run_id)
     os.makedirs(args.output_dir, exist_ok=True)
-    logger = init_logs(args.output_dir)
-    logger1 = init_logs("./logs")
+    logger,time_logger = init_logs(args.output_dir)#COBEL normal logger
+    
 
     challenge = Challenge(
         logger,
+        time_logger,
         args.port,
         args.data_path,
         args.output_dir,
@@ -354,11 +397,11 @@ def main():
     agents = []
     for i, agent in enumerate(args.agents):
         if agent == "h_agent":
-            agents.append(H_agent(i, logger1, args.max_frames, args.output_dir))
+            agents.append(H_agent(i, logger, args.max_frames, args.output_dir))
         elif agent == "lm_agent":
-            agents.append(lm_agent(i, logger1, args.max_frames, args, args.output_dir))
+            agents.append(lm_agent(i, logger, args.max_frames, args, args.output_dir))
         elif agent == "lm_agent_cobel":
-            agents.append(lm_agent_cobel(i, logger1, args.max_frames, args, args.output_dir))#use two logger logger1 locate at tdw_mat/logs
+            agents.append(lm_agent_cobel(i, logger, args.max_frames, args, args.output_dir))
         else:
             pass
     try:
