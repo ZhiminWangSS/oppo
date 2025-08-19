@@ -11,7 +11,7 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-from LLM.LLM_cobel import LLM
+from LLM.LLM_cobel import LLM_cobel
 
 CELL_SIZE = 0.125
 ANGLE = 15
@@ -56,8 +56,8 @@ class lm_agent_cobel:
 
         # COBEL-zhimin
         self.belief_rules = None
-        self.zero_order_beliefs = None
-        self.first_order_beliefs = None
+        self.zero_order_beliefs = ""
+        self.first_order_beliefs = ""
         self.subgoal_done = True  # 是否完成子目标
         self.belief_threshold = 0.5
 
@@ -673,6 +673,8 @@ class lm_agent_cobel:
         返回:
             updated_beliefs
         """
+
+        # COBEL TODO: 这里需要一个logger记录一下beliefs
         self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
         self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
 
@@ -685,6 +687,7 @@ class lm_agent_cobel:
 
 
         """
+        # COBEL TODO: 这里需要一个logger记录一下beliefs(与上面同一个logger即可)
         opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs)
         my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
@@ -755,12 +758,16 @@ class lm_agent_cobel:
         seeing = 'I see '
         last_agent_position = None
         last_see_frame = None
-        for item in info["visible_objects"].values():
-            if item["type"] != 3:
-                seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
-            else:
-                last_agent_position = item['position'][5:]
-                last_see_frame = item['position'][:2]
+        if info['visible_objects']:
+            # print(info['visible_objects'])
+            for item in info["visible_objects"]:
+                if item["type"] != 3:
+                    # seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
+                    seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + info['current_room'] + '. '
+                #COBEL TODO 这里的position是array类型 包括xyz 需要转换成在哪个房间 现在暂时使用当前房间
+                else:
+                    last_agent_position = item['position'][5:]
+                    last_see_frame = item['position'][:2]
         seeing = seeing if seeing != 'I see ' else ''
         if self.last_hold != None:
             for id ,item in enumerate(self.last_hold):
@@ -979,9 +986,10 @@ class lm_agent_cobel:
 
                 #TODO process_obs() -> return visual_observation, message by shaokang
 
-                visual_observation = None
-                message = None
+                visual_observation = self.observation2text(info)['observation'] #这里的visual_observation是对话历史
 
+                message = self.dialogue_history.copy()  # 这里的message是对话历史
+                message = "" #TODO
                 #measurement update
                 self.measurement_update(visual_observation, message)
 
@@ -1238,8 +1246,8 @@ class lm_agent_cobel:
                 #首先根据观测进行更新 TODO：self.obs -> COBEL需要的观测 TODO: self.dialogue_history -> message
 
                 observation = self.observation2text(info)
-                self.logger.debug(
-                    f"observation :{observation} "
+                # self.logger.debug(
+                #     f"observation :{observation} "
 
                 measurement_update = self.LLM.measurement_update(
                     self.obs, self.dialogue_history
