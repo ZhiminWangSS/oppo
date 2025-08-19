@@ -1239,20 +1239,22 @@ class lm_agent_cobel:
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 
-                #TODO observation process return obs
-                #process_obs(self.obs) return obs,messge
+                #COBEL - zhimin begin 从这里开始维护belief
 
-                #COBEL-zhimin begin
-                #首先根据观测进行更新 TODO：self.obs -> COBEL需要的观测 TODO: self.dialogue_history -> message
+                #TODO process_obs() -> return visual_observation, message by shaokang
 
-                observation = self.observation2text(info)
-                # self.logger.debug(
-                #     f"observation :{observation} "
+                visual_observation = self.observation2text(info)['observation'] #这里的visual_observation是对话历史
 
-                measurement_update = self.LLM.measurement_update(
-                    self.obs, self.dialogue_history
-                )
-                #origin plan
+                message = self.dialogue_history.copy()  # 这里的message是对话历史
+                message = "" #TODO
+                #measurement update
+                self.measurement_update(visual_observation, message)
+
+                #prediction update
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
+
+                #TODO update the belief with subgoal by shaokang
+                
                 plan, a_info = self.LLM_plan()
                 
                 
