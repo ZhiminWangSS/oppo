@@ -290,7 +290,7 @@ def init_logs(output_dir, name="simple_example"):
 
     return logger, time_logger
 
-#COBEL logger for belief and observation
+#COBEL logger only for belief and observation
 def init_episode_logs(output_dir, episode):
     """
     初始化每个episode的日志记录器
