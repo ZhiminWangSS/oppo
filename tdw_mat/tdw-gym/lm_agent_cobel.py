@@ -77,7 +77,7 @@ class lm_agent_cobel:
 
         # 智能体基本信息
         self.agent_id = agent_id
-        self.agent_type = "lm_agent"
+        self.agent_type = "lm_agent_cobel"
         self.agent_names = ["Alice", "Bob"]
         self.opponent_agent_id = 1 - agent_id
 
@@ -121,7 +121,7 @@ class lm_agent_cobel:
         self.communication = args.communication
         self.cot = args.cot
         self.args = args
-        self.LLM = LLM(
+        self.LLM = LLM_cobel(
             self.source,
             self.lm_id,
             self.prompt_template_path,
@@ -133,6 +133,8 @@ class lm_agent_cobel:
         self.action_history = []  # 动作历史
         self.dialogue_history = []  # 对话历史
         self.plan = None  # 当前计划
+        self.visible_obj = {}
+        self.last_hold = None
 
         # 房间和位置相关
         self.rooms_name = None  # 房间名称
@@ -283,21 +285,36 @@ class lm_agent_cobel:
             if object_id not in self.object_info:#can know that the object_info is personlize
                 self.object_info[object_id] = {}
                 new_obj = True
+
+            if object_id not in self.visible_obj.keys():
+                if o_dict["type"] < 4:
+                    self.visible_obj[object_id] = {}
+
             self.object_info[object_id]["id"] = object_id
             self.object_info[object_id]["type"] = o_dict["type"]
             self.object_info[object_id]["name"] = o_dict["name"]
             if o_dict["type"] == 3:  # the agent'information updating
                 if o_dict["id"] == self.opponent_agent_id:
+                    self.last_hold = self.obs['oppo_held_objects']
                     position = self.cal_object_position(o_dict)
                     self.oppo_pos = position#update the partner's position
                     if position is not None:
                         oppo_last_room = self.env_api["belongs_to_which_room"](position)
                         if oppo_last_room is not None:
                             self.oppo_last_room = oppo_last_room
+                            self.visible_obj[object_id]["id"] = object_id
+                            self.visible_obj[object_id]["type"] = o_dict["type"]
+                            self.visible_obj[object_id]["name"] = o_dict["name"]
+                            self.visible_obj[object_id]["position"] = str(self.num_frames) + " at " + oppo_last_room
                 continue
             if object_id in self.satisfied or object_id in self.with_character:
                 continue
             self.object_info[object_id]["position"] = position
+            if o_dict["type"] < 3:
+                self.visible_obj[object_id]["id"] = object_id
+                self.visible_obj[object_id]["type"] = o_dict["type"]
+                self.visible_obj[object_id]["name"] = o_dict["name"]
+                self.visible_obj[object_id]["position"] = self.env_api["belongs_to_which_room"](position)
             if o_dict["type"] == 0:
                 x, y, z = self.object_info[object_id]["position"]
 
@@ -459,6 +476,7 @@ class lm_agent_cobel:
         self.save_img = save_img
         self.episode = episode
         self.episode_logger = episode_logger
+        self.visible_obj = {}
 
     def move(self, target_pos):
         self.local_step += 1
@@ -635,7 +653,7 @@ class lm_agent_cobel:
             self.object_per_room,
             self.action_history,
             self.dialogue_history,  # 对话历史作为上下文输入
-            self.obs["oppo_held_objects"],
+            self.obs["oppo_held_objects"],# including history holding
             self.oppo_last_room,
             self.episode_logger #add logger to recorde llm input and output
         )
@@ -705,14 +723,72 @@ class lm_agent_cobel:
         """
         communication = self.LLM.adaptive_communication(self.first_order_beliefs, self.zero_order_beliefs)
         return communication
+    
 
     #COBEL -zhimin
     def process_obs(self,obs):
         pass
 
+    def observation2text(self,info):
+        measurement_observation = {}
+        current_frames = info['obs']['current_frames']
+        current_room = info["current_room"]
+        holding = ['','']
+        container = ['','']
+        oppo_holding = ['','']
+        oppo_container = ['','']
+        for id ,item in enumerate(info['obs']['held_objects']):
+            if item['id'] is not None:
+                holding[id] = '<' + item["name"] + "> " + '(' + str(item["id"]) + ")"
+                if item['contained'] != [None, None, None]:
+                    container[id] = 'with'
+                    for obj,index in enumerate(item["contained"]):
+                        if obj != None:
+                            container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '),  '
+                    container[id] += "in it. "
+        if holding[0] == '' and holding[1] == '':
+            pro_holding = "holding nothing "
+        else:
+            pro_holding = " holding" + holding[0] + container[0] 
+            pro_holding += ' and ' if holding[0] != None and holding[1] != None else ''
+            pro_holding += holding[1] + container[1]
+        seeing = 'I see '
+        last_agent_position = None
+        last_see_frame = None
+        for item in info["visible_objects"].values():
+            if item["type"] != 3:
+                seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
+            else:
+                last_agent_position = item['position'][5:]
+                last_see_frame = item['position'][:2]
+        seeing = seeing if seeing != 'I see ' else ''
+        if self.last_hold != None:
+            for id ,item in enumerate(self.last_hold):
+                if item['id'] is not None:
+                    oppo_holding[id] = '<' + item["name"] + "> " + '(' + str(item["id"]) + ")"
+                    if item['contained'] != [None, None, None]:
+                        oppo_container[id] = 'with'
+                        for obj,index in enumerate(item["contained"]):
+                            if obj != None:
+                                oppo_container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '), '
+                        oppo_container[id] += "in it. "
+        if oppo_holding[0] == '' and oppo_holding[1] == '':
+            oppo_pro_holding = " holding nothing"
+        else:
+            oppo_pro_holding = " holding" + oppo_holding[0] + oppo_container[0]
+            oppo_pro_holding += " and " if oppo_holding[0] != None and oppo_holding[1] != None else ''
+            oppo_pro_holding += oppo_holding[1] + oppo_container[1] 
+        observation = "At " + str(current_frames) + " frames, I'm in " + current_room + ', ' + pro_holding + seeing 
+        observation += ("I saw partner at " + last_see_frame + ' frames at ' + last_agent_position + oppo_pro_holding) if last_see_frame is not None else ''
+        measurement_observation['observation'] = observation
+        measurement_observation['messages'] = self.obs['messages']
+        return measurement_observation
+
+
     def act(self, obs):
         """
         执行动作
+
 
         参数:
             obs: 环境观察
@@ -1131,10 +1207,12 @@ class lm_agent_cobel:
 
         info = {
             "satisfied": self.satisfied,
-            "object_list": self.object_list,
-            "new_object_list": self.new_object_list,
+            #"object_list": self.object_list,
+            #"new_object_list": self.new_object_list,
             "current_room": self.current_room,
-            "visible_objects": self.filtered(self.obs["visible_objects"]),
+            #"visible_objects": self.filtered(self.obs["visible_objects"]),
+            "visible_objects":self.visible_obj,
+            "room_explored":self.rooms_explored,
             "obs": {
                 k: v
                 for k, v in self.obs.items()
@@ -1158,30 +1236,43 @@ class lm_agent_cobel:
 
                 #COBEL-zhimin begin
                 #首先根据观测进行更新 TODO：self.obs -> COBEL需要的观测 TODO: self.dialogue_history -> message
+
+                observation = self.observation2text(info)
+                self.logger.debug(
+                    f"observation :{observation} "
+
                 measurement_update = self.LLM.measurement_update(
                     self.obs, self.dialogue_history
                 )
-
-                #如果subgoal做完了,则进行TOM reasoning 和 deliberate planning更新subgoal
-                while self.subgoal_done is True:
-                    self.prediction()
-
-
-                #plan, a_info = self.LLM_plan()
-
-                if self.belief_awareness() > self.belief_threshold:
-                    plan = self.adaptive_communication() #实际上是通信内容 这里是做计划 相当于action type6
-                else:
-                    plan = self.intuitive_planning()
-                    
-                if plan == "SUBGOAL_DONE": #TODO:需要更鲁棒的解析
-                    self.subgoal_done = True
-                    self.action_history = [] # 清空动作历史
+                #origin plan
+                plan, a_info = self.LLM_plan()
+                
                 
 
-                self.episode_logger.debug(
-                    f"agent_name: {self.agent_names[self.agent_id]}:low_level_plan: {plan} at frame {self.num_frames}, step {self.steps}"
-                )
+                # measurement_update = self.measurement_update(
+                #     self.obs, self.dialogue_history, self.zero_order_beliefs, self.first_order_beliefs, self.belief_rules
+                # )
+
+                # #如果subgoal做完了,则进行TOM reasoning 和 deliberate planning更新subgoal
+                # while self.subgoal_done is True:
+                #     self.prediction()
+
+
+                # #plan, a_info = self.LLM_plan()
+
+                # if self.belief_awareness() > self.belief_threshold:
+                #     plan = self.adaptive_communication() #实际上是通信内容 这里是做计划 相当于action type6
+                # else:
+                #     plan = self.intuitive_planning()
+                    
+                # if plan == "SUBGOAL_DONE": #TODO:需要更鲁棒的解析
+                #     self.subgoal_done = True
+                #     self.action_history = [] # 清空动作历史
+                
+
+                # self.episode_logger.debug(
+                #     f"agent_name: {self.agent_names[self.agent_id]}:low_level_plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                # )
 
 
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!

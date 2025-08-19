@@ -83,6 +83,7 @@ class TDW(Env):
         self.enable_collision_detection = enable_collision_detection
         self.controller = None
         self.message_per_frame = 500
+        self.info_goal = None
         rgb_space = gym.spaces.Box(0, 256,
                                  (3,
                                   self.screen_size,
@@ -308,6 +309,14 @@ class TDW(Env):
                 self.goal_description[self.object_names[i]] += 1
             else:
                 self.goal_description[self.object_names[i]] = 1
+
+        self.info_goal = {}
+        for i in self.target_object_ids:
+            if self.object_names[i] in self.info_goal:
+                self.info_goal[self.object_names[i]+str(i)] += 1
+            else:
+                self.info_goal[self.object_names[i]+str(i)] = 1
+        
 
         room_type_path = f'./dataset/room_types.json'
         with open(room_type_path, 'r') as f: room_types = json.load(f)
@@ -748,6 +757,7 @@ class TDW(Env):
         info['done'] = done
         info['num_frames_for_step'] = num_frames
         info['num_step'] = self.num_step
+        info["statisfied"] = self.satisfied
         if done:
             info['reward'] = self.reward
 
