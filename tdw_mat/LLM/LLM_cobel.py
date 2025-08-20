@@ -785,11 +785,11 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         #这里的结果是Reason: ... Subgoal: ... 
-
-        #TODO parse the subgoal by shaokang
-
-        opponent_subgoal = output[0]
-
+        match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
+        if match:
+            output = match.group(1).strip()
+        
+        opponent_subgoal = output
         return opponent_subgoal
     
     #COBEL-zhimin
@@ -806,11 +806,13 @@ class LLM_cobel:
         output, usage = self.generator(
                     chat_prompt, self.sampling_params
                 ) # usage token cost
-        
+        match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
+        if match:
+            output = match.group(1).strip()
 
-        #TODO parse the subgoal by shaokang
+       
 
-        my_subgoal = output[0]  
+        my_subgoal = output  
 
         return my_subgoal
 
