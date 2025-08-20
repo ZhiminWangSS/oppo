@@ -140,6 +140,7 @@ class lm_agent_cobel:
         # 房间和位置相关
         self.rooms_name = None  # 房间名称
         self.rooms_explored = {}  # 已探索的房间
+        self.new_room_explored = {}
         self.position = None  # 当前位置
         self.forward = None  # 朝向
         self.current_room = None  # 当前房间
@@ -457,6 +458,17 @@ class lm_agent_cobel:
         self.current_room = self.env_api["belongs_to_which_room"](self.position)
         self.rotated = None
         self.rooms_explored = {}
+        self.last_hold = None
+        # COBEL detect new exploration extend 
+        self.new_room_explored = {} 
+        for name in self.rooms_name:
+            self.new_room_explored.update(
+                {
+                    name:'None'
+                }
+            )
+
+
 
         self.plan = None
         self.action_history = [f"go to {self.current_room} at initial step"]
@@ -795,6 +807,17 @@ class lm_agent_cobel:
             oppo_pro_holding += oppo_holding[1] + oppo_container[1] 
         observation = "At " + str(current_frames) + " frames, I'm in " + current_room + ', ' + pro_holding + seeing 
         observation += ("I saw partner at " + last_see_frame + ' frames at ' + last_agent_position + oppo_pro_holding) if last_see_frame is not None else ''
+
+        explored_extend = 'I have '
+        for item in self.new_room_explored.keys():
+            if item in info['room_explored'].keys():
+                if self.new_room_explored[item] != info['room_explored'][item]:
+                    explored_extend += 'explored ' + info['room_explored'][item] + ' of the ' + item + ', '
+                    self.new_room_explored[item] = info['room_explored'][item]
+        
+                
+        explored_extend = explored_extend if explored_extend != 'I have ' else ""
+        observation += explored_extend
         measurement_observation['observation'] = observation
         measurement_observation['messages'] = self.obs['messages']
         return measurement_observation
@@ -1247,7 +1270,8 @@ class lm_agent_cobel:
             if self.plan is None:
                 self.target_pos = None
                 if lm_times > 0:
-                    print(info)
+                    #print(info)
+                    pass
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 
