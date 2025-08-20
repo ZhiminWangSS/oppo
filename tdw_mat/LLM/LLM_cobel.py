@@ -788,7 +788,8 @@ class LLM_cobel:
         match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
         if match:
             output = match.group(1).strip()
-        
+        if output.startswith('**'):
+            output = output[2:]
         opponent_subgoal = output
         return opponent_subgoal
     
@@ -810,7 +811,8 @@ class LLM_cobel:
         if match:
             output = match.group(1).strip()
 
-       
+        if output.startswith('**'):
+            output = output[2:]
 
         my_subgoal = output  
 
