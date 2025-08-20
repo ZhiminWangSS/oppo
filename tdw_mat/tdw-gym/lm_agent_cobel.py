@@ -10,6 +10,7 @@ import math
 import copy
 from PIL import Image
 from agent_memory import AgentMemory
+import re
 
 from LLM.LLM_cobel import LLM_cobel
 
@@ -1358,3 +1359,62 @@ class lm_agent_cobel:
         return self.LLM.api
     def get_total_cost(self):## for generated content counting
         return self.LLM.total_cost
+    
+    import re
+
+def update_subgoals(text, agent_subgoal_dic):
+    """
+    遍历 agent_subgoal_dic 中的每个 agent_name，对文本中的 agent 子目标进行更新：
+    - 若文本中不存在该 agent，则添加带有默认信息和 subgoal 的模板；
+    - 若存在，则查找其后的第一个 subgoal(...) 并替换为字典中对应的新 subgoal 内容。
+
+    参数:
+        text (str): 原始文本，包含 agent 的描述信息。
+        agent_subgoal_dic (dict): 键为 agent_name，值为对应的 subgoal 字符串。
+
+    返回:
+        str: 更新后的文本。
+    """
+    result_text = text
+
+    for agent_name in agent_subgoal_dic.keys():
+        # 构造正则匹配 agent(agent_name)
+        agent_pattern = f'agent\\({re.escape(agent_name)}\\)'
+        agent_matches = list(re.finditer(agent_pattern, result_text))
+
+        if not agent_matches:
+            # Agent 不存在，添加模板
+            print(f"Agent {agent_name} 不存在，添加模板")
+            template = f'''agent({agent_name})
+   - location(Unknown)
+   - objects_in_hand[Unknown,Unknown] 
+   - subgoal("{agent_subgoal_dic[agent_name]}")
+'''
+            result_text += template
+        else:
+            # Agent 存在，替换其后第一个 subgoal(...)
+            print(f"Agent {agent_name} 存在，替换 subgoal")
+            # 从后往前处理，避免字符串替换后位置偏移影响后续匹配
+            for match in reversed(agent_matches):
+                agent_end_pos = match.end()
+                remaining_text = result_text[agent_end_pos:]
+
+                # 查找 agent 后的第一个 subgoal(...)
+                subgoal_match = re.search(r'subgoal\([^)]*\)', remaining_text)
+                if subgoal_match:
+                    # 计算 subgoal 在原字符串中的绝对位置
+                    subgoal_start = agent_end_pos + subgoal_match.start()
+                    subgoal_end = agent_end_pos + subgoal_match.end()
+
+                    # 构建新旧 subgoal 内容
+                    old_subgoal = subgoal_match.group(0)
+                    new_subgoal = f'subgoal("{agent_subgoal_dic[agent_name]}")'
+
+                    # 替换内容
+                    result_text = result_text[:subgoal_start] + new_subgoal + result_text[subgoal_end:]
+                    print(f"  已替换 {old_subgoal} -> {new_subgoal}")
+                else:
+                    # 未找到 subgoal，跳过替换
+                    print(f"  未找到 agent({agent_name}) 后的 subgoal，跳过替换")
+
+    return result_text
