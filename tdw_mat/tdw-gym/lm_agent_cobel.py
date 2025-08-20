@@ -61,7 +61,8 @@ class lm_agent_cobel:
         self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
         self.belief_threshold = 0.5
-
+        self.my_subgoal = "None"
+        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
         
 
         # 物体信息存储
@@ -473,7 +474,11 @@ class lm_agent_cobel:
             self.detection_model = init_detection()
         self.navigation_threshold = 5
         # print(self.rooms_name)
-        self.LLM.reset(self.rooms_name, self.goal_objects)
+         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
+        initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
+        self.zero_order_beliefs = initial_zero_beliefs
+        self.first_order_beliefs = initial_first_beliefs
+        #COBEL - zhimin end 每个episode初始化一次
         self.save_img = save_img
         self.episode = episode
         self.episode_logger = episode_logger
@@ -661,6 +666,7 @@ class lm_agent_cobel:
 
     #COBEL-zhimin
     def measurement_update(self,visual_observation,message):
+        #TODO 并行观测
         """
         更新观测数据
 
@@ -676,8 +682,15 @@ class lm_agent_cobel:
         """
 
         # COBEL logger done
-        self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
-        self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
+        
+        #没有消息只处理视觉的
+        #TODO 还有I saw的情况没有考虑 后面考虑统一两个步骤
+        if message == "None":
+            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+        
+        else:
+            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+            self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
         self.episode_logger.info(
             f"zero_order_beliefs:\n{self.zero_order_beliefs}"
         )
@@ -1006,23 +1019,28 @@ class lm_agent_cobel:
                 
                 #COBEL - zhimin begin 从这里开始维护belief
 
-                #TODO process_obs() -> return visual_observation, message by shaokang
 
                 observation = self.observation2text(info)
-                visual_observation = observation['observation'] #这里的visual_observation是对话历史
-                mes_list = observation['messages'] #这里的message是对话历史
-                message = ""
-                for idx, agent_name in enumerate(self.agent_names):
-                    message += f"{agent_name}: {mes_list[idx]}\n"
-                self.episode_logger.info(
-                    f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
-                )
+                visual_observation = observation['observation']
+                mes_list = observation['messages'] 
+                
+                #消息列表转换为对话形式\
+                #TODO 监测是否有消息
+                if mes_list:
+                    message = ""
+                    for idx, agent_name in enumerate(self.agent_names):
+                        message += f"{agent_name}: {mes_list[idx]}\n"
+                    self.episode_logger.info(
+                        f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
+                    )
+                else:
+                    message = "None"
                 
                 #measurement update
                 self.measurement_update(visual_observation, message)    
 
                 #prediction update
-                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
 
                 
                 

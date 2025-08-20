@@ -323,8 +323,8 @@ class LLM_cobel:
         self.obj_per_room = None
 
         #COBEL - zhimin 初始化信念
-        belief_rules = self.zero_order_rules + "\n" + self.first_order_rules
-        self.intial_beliefs = self.init_beliefs(belief_rules, self.goal_desc, self.rooms)  # 初始化信念
+        self.belief_rules = self.zero_order_rules + "\n" + self.first_order_rules #整个任务不变
+        # self.zero = self.init_beliefs(self.belief_rules, self.goal_desc, self.rooms)  # 初始化信念
 
     def reset(self, rooms_name, goal_objects):
         """
@@ -336,10 +336,14 @@ class LLM_cobel:
         """
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
+        #COBEL - zhimin
+        initial_zero_beliefs, initial_first_beliefs = self.init_beliefs(self.belief_rules,self.goal_desc,self.rooms)
+        
         self.tokens = 0
         self.communication_cost = 0
         self.api = 0
         self.total_cost = 0
+        return initial_zero_beliefs, initial_first_beliefs
     def goal2description(self, goals):  # {predicate: count}
         """
         将目标转换为描述文本
@@ -853,7 +857,15 @@ class LLM_cobel:
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========initial_beliefs=============: \n{initial_beliefs}")
-        return initial_beliefs
+            
+            
+        pattern1 = r'(Zero\s+order\s+beliefs:.+?)(?=First\s+order\s+beliefs:)'
+        zero_order_beliefs = re.search(pattern1, initial_beliefs, re.DOTALL | re.IGNORECASE)
+
+        # 匹配从 "First order beliefs:" 开始到文本结尾
+        pattern2 = r'(First\s+order\s+beliefs:.*)'
+        first_order_beliefs = re.search(pattern2, initial_beliefs, re.DOTALL | re.IGNORECASE)
+        return zero_order_beliefs,first_order_beliefs
     
 
     def run(
