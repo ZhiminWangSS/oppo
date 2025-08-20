@@ -655,7 +655,7 @@ class lm_agent_cobel:
             self.dialogue_history,  # 对话历史作为上下文输入
             self.obs["oppo_held_objects"],# including history holding
             self.oppo_last_room,
-            self.episode_logger #add logger to recorde llm input and output
+            self.logger #add logger to record llm input and output
         )
 
     #COBEL-zhimin
@@ -674,9 +674,15 @@ class lm_agent_cobel:
             updated_beliefs
         """
 
-        # COBEL TODO: 这里需要一个logger记录一下beliefs
+        # COBEL logger done
         self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
         self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
+        self.episode_logger.info(
+            f"zero_order_beliefs:{self.zero_order_beliefs}"
+        )
+        self.episode_logger.info(
+            f"first_order_belief:{self.first_order_beliefs}"
+        )
 
 
     #COBEL-zhimin
@@ -687,9 +693,12 @@ class lm_agent_cobel:
 
 
         """
-        # COBEL TODO: 这里需要一个logger记录一下beliefs(与上面同一个logger即可)
+        # COBEL logger done
         opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs)
         my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
+        self.episode_logger.info(
+            f"opponent_subgoal:{opponent_subgoal}, my_subgoal:{my_subgoal}"
+        )
         return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
@@ -731,7 +740,7 @@ class lm_agent_cobel:
     #COBEL -zhimin
     def process_obs(self,obs):
         pass
-
+    #COBEL -shaokang 
     def observation2text(self,info):
         measurement_observation = {}
         current_frames = info['obs']['current_frames']
@@ -758,16 +767,14 @@ class lm_agent_cobel:
         seeing = 'I see '
         last_agent_position = None
         last_see_frame = None
-        if info['visible_objects']:
-            # print(info['visible_objects'])
-            for item in info["visible_objects"]:
-                if item["type"] != 3:
-                    # seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
-                    seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + info['current_room'] + '. '
-                #COBEL TODO 这里的position是array类型 包括xyz 需要转换成在哪个房间 现在暂时使用当前房间
-                else:
-                    last_agent_position = item['position'][5:]
-                    last_see_frame = item['position'][:2]
+        
+        for item in info["visible_objects"].values():
+            if item["type"] != 3:
+                # seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
+                seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + info['current_room'] + '. '
+            else:
+                last_agent_position = item['position'][5:]
+                last_see_frame = item['position'][:2]
         seeing = seeing if seeing != 'I see ' else ''
         if self.last_hold != None:
             for id ,item in enumerate(self.last_hold):
@@ -960,10 +967,11 @@ class lm_agent_cobel:
 
         info = {
             "satisfied": self.satisfied,
-            "object_list": self.object_list,
-            "new_object_list": self.new_object_list,
+            #"object_list": self.object_list,
+            #"new_object_list": self.new_object_list,
             "current_room": self.current_room,
-            "visible_objects": self.filtered(self.obs["visible_objects"]),
+            "visible_objects": self.visible_obj,
+            "room_explored":self.rooms_explored,
             "obs": {
                 k: v
                 for k, v in self.obs.items()
@@ -987,6 +995,9 @@ class lm_agent_cobel:
                 #TODO process_obs() -> return visual_observation, message by shaokang
 
                 visual_observation = self.observation2text(info)['observation'] #这里的visual_observation是对话历史
+                self.episode_logger.info(
+                    f"observation:{visual_observation}"
+                )
 
                 message = self.dialogue_history.copy()  # 这里的message是对话历史
                 message = "" #TODO
@@ -1001,7 +1012,7 @@ class lm_agent_cobel:
 
                 #COBEL - zhimin end
                 plan, a_info = self.LLM_plan()
-                self.episode_logger.debug(
+                self.logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
                 )
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
