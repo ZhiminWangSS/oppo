@@ -27,7 +27,7 @@
                 "--no_save_img"
                 
             ],
-            "cwd":"/home/kking/coela/oppo/tdw_mat"
+            "cwd":"/home/mmlab/zmwang/codes/CoELA/tdw_mat"
             
         }
     ]

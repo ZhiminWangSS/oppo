@@ -156,7 +156,7 @@ class lm_agent_cobel:
         self.zero_order_beliefs = "None"
         self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
-        self.belief_threshold = 0.5
+        self.belief_threshold = 5
         self.my_subgoal = "None"
         self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
 
@@ -742,8 +742,8 @@ class lm_agent_cobel:
         self.episode_logger.info(
             f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
         )
-        print(f"=====first-order-after-subgoal======",self.first_order_beliefs)
-        print(f"=====zero-order-after-subgoal======",self.zero_order_beliefs)
+        print(f"=====first-order-after-subgoal======\n",self.first_order_beliefs)
+        print(f"=====zero-order-after-subgoal======\n",self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
@@ -754,8 +754,8 @@ class lm_agent_cobel:
         返回:
             belief_threshold
         """
-        belief_misalignment = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
-        return belief_misalignment
+        difference_score, difference_content = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
+        return difference_score, difference_content
 
     #COBEL-zhimin
     def intuitive_planning(self):
@@ -1074,10 +1074,15 @@ class lm_agent_cobel:
 
                 #TODO 刚开始啥也不知道的时候
                 
+                #belief awareness
+                difference_score, difference_content = self.belief_awareness()
 
-
+                # if difference_score > self.belief_threshold:
+                #     self.adaptive_communication()#自适应通信
+                # else:
+                #     self.intuitive_planning()#直观规划
                 #COBEL - zhimin end
-                plan, a_in = self.LLM_plan()
+                plan, a_info = self.LLM_plan()
                 self.logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
                 )
