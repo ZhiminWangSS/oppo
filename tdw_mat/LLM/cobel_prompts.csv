@@ -31,7 +31,14 @@ $OPPO_NAME$.’s Knowledge:
 $FIRST_ORDER_BELIEFS$
 Reasons:
 Subgoal:"
-belief_awareness,
+belief_awareness,"zero order belief: $ZERO_ORDER_BELIEFS$
+first order bliefs: $FIRSTORDERBELIEFS$
+Evaluate the different content first_order_belief and zero_order_belief, regardless of format and give a difference index from 0-10 0 for nearly identical 10 for large differences. And then output the difference content in origin format.
+
+Answer in this format:
+Difference score: 
+Different content:"
+
 intuitive_planning,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subgoal and previous actions. In order to achieve a subgoal, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this sub-goal. If I have done all actions need in the subgoal, just answer SUBGOAL DONE. 
 
 My state: $MYSTATE$
@@ -75,3 +82,124 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+misalignment_test,"
+zero_order_beliefs
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(banana(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(burger(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Alice)
+  - location(Office(3000))
+  - subgoal(Unknown)
+  - object_in_hand[Null, Null]
+- agent_state(Bob)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+- room_state(Bedroom(2000))
+  - exploration_state(Unknown)
+- room_state(Office(3000))
+  - exploration_state(Part)
+- room_state(Livingroom(4000))
+  - exploration_state(Unknown)
+- room_state(Kitchen(5000))
+  - exploration_state(Unknown)
+- room_state(Livingroom(6000))
+  - exploration_state(Unknown)
+- bed_location()
+  - location(Unknown)
+
+first_order_beliefs
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(banana(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(bread(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(burger(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Alice)
+  - location(Unkown)
+  - subgoal(Unknown)
+  - object_in_hand[Unkown, Unkown]
+- agent_state(Bob)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+- room_state(Bedroom(2000))
+  - exploration_state(Unknown)
+- room_state(Office(3000))
+  - exploration_state(Unkown)
+- room_state(Livingroom(4000))
+  - exploration_state(Unknown)
+- room_state(Kitchen(5000))
+  - exploration_state(Unknown)
+- room_state(Livingroom(6000))
+  - exploration_state(Unknown)
+- bed_location()
+  - location(Unknown)
+
+
+Find the difference between the two sets of beliefs and give a difference index from 0-10 0 for nearly identical 10 for large differences. And then output the difference content in origin format.
+
+Answer in this format:
+Difference score: 
+Different content: "
