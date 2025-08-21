@@ -57,11 +57,12 @@ class lm_agent_cobel:
 
         # COBEL-zhimin
         self.belief_rules = None
-        self.zero_order_beliefs = ""
-        self.first_order_beliefs = ""
+        self.zero_order_beliefs = "None"
+        self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
         self.belief_threshold = 0.5
-
+        self.my_subgoal = "None"
+        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
         
 
         # 物体信息存储
@@ -485,7 +486,11 @@ class lm_agent_cobel:
             self.detection_model = init_detection()
         self.navigation_threshold = 5
         # print(self.rooms_name)
-        self.LLM.reset(self.rooms_name, self.goal_objects)
+         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
+        initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
+        self.zero_order_beliefs = initial_zero_beliefs
+        self.first_order_beliefs = initial_first_beliefs
+        #COBEL - zhimin end 每个episode初始化一次
         self.save_img = save_img
         self.episode = episode
         self.episode_logger = episode_logger
@@ -673,6 +678,7 @@ class lm_agent_cobel:
 
     #COBEL-zhimin
     def measurement_update(self,visual_observation,message):
+        #TODO 并行观测
         """
         更新观测数据
 
@@ -688,13 +694,20 @@ class lm_agent_cobel:
         """
 
         # COBEL logger done
-        self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
-        self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
+        
+        #没有消息只处理视觉的
+        #TODO 还有I saw的情况没有考虑 后面考虑统一两个步骤
+        if message == "None":
+            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+        
+        else:
+            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+            self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
         self.episode_logger.info(
-            f"zero_order_beliefs:{self.zero_order_beliefs}"
+            f"zero_order_beliefs:\n{self.zero_order_beliefs}"
         )
         self.episode_logger.info(
-            f"first_order_belief:{self.first_order_beliefs}"
+            f"first_order_belief:\n{self.first_order_beliefs}"
         )
 
 
@@ -708,10 +721,23 @@ class lm_agent_cobel:
         """
         # COBEL logger done
         opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs)
+        oppo_subgoals_dic = {
+            self.agent_names[1 - self.agent_id]: opponent_subgoal
+        }
+        # self.first_order_beliefs = self.update_subgoals(self.first_order_beliefs,oppo_subgoals_dic)
+        self.zero_orderbeliefs = self.update_subgoals(self.zero_order_beliefs, oppo_subgoals_dic)
         my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
+        agent_subgoals_dic = {
+                    self.agent_names[self.agent_id]: my_subgoal,
+                    # self.agent_names[1 - self.agent_id]: opponent_subgoal,
+                }
+
+        self.zero_orderbeliefs = self.update_subgoals(self.zero_order_beliefs, agent_subgoals_dic)
         self.episode_logger.info(
-            f"opponent_subgoal:{opponent_subgoal}, my_subgoal:{my_subgoal}"
+            f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
         )
+        print(f"=====first-order-after-subgoal======",self.first_order_beliefs)
+        print(f"=====zero-order-after-subgoal======",self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
@@ -1016,22 +1042,31 @@ class lm_agent_cobel:
                 
                 #COBEL - zhimin begin 从这里开始维护belief
 
-                #TODO process_obs() -> return visual_observation, message by shaokang
 
-                visual_observation = self.observation2text(info)['observation'] #这里的visual_observation是对话历史
-                self.episode_logger.info(
-                    f"observation:{visual_observation}"
-                )
-
-                message = self.dialogue_history.copy()  # 这里的message是对话历史
-                message = "" #TODO
+                observation = self.observation2text(info)
+                visual_observation = observation['observation']
+                mes_list = observation['messages'] 
+                
+                #消息列表转换为对话形式\
+                #TODO 监测是否有消息
+                if mes_list:
+                    message = ""
+                    for idx, agent_name in enumerate(self.agent_names):
+                        message += f"{agent_name}: {mes_list[idx]}\n"
+                    self.episode_logger.info(
+                        f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
+                    )
+                else:
+                    message = "None"
+                
                 #measurement update
-                self.measurement_update(visual_observation, message)
+                self.measurement_update(visual_observation, message)    
 
                 #prediction update
-                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
 
-                #TODO update the belief with subgoal by shaokang
+                
+                
 
 
                 #COBEL - zhimin end
@@ -1386,59 +1421,59 @@ class lm_agent_cobel:
     
     import re
 
-def update_subgoals(text, agent_subgoal_dic):
-    """
-    遍历 agent_subgoal_dic 中的每个 agent_name，对文本中的 agent 子目标进行更新：
-    - 若文本中不存在该 agent，则添加带有默认信息和 subgoal 的模板；
-    - 若存在，则查找其后的第一个 subgoal(...) 并替换为字典中对应的新 subgoal 内容。
+    def update_subgoals(self, text, agent_subgoal_dic):
+        """
+        遍历 agent_subgoal_dic 中的每个 agent_name，对文本中的 agent 子目标进行更新：
+        - 若文本中不存在该 agent，则添加带有默认信息和 subgoal 的模板；
+        - 若存在，则查找其后的第一个 subgoal(...) 并替换为字典中对应的新 subgoal 内容。
 
-    参数:
-        text (str): 原始文本，包含 agent 的描述信息。
-        agent_subgoal_dic (dict): 键为 agent_name，值为对应的 subgoal 字符串。
+        参数:
+            text (str): 原始文本，包含 agent 的描述信息。
+            agent_subgoal_dic (dict): 键为 agent_name，值为对应的 subgoal 字符串。
 
-    返回:
-        str: 更新后的文本。
-    """
-    result_text = text
+        返回:
+            str: 更新后的文本。
+        """
+        result_text = text
 
-    for agent_name in agent_subgoal_dic.keys():
-        # 构造正则匹配 agent(agent_name)
-        agent_pattern = f'agent\\({re.escape(agent_name)}\\)'
-        agent_matches = list(re.finditer(agent_pattern, result_text))
+        for agent_name in agent_subgoal_dic.keys():
+            # 构造正则匹配 agent(agent_name)
+            agent_pattern = f'agent\\({re.escape(agent_name)}\\)'
+            agent_matches = list(re.finditer(agent_pattern, result_text))
 
-        if not agent_matches:
-            # Agent 不存在，添加模板
-            print(f"Agent {agent_name} 不存在，添加模板")
-            template = f'''agent({agent_name})
-   - location(Unknown)
-   - objects_in_hand[Unknown,Unknown] 
-   - subgoal("{agent_subgoal_dic[agent_name]}")
-'''
-            result_text += template
-        else:
-            # Agent 存在，替换其后第一个 subgoal(...)
-            print(f"Agent {agent_name} 存在，替换 subgoal")
-            # 从后往前处理，避免字符串替换后位置偏移影响后续匹配
-            for match in reversed(agent_matches):
-                agent_end_pos = match.end()
-                remaining_text = result_text[agent_end_pos:]
+            if not agent_matches:
+                # Agent 不存在，添加模板
+                print(f"Agent {agent_name} 不存在，添加模板")
+                template = f'''agent({agent_name})
+    - location(Unknown)
+    - objects_in_hand[Unknown,Unknown] 
+    - subgoal("{agent_subgoal_dic[agent_name]}")
+    '''
+                result_text += template
+            else:
+                # Agent 存在，替换其后第一个 subgoal(...)
+                print(f"Agent {agent_name} 存在，替换 subgoal")
+                # 从后往前处理，避免字符串替换后位置偏移影响后续匹配
+                for match in reversed(agent_matches):
+                    agent_end_pos = match.end()
+                    remaining_text = result_text[agent_end_pos:]
 
-                # 查找 agent 后的第一个 subgoal(...)
-                subgoal_match = re.search(r'subgoal\([^)]*\)', remaining_text)
-                if subgoal_match:
-                    # 计算 subgoal 在原字符串中的绝对位置
-                    subgoal_start = agent_end_pos + subgoal_match.start()
-                    subgoal_end = agent_end_pos + subgoal_match.end()
+                    # 查找 agent 后的第一个 subgoal(...)
+                    subgoal_match = re.search(r'subgoal\([^)]*\)', remaining_text)
+                    if subgoal_match:
+                        # 计算 subgoal 在原字符串中的绝对位置
+                        subgoal_start = agent_end_pos + subgoal_match.start()
+                        subgoal_end = agent_end_pos + subgoal_match.end()
 
-                    # 构建新旧 subgoal 内容
-                    old_subgoal = subgoal_match.group(0)
-                    new_subgoal = f'subgoal("{agent_subgoal_dic[agent_name]}")'
+                        # 构建新旧 subgoal 内容
+                        old_subgoal = subgoal_match.group(0)
+                        new_subgoal = f'subgoal("{agent_subgoal_dic[agent_name]}")'
 
-                    # 替换内容
-                    result_text = result_text[:subgoal_start] + new_subgoal + result_text[subgoal_end:]
-                    print(f"  已替换 {old_subgoal} -> {new_subgoal}")
-                else:
-                    # 未找到 subgoal，跳过替换
-                    print(f"  未找到 agent({agent_name}) 后的 subgoal，跳过替换")
+                        # 替换内容
+                        result_text = result_text[:subgoal_start] + new_subgoal + result_text[subgoal_end:]
+                        print(f"  已替换 {old_subgoal} -> {new_subgoal}")
+                    else:
+                        # 未找到 subgoal，跳过替换
+                        print(f"  未找到 agent({agent_name}) 后的 subgoal，跳过替换")
 
-    return result_text
+        return result_text

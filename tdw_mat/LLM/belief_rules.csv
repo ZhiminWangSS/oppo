@@ -1,5 +1,10 @@
-type,rules
-first_order,"- know_target_object(?object)
+type,prompt
+first_order,"First order belief rules:
+The first order beliefs describes what information collaborators may know in one¡¯s own perspective.
+
+Format: 
+first_order_beliefs(?collaborator_agent)
+- know_target_object(?object)
   - location(?room or ?agent or ?container)
   - completion(?completed or ?incompleted)
 
@@ -17,7 +22,12 @@ first_order,"- know_target_object(?object)
 
 - know_bed_location()
   - location(?room)"
-zero-order,"- target_object_state(?object)
+zero-order,"Zero order belief rules:
+The zero order beliefs describes what information may I know in one¡¯s own perspective.
+
+Format: 
+zero_order_beliefs(?agent)
+- target_object_state(?object)
   - location(?room or ?agent or ?container)
   - completion(?complete or ?incomplete)
 

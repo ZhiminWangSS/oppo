@@ -68,6 +68,7 @@ class LLM_cobel:
         self.api = 0
         # 调试和配置
         self.debug = sampling_parameters.debug  # 调试模式
+        self.belief_debug = True
         self.rooms = []  # 房间列表
 
         # 提示词模板相关
@@ -321,6 +322,10 @@ class LLM_cobel:
         self.holding_objects = None
         self.obj_per_room = None
 
+        #COBEL - zhimin 初始化信念
+        self.belief_rules = self.zero_order_rules + "\n" + self.first_order_rules #整个任务不变
+        # self.zero = self.init_beliefs(self.belief_rules, self.goal_desc, self.rooms)  # 初始化信念
+
     def reset(self, rooms_name, goal_objects):
         """
         重置模型状态
@@ -331,10 +336,14 @@ class LLM_cobel:
         """
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
+        #COBEL - zhimin
+        initial_zero_beliefs, initial_first_beliefs = self.init_beliefs(self.belief_rules,self.goal_desc,self.rooms)
+        
         self.tokens = 0
         self.communication_cost = 0
         self.api = 0
         self.total_cost = 0
+        return initial_zero_beliefs, initial_first_beliefs
     def goal2description(self, goals):  # {predicate: count}
         """
         将目标转换为描述文本
@@ -738,6 +747,9 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         updated_first_order_beliefs = output[0]
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========updated_first_order_beliefs=============: \n{updated_first_order_beliefs}")
         return updated_first_order_beliefs
 
     #COBEL-zhimin
@@ -758,7 +770,7 @@ class LLM_cobel:
             self.cobel_prompts_df["prompt"][1]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$BELIEF_RULES$", self.first_order_rules)
+            .replace("$BELIEF_RULES$", self.zero_order_rules)
             .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
             .replace("$MESSAGE$", message)
             .replace("$VISUAL_OBSERVATION$", visual_observation)
@@ -769,6 +781,9 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         updated_zero_order_beliefs = output[0]
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========updated_zero_order_beliefs=============: \n{updated_zero_order_beliefs}")
         return updated_zero_order_beliefs
 
     #COBEL-zhimin
@@ -785,12 +800,13 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         #这里的结果是Reason: ... Subgoal: ... 
-        match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
-        if match:
-            output = match.group(1).strip()
-        if output.startswith('**'):
-            output = output[2:]
-        opponent_subgoal = output
+
+
+        opponent_subgoal = self.extract_subgoal_content(output[0])
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========opponent_subgoal=============: \n{output[0]}")
+
         return opponent_subgoal
     
     #COBEL-zhimin
@@ -811,13 +827,50 @@ class LLM_cobel:
         if match:
             output = match.group(1).strip()
 
-        if output.startswith('**'):
-            output = output[2:]
+
+        opponent_subgoal = self.extract_subgoal_content(output[0])
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========my_subgoal=============: \n{output[0]}")
 
         my_subgoal = output  
 
         return my_subgoal
+    
+    #COBEL - zhimin
+    def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str]):
+        #TODO shaokang
 
+        room_des = ""
+        for room in room_list:
+            room_des += f"{room}, "
+        room_des = room_des[:-2] + ". "
+        prompt = (
+            self.cobel_prompts_df["prompt"][6]  #-> init_beliefs
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$BELIEF_RULES$", belief_rules)
+            .replace("$GOAL$", goal)
+            .replace("$ROOM_LIST$", room_des)
+        )
+
+        chat_prompt = [{"role": "user", "content": prompt}]
+        output, usage = self.generator(
+                    chat_prompt, self.sampling_params
+                ) # usage token cost
+        initial_beliefs = output[0]
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========initial_beliefs=============: \n{initial_beliefs}")
+            
+            
+        pattern1 = r'(Zero\s+order\s+beliefs:.+?)(?=First\s+order\s+beliefs:)'
+        zero_order_beliefs = re.search(pattern1, initial_beliefs, re.DOTALL | re.IGNORECASE)
+
+        # 匹配从 "First order beliefs:" 开始到文本结尾
+        pattern2 = r'(First\s+order\s+beliefs:.*)'
+        first_order_beliefs = re.search(pattern2, initial_beliefs, re.DOTALL | re.IGNORECASE)
+        return zero_order_beliefs,first_order_beliefs
     
 
     def run(
@@ -997,3 +1050,19 @@ class LLM_cobel:
             }
         )
         return plan, info
+    
+
+    #COBEL-zhimin
+    def extract_subgoal_content(self,text):
+        """
+        提取最后一个 subgoal: 之后的内容
+        """
+        # 匹配所有 subgoal: 后面的内容
+        pattern = r'subgoal:\s*(.*?)(?=\n\s*-|\n\s*$)'
+        matches = re.findall(pattern, text, re.DOTALL)
+        
+        # 返回最后一个匹配的内容，清理空白字符
+        if matches:
+            return matches[-1].strip()
+        else:
+            return None
