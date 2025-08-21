@@ -49,7 +49,7 @@ Available actions: $AVAILABLEACTIONS$
 Answer:
 
 "
-init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don��t know any information, just put Unknown in () to represent it. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
+init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don’t know any information, just put Unknown in () to represent it. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
 
 Belief rules:
 $BELIEF_RULES$
@@ -64,6 +64,15 @@ First order beliefs:
 
 
 "
+adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference.
+
+
+Belief difference: $BELIEF_DIFFERENCE$
+
+
+Answer in this format:
+{ to_agent1: message1,
+to_agent2: message2 }"
 measurement_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and my own visual observation, what $OPPO_NAME$'s mental knowledge now about object and my state? Remember that $OPPO_NAME$  don’t know $AGENT_NAME$’s Visual Observation. Use the rules below to refine and update $OPPO_NAME$'s mental knowledge:
 $AGENT_NAME$’s Visual Observation: $VISUAL_OBSERVATION$
 Message: 
@@ -83,124 +92,4 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
-misalignment_test,"
-zero_order_beliefs
-- target_object_state(orange(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(orange(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(banana(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(burger(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- container_state(Unknown)
-  - location(Unknown)
-  - contents[Unknown, Unknown, Unknown]
-- agent_state(Alice)
-  - location(Office(3000))
-  - subgoal(Unknown)
-  - object_in_hand[Null, Null]
-- agent_state(Bob)
-  - location(Unknown)
-  - subgoal(Unknown)
-  - object_in_hand[Unknown, Unknown]
-- room_state(Livingroom(1000))
-  - exploration_state(Unknown)
-- room_state(Bedroom(2000))
-  - exploration_state(Unknown)
-- room_state(Office(3000))
-  - exploration_state(Part)
-- room_state(Livingroom(4000))
-  - exploration_state(Unknown)
-- room_state(Kitchen(5000))
-  - exploration_state(Unknown)
-- room_state(Livingroom(6000))
-  - exploration_state(Unknown)
-- bed_location()
-  - location(Unknown)
-
-first_order_beliefs
-- target_object_state(orange(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(orange(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(apple(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(banana(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(bread(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- target_object_state(burger(Unknown))
-  - location(Unknown)
-  - completion(Unknown)
-- container_state(Unknown)
-  - location(Unknown)
-  - contents[Unknown, Unknown, Unknown]
-- agent_state(Alice)
-  - location(Unkown)
-  - subgoal(Unknown)
-  - object_in_hand[Unkown, Unkown]
-- agent_state(Bob)
-  - location(Unknown)
-  - subgoal(Unknown)
-  - object_in_hand[Unknown, Unknown]
-- room_state(Livingroom(1000))
-  - exploration_state(Unknown)
-- room_state(Bedroom(2000))
-  - exploration_state(Unknown)
-- room_state(Office(3000))
-  - exploration_state(Unkown)
-- room_state(Livingroom(4000))
-  - exploration_state(Unknown)
-- room_state(Kitchen(5000))
-  - exploration_state(Unknown)
-- room_state(Livingroom(6000))
-  - exploration_state(Unknown)
-- bed_location()
-  - location(Unknown)
-
-
-Find the difference between the two sets of beliefs and give a difference index from 0-10 0 for nearly identical 10 for large differences. And then output the difference content in origin format.
-
-Answer in this format:
-Difference score: 
-Different content: "
+misalignment_test,

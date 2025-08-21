@@ -1094,13 +1094,13 @@ class LLM_cobel:
     
 
     #COBEL-zhimin
-    def extract_subgoal_content(self,text):
+    def extract_subgoal_content(self, text):
         """
         提取最后一个 subgoal: 之后的内容
         """
-        # 匹配所有 subgoal: 后面的内容
-        pattern = r'Subgoal:\s*(.*?)(?=\n\s*-|\n\s*$)'
-        matches = re.findall(pattern, text, re.DOTALL)
+        # 简单匹配 Subgoal: 后面的任何内容直到行尾
+        pattern = r'Subgoal:\s*(.*?)(?:\n|$)'
+        matches = re.findall(pattern, text)
         
         # 返回最后一个匹配的内容，清理空白字符
         if matches:

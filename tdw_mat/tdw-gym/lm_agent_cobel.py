@@ -1336,9 +1336,20 @@ class lm_agent_cobel:
                 #prediction update
                 opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
 
-                #TODO update the belief with subgoal by shaokang
+                difference_score, difference_content = self.belief_awareness()
+
+                if difference_score > self.belief_threshold:
+                    self.adaptive_communication() #自适应通信
+                else:
+                    plan = self.intuitive_planning()
+
+
+                if plan == "SUBGOAL_DONE": #TODO:需要更鲁棒的解析
+                #     self.subgoal_done = True
+                #     self.action_history = [] # 清空动作历史
+                #COBEL - zhimin end
                 
-                plan, a_info = self.LLM_plan()
+                # plan, a_info = self.LLM_plan()
                 
                 
 
@@ -1450,7 +1461,7 @@ class lm_agent_cobel:
 
         for agent_name in agent_subgoal_dic.keys():
             # 构造正则匹配 agent(agent_name)
-            agent_pattern = f'agent\\({re.escape(agent_name)}\\)'
+            agent_pattern = f'agent_state\\({re.escape(agent_name)}\\)'
             agent_matches = list(re.finditer(agent_pattern, result_text))
 
             if not agent_matches:
