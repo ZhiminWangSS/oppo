@@ -55,14 +55,7 @@ class lm_agent_cobel:
 
 
 
-        # COBEL-zhimin
-        self.belief_rules = None
-        self.zero_order_beliefs = "None"
-        self.first_order_beliefs = "None"
-        self.subgoal_done = True  # 是否完成子目标
-        self.belief_threshold = 0.5
-        self.my_subgoal = "None"
-        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
+        
         
 
         # 物体信息存储
@@ -157,6 +150,15 @@ class lm_agent_cobel:
         # print(f"是否启用通信：{self.communication}")
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
+
+        # COBEL-zhimin
+        self.belief_rules = None
+        self.zero_order_beliefs = "None"
+        self.first_order_beliefs = "None"
+        self.subgoal_done = True  # 是否完成子目标
+        self.belief_threshold = 0.5
+        self.my_subgoal = "None"
+        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -485,15 +487,19 @@ class lm_agent_cobel:
             # so we put the import here
             self.detection_model = init_detection()
         self.navigation_threshold = 5
+
+        self.episode_logger = episode_logger
         # print(self.rooms_name)
-         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
+        #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
         initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
+        self.episode_logger.info(f"initial_first\n{initial_first_beliefs}")
+        self.episode_logger.info(f"initial_zero\n{initial_zero_beliefs}")
         self.zero_order_beliefs = initial_zero_beliefs
         self.first_order_beliefs = initial_first_beliefs
         #COBEL - zhimin end 每个episode初始化一次
         self.save_img = save_img
         self.episode = episode
-        self.episode_logger = episode_logger
+        
         self.visible_obj = {}
 
     def move(self, target_pos):
@@ -702,7 +708,7 @@ class lm_agent_cobel:
         
         else:
             self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
-            self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, visual_observation, message, self.belief_rules)
+            self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, "None", message, self.belief_rules)
         self.episode_logger.info(
             f"zero_order_beliefs:\n{self.zero_order_beliefs}"
         )
@@ -785,7 +791,7 @@ class lm_agent_cobel:
         current_frames = info['obs']['current_frames']
         current_room = info["current_room"]
         holding = ['','']
-        container = ['','']
+        container = ['',''] #应该是三个
         oppo_holding = ['','']
         oppo_container = ['','']
         for id ,item in enumerate(info['obs']['held_objects']):
@@ -793,7 +799,7 @@ class lm_agent_cobel:
                 holding[id] = '<' + item["name"] + "> " + '(' + str(item["id"]) + ")"
                 if item['contained'] != [None, None, None]:
                     container[id] = 'with'
-                    for obj,index in enumerate(item["contained"]):
+                    for index,obj in enumerate(item["contained"]):
                         if obj != None:
                             container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '),  '
                     container[id] += "in it. "
@@ -1049,10 +1055,11 @@ class lm_agent_cobel:
                 
                 #消息列表转换为对话形式\
                 #TODO 监测是否有消息
-                if mes_list:
+                if not all(item is None for item in mes_list):
                     message = ""
                     for idx, agent_name in enumerate(self.agent_names):
-                        message += f"{agent_name}: {mes_list[idx]}\n"
+                        if mes_list[idx]:
+                            message += f"{agent_name}: {mes_list[idx]}\n"
                     self.episode_logger.info(
                         f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
                     )
@@ -1065,12 +1072,12 @@ class lm_agent_cobel:
                 #prediction update
                 opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
 
-                
+                #TODO 刚开始啥也不知道的时候
                 
 
 
                 #COBEL - zhimin end
-                plan, a_info = self.LLM_plan()
+                plan, a_in = self.LLM_plan()
                 self.logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
                 )
