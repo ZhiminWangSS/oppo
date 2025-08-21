@@ -81,8 +81,8 @@ class LLM_cobel:
         rules_df = pd.read_csv("./LLM/belief_rules.csv")
         self.cobel_prompts_df = pd.read_csv("./LLM/cobel_prompts.csv")
 
-        self.first_order_rules = rules_df['rules'][0]
-        self.zero_order_rules = rules_df['rules'][1]
+        self.first_order_rules = rules_df['prompt'][0]
+        self.zero_order_rules = rules_df['prompt'][1]
         self.prompt_template = (
             df["prompt"][0]
             .replace("$AGENT_NAME$", self.agent_name)
@@ -823,17 +823,16 @@ class LLM_cobel:
         output, usage = self.generator(
                     chat_prompt, self.sampling_params
                 ) # usage token cost
-        match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
-        if match:
-            output = match.group(1).strip()
+        # match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
+        # if match:
+        #     output = match.group(1).strip()
 
 
-        opponent_subgoal = self.extract_subgoal_content(output[0])
+        my_subgoal = self.extract_subgoal_content(output[0])
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========my_subgoal=============: \n{output[0]}")
-
-        my_subgoal = output  
+  
 
         return my_subgoal
     
@@ -862,15 +861,19 @@ class LLM_cobel:
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========initial_beliefs=============: \n{initial_beliefs}")
-            
-            
+        
         pattern1 = r'(Zero\s+order\s+beliefs:.+?)(?=First\s+order\s+beliefs:)'
-        zero_order_beliefs = re.search(pattern1, initial_beliefs, re.DOTALL | re.IGNORECASE)
+        zero_order_match = re.search(pattern1, initial_beliefs, re.DOTALL | re.IGNORECASE)
 
         # 匹配从 "First order beliefs:" 开始到文本结尾
         pattern2 = r'(First\s+order\s+beliefs:.*)'
-        first_order_beliefs = re.search(pattern2, initial_beliefs, re.DOTALL | re.IGNORECASE)
-        return zero_order_beliefs,first_order_beliefs
+        first_order_match = re.search(pattern2, initial_beliefs, re.DOTALL | re.IGNORECASE)
+
+        # 提取匹配的字符串
+        zero_order_beliefs = zero_order_match.group(1) if zero_order_match else ""
+        first_order_beliefs = first_order_match.group(1) if first_order_match else ""
+
+        return zero_order_beliefs, first_order_beliefs
     
 
     def run(
