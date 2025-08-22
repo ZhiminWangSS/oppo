@@ -87,8 +87,8 @@ class Challenge:
         self.logger.info("done")
 
         #COBEL
-        self.rules_prompt_path = "./belief_symbolic_representation/construct.csv"
-        self.rules_output_file  = "./rules.txt"
+        self.rules_prompt_path = "../belief_symbolic_representation/construct.csv"
+        self.rules_output_file  = "rules.txt"
         self.challenge_description = "In this domain, two agents must collaborate to transporting as many target objects as possible to a designated bed location(unknown at beginning)(totice that bed is an important entity class as destination with only attribution: location) using available containers given a shared goal(e.g. like transport 2 apples and one pen to the bed). Each target object corresponds to a task, which can be either complete or incomplete. Agents can autonomously plan subgoals based on the overall objective.Objects, containers, and agents all have a location attribute. Initially, objects and containers are scattered across various rooms. A container can hold up to three objects, and an agent can carry up to two items at a time—these may be objects or containers. The domain consists of multiple rooms, and agents are deployed within this multi-room space, where they can freely move and explore. Each room’s exploration state is categorized as None (unexplored), Part (partially explored), or All (fully explored)."
 
     #COBEL rules builder
@@ -96,6 +96,9 @@ class Challenge:
         builder = BeliefBuilder(self.rules_prompt_path)
         os.makedirs("./belief_rules",exist_ok=True)
         path = os.path.join("./belief_rules",self.rules_output_file)
+        # if the file has content
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            return
         builder.build_complete_belief(self.challenge_description,path)
 
 

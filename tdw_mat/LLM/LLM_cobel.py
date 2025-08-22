@@ -78,10 +78,10 @@ class LLM_cobel:
 
         
         #COBEL - zhimin
-        rules_df = pd.read_csv("./tdw_mat/LLM/belief_rules.csv")
-        self.cobel_prompts_df = pd.read_csv("./tdw_mat/LLM/cobel_prompts.csv")
+        rules_df = pd.read_csv("./LLM/belief_rules.csv")
+        self.cobel_prompts_df = pd.read_csv("./LLM/cobel_prompts.csv")
 
-        self.first_order_rules = rules_df['prompt'][0]
+        self.first_order_rules = rules_df['prompt'][0]# need to change rules
         self.zero_order_rules = rules_df['prompt'][1]
         self.prompt_template = (
             df["prompt"][0]
