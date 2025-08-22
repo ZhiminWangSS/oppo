@@ -19,7 +19,7 @@ from openai import AzureOpenAI
 from openai import OpenAIError
 from openai import OpenAI
 from datetime import datetime
-
+import ast
 
 
 
@@ -876,7 +876,6 @@ class LLM_cobel:
     
     #COBEL - zhimin
     def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str]):
-        #TODO shaokang
 
         room_des = ""
         for room in room_list:
@@ -913,7 +912,40 @@ class LLM_cobel:
 
         return zero_order_beliefs, first_order_beliefs
     
+    #COBEL - zhimin
+    def message_generation(self, difference_content):
 
+
+            # 使用正则表达式提取zero_order_belief后面的内容
+        zero_match = re.search(r'Zero_order_belief:\s*(.*?)(?:\n|$)', difference_content)
+        zero_order_belief = zero_match.group(1) if zero_match else ""
+
+        # 使用正则表达式提取first_order_belief后面的内容
+        first_match = re.search(r'First_order_belief:\s*(.*?)(?:\n|$)', difference_content)
+        first_order_belief = first_match.group(1) if first_match else ""
+
+        prompt = (
+            self.cobel_prompts_df["prompt"][6]  #-> init_beliefs
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$FIRST_ORDER_BELIEF_DIFFERENCE$", first_order_belief)
+            .replace("$ZERO_ORDER_BELIEF_DIFFERENCE$", zero_order_belief)
+        )
+
+        chat_prompt = [{"role": "user", "content": prompt}]
+        output, usage = self.generator(
+                    chat_prompt, self.sampling_params
+                ) # usage token cost
+        mes_list = output[0]
+        if self.belief_debug:
+            print(f"=========message_prompt===========: \n{prompt}")
+            print(f"=========mes_list=============: \n{mes_list}")
+        try:
+            result_dict = ast.literal_eval(mes_list)
+            print(result_dict)
+        except Exception as e:
+            print(f"Error: {e}")
+        return result_dict
     def run(
         self,
         current_step,
