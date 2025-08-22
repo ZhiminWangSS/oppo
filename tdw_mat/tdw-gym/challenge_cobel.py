@@ -7,6 +7,7 @@ import time
 import pickle
 import logging
 import sys
+from ...belief_symbolic_representation import belief_builder##COBEL init the rules bulider
 
 # add this dictionary to python env path:
 base_path = os.getcwd()
@@ -81,6 +82,21 @@ class Challenge:
         self.data = json.load(open(os.path.join(data_prefix, data_path), "r"))
         self.logger.info("done")
 
+        #COBEL
+        self.rules_prompt_path = None
+        self.rules_output_file  = None
+        self.challenge_description = None
+
+    #COBEL rules builder
+    def rules_builder(self):
+        builder = belief_builder(self.rules_prompt_path)
+        os.makedirs("./belief_rules",exist_ok=True)
+        path = os.path.join("./belief_rules",self.rules_output_file)
+        builder.build_complete_belief(self.challenge_description,path)
+
+
+
+
     def submit(self, agents, logger, eval_episodes):
         """
         执行智能体评估过程
@@ -93,6 +109,9 @@ class Challenge:
         返回:
             float: 平均完成率
         """
+        ##COBEL init the rules builder
+        self.rules_builder()
+
         total_finish = 0.0
         if eval_episodes[0] == -1:
             eval_episodes = range(len(self.data))

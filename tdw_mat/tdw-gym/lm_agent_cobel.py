@@ -157,8 +157,8 @@ class lm_agent_cobel:
         self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
         self.belief_threshold = 0.5
-        self.my_subgoal = "None"
-        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
+        self.my_subgoal = None
+        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: None }
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -731,14 +731,14 @@ class lm_agent_cobel:
             self.agent_names[1 - self.agent_id]: opponent_subgoal
         }
         # self.first_order_beliefs = self.update_subgoals(self.first_order_beliefs,oppo_subgoals_dic)
-        self.zero_orderbeliefs = self.update_subgoals(self.zero_order_beliefs, oppo_subgoals_dic)
+        self.zero_order_beliefs = self.update_subgoals(self.zero_order_beliefs, oppo_subgoals_dic)
         my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
         agent_subgoals_dic = {
                     self.agent_names[self.agent_id]: my_subgoal,
                     # self.agent_names[1 - self.agent_id]: opponent_subgoal,
                 }
 
-        self.zero_orderbeliefs = self.update_subgoals(self.zero_order_beliefs, agent_subgoals_dic)
+        self.zero_order_beliefs = self.update_subgoals(self.zero_order_beliefs, agent_subgoals_dic)
         self.episode_logger.info(
             f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
         )
@@ -766,7 +766,7 @@ class lm_agent_cobel:
             plan: 生成的计划 = 论文中的low-level plan
         """
 
-        plan = self.LLM.intuitive_planning(self.zero_order_beliefs)
+        plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subgoal,self.action_history)# and subgoal to be added in it 
         return plan
 
 
@@ -1039,6 +1039,14 @@ class lm_agent_cobel:
         action = None
         lm_times = 0
         while action is None:
+            #COBEL justify the completion of the subgoal
+            if self.my_subgoal is None:
+                #TODO:add prediction here
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
+                self.my_subgoal = my_subgoal
+                self.action_history = []#COBEL clean the action history
+                continue
+
             if self.plan is None:
                 self.target_pos = None
                 if lm_times > 0:
@@ -1068,10 +1076,14 @@ class lm_agent_cobel:
                 
                 #measurement update
                 self.measurement_update(visual_observation, message)    
-
-                #prediction update
-                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
-
+                #TODO:intuitive planning adding here,prediction to be changed other place
+                # update the low-level plan
+                plan = self.intuitive_planning()
+                if plan == "SUBGOAL DONE":##TODO:have to program a fuzzy match in parse
+                    self.my_subgoal = None
+                    continue
+                
+               
                 #TODO 刚开始啥也不知道的时候
                 
 
@@ -1088,8 +1100,8 @@ class lm_agent_cobel:
                 self.action_history.append(
                     f"{'send a message' if plan.startswith('send a message:') else plan} at step {self.num_frames}"
                 )
-                a_info.update({"Frames": self.num_frames})
-                info.update({"LLM": a_info})
+                # a_info.update({"Frames": self.num_frames})
+                # info.update({"LLM": a_info})
                 lm_times += 1
             if self.plan.startswith("go to"):
                 action = self.gotoroom()
