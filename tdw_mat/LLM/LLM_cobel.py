@@ -460,7 +460,7 @@ class LLM_cobel:
             i = ord(text) - ord("A")
             if i in range(len(available_actions)):
                 return available_actions[i]
-        print("WARNING! No available action parsed!!! Random choose one")
+        print("WARNING! No available action parsed!!! Random choose one")#TODO: verify that if the parse function works
         flags = "failed to parse"
         return random.choice(available_actions), flags
 
@@ -716,7 +716,81 @@ class LLM_cobel:
             plans += f"{chr(ord('A') + i)}. {plan}\n"
 
         return plans, len(available_plans), available_plans
+    #COBEL -shaokang available_plans 
+    def get_available_plans_cobel(self):#plans according to the state
+        """
+        获取可用的规划
 
+        参数:
+            message: 消息文本
+
+        返回:
+            可用规划列表
+        """
+        """
+        go to room {}
+        explore current room {}
+        go grasp target object / container {}
+        holding both container and object: put obj into the container
+        holding any goal objects: transport holding objects to the bed
+        """
+        available_plans = []
+        if (
+            self.holding_objects[0]["type"] is None
+            or self.holding_objects[1]["type"] is None
+        ):
+            for obj in self.object_list[0]:
+                available_plans.append(
+                    f"go grasp target object <{obj['name']}> ({obj['id']})"
+                )
+            if not (
+                self.holding_objects[0]["type"] == 1
+                or self.holding_objects[1]["type"] == 1
+            ):
+                for obj in self.object_list[1]:
+                    available_plans.append(
+                        f"go grasp container <{obj['name']}> ({obj['id']})"
+                    )
+        else:
+            if (
+                self.holding_objects[0]["type"] == 1
+                and self.holding_objects[0]["contained"][-1] is None
+                and self.holding_objects[1]["type"] == 0
+            ):
+                available_plans.append(
+                    f"put <{self.holding_objects[1]['name']}> ({self.holding_objects[1]['id']}) into the container <{self.holding_objects[0]['name']}> ({self.holding_objects[0]['id']})"
+                )
+            elif (
+                self.holding_objects[1]["type"] == 1
+                and self.holding_objects[1]["contained"][-1] is None
+                and self.holding_objects[0]["type"] == 0
+            ):
+                available_plans.append(
+                    f"put <{self.holding_objects[0]['name']}> ({self.holding_objects[0]['id']}) into the container <{self.holding_objects[1]['name']}> ({self.holding_objects[1]['id']})"
+                )
+        if (
+            any(obj["type"] is not None for obj in self.holding_objects)
+            and len(self.object_list[2]) != 0
+        ):
+            available_plans.append(f"transport objects I'm holding to the bed")
+        for room in self.rooms:
+            if room == self.current_room or room is None or room == "None":
+                continue
+            available_plans.append(f"go to {room}")
+        if (
+            self.current_room not in self.rooms_explored
+            or self.rooms_explored[self.current_room] != "all"
+        ):
+            available_plans.append(f"explore current room {self.current_room}")
+        
+        #COBEL subgoal finish
+        available_plans.append("SUBGOAL DONE")
+
+        plans = ""
+        for i, plan in enumerate(available_plans):
+            plans += f"{chr(ord('A') + i)}. {plan}\n"
+
+        return plans, len(available_plans), available_plans
 
     #COBEL-zhimin
     def update_first_order_beliefs(self,first_order_beliefs,visual_observation, message, belief_rules):
@@ -838,7 +912,7 @@ class LLM_cobel:
     
     #COBEL - zhimin
     def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str]):
-        #TODO shaokang
+        #TODO shaokang template generation
 
         room_des = ""
         for room in room_list:
@@ -874,7 +948,26 @@ class LLM_cobel:
         first_order_beliefs = first_order_match.group(1) if first_order_match else ""
 
         return zero_order_beliefs, first_order_beliefs
-    
+    #COBEL  -shaokang
+    def intuitive_planning(self,zero_order_beliefs,subgaol,action_history):#TODO:subgoal need tobe change to formally the combination of the available plans
+        # Done:action will be cleaned once the subgoal is done
+        available_plans, num, available_plans_list = self.get_available_plans_cobel()
+        prompt = (
+            self.cobel_prompts_df['prompt'][5]
+            .replace('$AGENT_NAME$',self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace('$MYSTATE$',zero_order_beliefs)
+            .replace('$SUBGOAL$',subgaol)
+            .replace('$PREVIOUSACTIONS$',action_history)
+            .replace('$AVAILABLEACTIONS$',available_plans)
+        )
+        chat_prompt = [{'role':'user','content':prompt}]
+        output,usage = self.generator(
+            chat_prompt,self.sampling_params
+        )
+        #TODO: COBEL parse checking the efficiency
+        plan, flags = self.parse_answer(available_plans_list, output[0])
+        return plan
 
     def run(
         self,
