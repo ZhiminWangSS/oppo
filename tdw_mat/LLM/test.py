@@ -1,5 +1,19 @@
 import re
 
+
+'''
+# Extract Difference score
+difference_score_match = re.search(r'- Difference score:\s*(\d+)', text)
+difference_score = difference_score_match.group(1) if difference_score_match else None
+
+# Extract Difference content
+difference_content_match = re.search(r'- Different content:\s*(.*?)^-*', text, re.DOTALL | re.MULTILINE)
+difference_content = difference_content_match.group(1).strip() if difference_content_match else None
+
+print("Difference score:", difference_score)
+print("Difference content:\n", difference_content)
+
+'''
 def process_agent_list(text, agent_names_list, new_subgoal_content="new subgoal content"):
     """
     遍历agent_names_list，对每个agent_name进行处理：

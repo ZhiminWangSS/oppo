@@ -27,6 +27,7 @@
                 "--no_save_img"
                 
             ],
+
             "cwd":"${workspaceFolder}/tdw_mat",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"

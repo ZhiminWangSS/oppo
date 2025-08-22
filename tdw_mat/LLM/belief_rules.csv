@@ -3,30 +3,7 @@ first_order,"First order belief rules:
 The first order beliefs describes what information collaborators may know in one’s own perspective.
 
 Format: 
-first_order_beliefs(?collaborator_agent)
-- know_target_object(?object)
-  - location(?room or ?agent or ?container)
-  - completion(?completed or ?incompleted)
-
-- know_container(?container) 
-  - location(?room or ?agent)
-  - contents[?object, ?object, ?object]  # list of objects; reflects belief about what other knows is inside
-
-- know_agent(?agent)
-  - location(?room)
-  - subgoal(a short description about what ?agent plan to do next)
-  - object_in_hand[?item, ?item]  # list of items; ?item is object or container, reflecting belief about other's held items
-  
-- know_room_state(?room)
-  - exploration_state(?all or ?part or ?none)
-
-- know_bed_location()
-  - location(?room)"
-zero-order,"Zero order belief rules:
-The zero order beliefs describes what information may I know in one’s own perspective.
-
-Format: 
-zero_order_beliefs(?agent)
+first_order_beliefs(?agent_collaborator)
 - target_object_state(?object)
   - location(?room or ?agent or ?container)
   - completion(?complete or ?incomplete)
@@ -36,6 +13,29 @@ zero_order_beliefs(?agent)
   - contents[?object, ?object, ?object]  # at most three objects; no containers allowed
 
 - agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?item, ?item]  # at most two items; ?item is object or container
+
+- room_state(?room)
+  - exploration_state(?None or ?Part or ?All)
+
+- bed_location()
+  - location(?room)"
+zero-order,"Zero order belief rules:
+The zero order beliefs describes what information may I know in one's own perspective.
+
+Format: 
+zero_order_beliefs(?agent_myself)
+- target_object_state(?object)
+  - location(?room or ?agent or ?container)
+  - completion(?complete or ?incomplete)
+
+- container_state(?container)
+  - location(?room or ?agent)
+  - contents[?object, ?object, ?object]  # at most three objects; no containers allowed
+
+- agent_state(?agent))
   - location(?room)
   - subgoal(a short description about what ?agent plans to do)
   - object_in_hand[?item, ?item]  # at most two items; ?item is object or container
