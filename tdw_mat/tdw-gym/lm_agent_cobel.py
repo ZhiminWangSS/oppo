@@ -156,9 +156,11 @@ class lm_agent_cobel:
         self.zero_order_beliefs = "None"
         self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
-        self.belief_threshold = 0.5
-        self.my_subgoal = None
-        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: None }
+
+        self.belief_threshold = 5
+        self.my_subgoal = "None"
+        self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
+
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -742,8 +744,8 @@ class lm_agent_cobel:
         self.episode_logger.info(
             f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
         )
-        print(f"=====first-order-after-subgoal======",self.first_order_beliefs)
-        print(f"=====zero-order-after-subgoal======",self.zero_order_beliefs)
+        print(f"=====first-order-after-subgoal======\n",self.first_order_beliefs)
+        print(f"=====zero-order-after-subgoal======\n",self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
@@ -754,8 +756,8 @@ class lm_agent_cobel:
         返回:
             belief_threshold
         """
-        belief_misalignment = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
-        return belief_misalignment
+        difference_score, difference_content = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
+        return difference_score, difference_content
 
     #COBEL-zhimin
     def intuitive_planning(self):
@@ -771,15 +773,15 @@ class lm_agent_cobel:
 
 
     #COBEL-zhimin
-    def adaptive_communication(self):
+    def adaptive_communication(self,difference_content):
         """
         自适应通信，基于当前信念差异生成通信内容
 
         返回:
             communication: 生成的通信内容 应该是一个多人的字典
         """
-        communication = self.LLM.adaptive_communication(self.first_order_beliefs, self.zero_order_beliefs)
-        return communication
+        mes_list = self.LLM.message_generation(difference_content)
+        return mes_list
     
 
     #COBEL -zhimin
@@ -1086,10 +1088,15 @@ class lm_agent_cobel:
                
                 #TODO 刚开始啥也不知道的时候
                 
+                #belief awareness
+                difference_score, difference_content = self.belief_awareness()
 
-
+                # if difference_score > self.belief_threshold:
+                #     self.adaptive_communication()#自适应通信
+                # else:
+                #     self.intuitive_planning()#直观规划
                 #COBEL - zhimin end
-                plan, a_in = self.LLM_plan()
+                plan, a_info = self.LLM_plan()
                 self.logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
                 )
@@ -1329,45 +1336,42 @@ class lm_agent_cobel:
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 
-                #COBEL - zhimin begin 从这里开始维护belief
+                                #COBEL - zhimin begin 从这里开始维护belief
 
-                #TODO process_obs() -> return visual_observation, message by shaokang
 
-                visual_observation = self.observation2text(info)['observation'] #这里的visual_observation是对话历史
-
-                message = self.dialogue_history.copy()  # 这里的message是对话历史
-                message = "" #TODO
+                observation = self.observation2text(info)
+                visual_observation = observation['observation']
+                mes_list = observation['messages'] 
+                
+                #消息列表转换为对话形式\
+                #TODO 监测是否有消息
+                if not all(item is None for item in mes_list):
+                    message = ""
+                    for idx, agent_name in enumerate(self.agent_names):
+                        if mes_list[idx]:
+                            message += f"{agent_name}: {mes_list[idx]}\n"
+                    self.episode_logger.info(
+                        f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
+                    )
+                else:
+                    message = "None"
+                
                 #measurement update
-                self.measurement_update(visual_observation, message)
+                self.measurement_update(visual_observation, message)    
 
                 #prediction update
-                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本
+                opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
 
-                #TODO update the belief with subgoal by shaokang
+                #TODO 刚开始啥也不知道的时候
                 
-                plan, a_info = self.LLM_plan()
-                
-                
+                #belief awareness
+                difference_score, difference_content = self.belief_awareness()
 
-                # measurement_update = self.measurement_update(
-                #     self.obs, self.dialogue_history, self.zero_order_beliefs, self.first_order_beliefs, self.belief_rules
-                # )
-
-                # #如果subgoal做完了,则进行TOM reasoning 和 deliberate planning更新subgoal
-                # while self.subgoal_done is True:
-                #     self.prediction()
-
-
-                # #plan, a_info = self.LLM_plan()
-
-                # if self.belief_awareness() > self.belief_threshold:
-                #     plan = self.adaptive_communication() #实际上是通信内容 这里是做计划 相当于action type6
-                # else:
-                #     plan = self.intuitive_planning()
-                    
-                # if plan == "SUBGOAL_DONE": #TODO:需要更鲁棒的解析
-                #     self.subgoal_done = True
-                #     self.action_history = [] # 清空动作历史
+                if difference_score > self.belief_threshold:
+                    self.adaptive_communication()#自适应通信
+                else:
+                    self.intuitive_planning()#直观规划
+                COBEL - zhimin end
                 
 
                 # self.episode_logger.debug(
@@ -1457,7 +1461,7 @@ class lm_agent_cobel:
 
         for agent_name in agent_subgoal_dic.keys():
             # 构造正则匹配 agent(agent_name)
-            agent_pattern = f'agent\\({re.escape(agent_name)}\\)'
+            agent_pattern = f'agent_state\\({re.escape(agent_name)}\\)'
             agent_matches = list(re.finditer(agent_pattern, result_text))
 
             if not agent_matches:
