@@ -1012,11 +1012,6 @@ class LLM_cobel:
     #COBEL - zhimin
     def message_generation(self, difference_content):
 
-    
-    
-
-
-
             # 使用正则表达式提取zero_order_belief后面的内容
         zero_match = re.search(r'Zero_order_belief:\s*(.*?)(?:\n|$)', difference_content)
         zero_order_belief = zero_match.group(1) if zero_match else ""
@@ -1047,6 +1042,7 @@ class LLM_cobel:
         except Exception as e:
             print(f"Error: {e}")
         return result_dict
+    
     def run(
         self,
         current_step,
