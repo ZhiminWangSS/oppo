@@ -1,71 +1,95 @@
 type,prompt
-zero-stage,"You are good at zero stage belief construction.
-We need you to construct the zero stage belief given the challenge description task goal and the construction rules.
+init,"You are Alice, you and Bob are constructing structured rules to denote the belief of the world. You should extract entity classes in a specific domain given a challenge description below, you should contruct first and send to bob for disscussion. 
+The entity classes should include the instances that interact within the domain like target objects, place to wander around and the agent interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity.
+After you have extracted the entity classes, you are required to reason about the attributions of the entity class and their parameters with quantity restriction demand if there is any described in the domain, you can use a annotation to describe the quantative demand and other important explaination. 
+The parameters can be arbitary amount of entities according to the restriction. 
 
-Challenge_des:
-$Challenge_des$
-
-Shared_goal:
-$Shared_goal$
-
-Construct Step:
-1.Infer and Extract the target objects in the Shared_goal and list them as predicates. Shared goal should added into it as predicate.
-2.Construct predicates to present my subgoal, my location, my satisfied goal and a predicate to denote the current time. Also, a predicate to present my belief of other's satisfied goal is needed.
-3.Construct predicate to denote the explored extend of the places.
-4.Construct predicates to denote my subgoal history and partners' subgoal history according to the agent numbers  described above. Also, predicates to denote my belief of partners' location and partners' subgoal are needed.
-5.You should construct a predicate named my hand which is a dictionary have sub-predicate left and right. Also, others hand is needed but its content can just be a empty list.
-6.Construct a predicate to denote where I last saw my partners.
-Rules:
-1.You only need to construct the predicate instead of the content of the predicate. e.g. 'apple_0':  None, 'apple_1': None
-2.Use 'predicate': None as the required format
-3.Use a dict to maintain the whole zero stage belief. The count of agents can be infered from the useful information above."
-check-refine,"You are excellent in checking and refine the constructed belief.
-We need you to check the format of the belief dictionary and try to refine it given the input and some useful information above.
-
-Rules to follow:
-1.Check the format of the dictionary if some key is omitted. Carefully check the input before you refine the original key. Do not change the original key if not necessary 
-2.Classify the key in the data into several class: 
-object_state: about the target objects, env_state: about the rooms, intention: about the subgoal of mine and others, observation_history: about the history of mine and others and last saw others position, agent_state.
-3.Current time, my satisfied goal and others satisfied goal should not be classified into the class above, they should be set to seperate keys. 
-4.Also, shared goal should be in the intention
-5.Maintain the dictionary format"
-one-stage,"You are an excellent expert in constructing one stage belief.
-We need you to construct a one stage belief given the input and the useful information above.
-
-It's important to notice that one stage belief require my belief of others on the foundation of the zero stage belief. You should create another dict to denote my belief of other's knowledge. e.g. {'my_belief':{...
-},
-'belief about partner_1':{...
-},
-'belief about partner_2':{...
-},
-...
-}
-Notice that my_belief is almost the same as the zero stage belief 
-Rules to follow:
-1.object_state,env_state and intention are needed in the belief about partner denoting my belief of other's knowledge. Other class in zero stage belief should not appear here. e.g. {'belif about partner_1':
-{
-'object_state': {
-'apple_0' : None,
-...
-},
-'env_state':{
-'room_0': None
-},
-'intention':{
-...
-}
-}
-}
-2.Object_state, env_state should maintain the same content as my belief, intention should maintain belief of my subgoal and belief of my location to denote my belief of whether partner knows my subgoal and location.
-3.Satisfied goal of partner should be added into the belief of partner as a seperate key while it have to be delete in my_belief
-3.Maintain the dictionary format.
-4.Do not delete the original key. 
+Here is an example to help to understand the demand above. 
+example:
+```
+- key_state(?key)
+  - location(?room or ?hand or ?container)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- container_state(?container)
+  - location(?room or ?hand)
+  - contents[?object,?object]#at most two; ?object can only be target object
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?item,?item]#at most two;item denote target object or container
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
+```
+here is the task:
+challenge_des:$Challenge_des$
+you should ouptut in the format of the following structure:
+reason:
+construction:
 "
-last-check,"You are excellent in checking and refine the constructed belief.
-We need you to check the format of the belief dictionary and try to refine it given the input and some useful information above.
+disscuss,"You are bob, you and Alice are constructing structured rules to denote the belief of the world. You are required to check the reasoning process and the construction made by Alice given the challenge description below, then send your advice to Alice with the your satisfactory literally Satisfied or Unsatisfied. If you are satisfied, the advice can be None
+The entity classes should include the instances that interact within the domain like target objects, places to wander around and the agents interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity. Check if there is any missing eneity classes or the construction violates the format. 
+Check the attributions of the entity classes and their parameters with quantity restriction demand if there is any of that described in the domain, check the annotation if it perfectly describe the demand. 
+The parameters can be arbitary amount of entities according to the restriction.
 
-Rules to follow:
-1.Check the keys of the belief dictionary if they meet the need of the requirement above.
-2.Check the dictionary format and make sure the content of the key is set to be None
-2.Do not change if not necessary.
-3.Maintain the dictionary format."
+
+
+Here is an example to help to understand the demand above:
+example:
+```
+- key_state(?key)
+  - location(?room or ?hand or ?container)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?item,?item]#at most two;item denote target object or container
+- container_state(?container)
+  - location(?room or ?hand)
+  - contents[?object,?object]#at most two; ?object can only be target object
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
+```
+Challenge_des:$Challenge_des$
+Alice content:$Alice_content$
+Check if alice' construction satisfy the need.
+
+you should output in the format of the following structure:
+reason:
+advice:
+satisfied:(yes or no)
+"
+refine,"You are Alice, you and Bob are are constructing structured rules to denote the belief of the world. You are required to refine the construction according your previous output and advice from bob given some important information.
+Entity classes is the base element you need to construct in the output . The entity classes should include the instances that interact within the domain like target objects, places to wander around and the agents interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity. 
+The attributions of the entity classes and their parameters may have quantity restriction demand if there is any of that described in the domain, you can add annotation to describe the demand. 
+The parameters can be arbitary amount of entities according to the restriction.
+Here is an example to help to understand the demand above:
+example:
+```
+- key_state(?key)
+  - location(?room or ?hand or ?container)
+- locked_door_state(?locked_door)
+  - location(?room)
+  - comletion(?know or ?unknow)
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(a short description about what ?agent plans to do)
+  - object_in_hand[?item,?item]#at most two;item denote target object or container
+- container_state(?container)
+  - location(?room or ?hand)
+  - contents[?object,?object]#at most two; ?object can only be target object
+- room_state(?room)
+  - exploration_state(?Part or ?None or ?All)
+```
+Challenge_des:$Challenge_des$
+previous content:$previous_content$
+Bob's advice:$advice$
+now try to refine your previous output according to Bob's advice.
+you should output in the format of the following structure:
+reason:
+construction:
+
+"
