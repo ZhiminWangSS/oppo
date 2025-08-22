@@ -31,7 +31,15 @@ $OPPO_NAME$.’s Knowledge:
 $FIRST_ORDER_BELIEFS$
 Reasons:
 Subgoal:"
-belief_awareness,
+belief_awareness,"zero order belief:
+ $ZERO_ORDER_BELIEFS$
+first order beliefs: 
+$FIRST_ORDER_BELIEFS$
+Evaluate the different content first_order_belief and zero_order_belief, regardless of format and give a difference index from 0-10 0 for nearly identical 10 for large differences. And then list the difference parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
+- Difference score: 
+- Different content: 
+  - Zero_order_belief: 
+  - First_order_belief:"
 intuitive_planning,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subgoal and previous actions. In order to achieve a subgoal, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this sub-goal. If I have done all actions need in the subgoal, just answer SUBGOAL DONE. 
 
 My state: $MYSTATE$
@@ -41,7 +49,7 @@ Available actions: $AVAILABLEACTIONS$
 Answer:
 
 "
-init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don��t know any information, just put Unknown in () to represent it. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
+init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don’t know any information, just put Unknown in () to represent it. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
 
 Belief rules:
 $BELIEF_RULES$
@@ -56,6 +64,15 @@ First order beliefs:
 
 
 "
+adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference.
+
+
+Belief difference: $BELIEF_DIFFERENCE$
+
+
+Answer in this format:
+{ to_agent1: message1,
+to_agent2: message2 }"
 measurement_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and my own visual observation, what $OPPO_NAME$'s mental knowledge now about object and my state? Remember that $OPPO_NAME$  don’t know $AGENT_NAME$’s Visual Observation. Use the rules below to refine and update $OPPO_NAME$'s mental knowledge:
 $AGENT_NAME$’s Visual Observation: $VISUAL_OBSERVATION$
 Message: 
@@ -75,3 +92,4 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+misalignment_test,

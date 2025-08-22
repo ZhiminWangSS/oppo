@@ -19,7 +19,7 @@ from openai import AzureOpenAI
 from openai import OpenAIError
 from openai import OpenAI
 from datetime import datetime
-
+import ast
 
 
 
@@ -911,8 +911,46 @@ class LLM_cobel:
         return my_subgoal
     
     #COBEL - zhimin
+    def belief_awareness(self, first_order_beliefs, zero_order_beliefs):
+        """
+        信念意识
+
+        参数:
+            first_order_beliefs: 一阶信念
+            zero_order_beliefs: 零阶信念
+
+        返回:
+            信念差异分数
+            信念差异文本
+        """
+        prompt = (
+            self.cobel_prompts_df["prompt"][4]
+            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
+        )
+
+        chat_prompt = [{"role": "user", "content": prompt}]
+        output, usage = self.generator(
+                    chat_prompt, self.sampling_params
+                )   
+        
+        # Extract Difference score
+        difference_score_match = re.search(r'- Difference score:\s*(\d+)', output[0])
+        difference_score = difference_score_match.group(1) if difference_score_match else None
+
+        # Extract Difference content
+        difference_content_match = re.search(r'- Different content:\s*(.*?)^-*', output[0], re.DOTALL | re.MULTILINE)
+        difference_content = difference_content_match.group(1).strip() if difference_content_match else None
+
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========difference=============: \n{output[0]}")
+
+        return difference_score, difference_content
+    
+    #COBEL - zhimin
     def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str]):
-        #TODO shaokang template generation
+
 
         room_des = ""
         for room in room_list:
@@ -948,6 +986,8 @@ class LLM_cobel:
         first_order_beliefs = first_order_match.group(1) if first_order_match else ""
 
         return zero_order_beliefs, first_order_beliefs
+      
+      
     #COBEL  -shaokang
     def intuitive_planning(self,zero_order_beliefs,subgaol,action_history):#TODO:subgoal need tobe change to formally the combination of the available plans
         # Done:action will be cleaned once the subgoal is done
@@ -968,7 +1008,41 @@ class LLM_cobel:
         #TODO: COBEL parse checking the efficiency
         plan, flags = self.parse_answer(available_plans_list, output[0])
         return plan
+      
+    #COBEL - zhimin
+    def message_generation(self, difference_content):
 
+            # 使用正则表达式提取zero_order_belief后面的内容
+        zero_match = re.search(r'Zero_order_belief:\s*(.*?)(?:\n|$)', difference_content)
+        zero_order_belief = zero_match.group(1) if zero_match else ""
+
+        # 使用正则表达式提取first_order_belief后面的内容
+        first_match = re.search(r'First_order_belief:\s*(.*?)(?:\n|$)', difference_content)
+        first_order_belief = first_match.group(1) if first_match else ""
+
+        prompt = (
+            self.cobel_prompts_df["prompt"][6]  #-> init_beliefs
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$FIRST_ORDER_BELIEF_DIFFERENCE$", first_order_belief)
+            .replace("$ZERO_ORDER_BELIEF_DIFFERENCE$", zero_order_belief)
+        )
+
+        chat_prompt = [{"role": "user", "content": prompt}]
+        output, usage = self.generator(
+                    chat_prompt, self.sampling_params
+                ) # usage token cost
+        mes_list = output[0]
+        if self.belief_debug:
+            print(f"=========message_prompt===========: \n{prompt}")
+            print(f"=========mes_list=============: \n{mes_list}")
+        try:
+            result_dict = ast.literal_eval(mes_list)
+            print(result_dict)
+        except Exception as e:
+            print(f"Error: {e}")
+        return result_dict
+    
     def run(
         self,
         current_step,
@@ -1149,13 +1223,13 @@ class LLM_cobel:
     
 
     #COBEL-zhimin
-    def extract_subgoal_content(self,text):
+    def extract_subgoal_content(self, text):
         """
         提取最后一个 subgoal: 之后的内容
         """
-        # 匹配所有 subgoal: 后面的内容
-        pattern = r'subgoal:\s*(.*?)(?=\n\s*-|\n\s*$)'
-        matches = re.findall(pattern, text, re.DOTALL)
+        # 简单匹配 Subgoal: 后面的任何内容直到行尾
+        pattern = r'Subgoal:\s*(.*?)(?:\n|$)'
+        matches = re.findall(pattern, text)
         
         # 返回最后一个匹配的内容，清理空白字符
         if matches:
