@@ -9,7 +9,7 @@
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "./tdw-gym/challenge_cobel.py",
+            "module": "tdw-gym.challenge_cobel",
             "console": "integratedTerminal",
             "args": [
                 "--output_dir","results_coela_testbelief",
@@ -27,7 +27,11 @@
                 "--no_save_img"
                 
             ],
-            "cwd":"/home/mmlab/zmwang/codes/CoELA/tdw_mat"
+
+            "cwd":"${workspaceFolder}/tdw_mat",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+                    }
             
         }
     ]
