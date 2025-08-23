@@ -11,7 +11,6 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-from LLM.LLM_oppo import LLM_oppo
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches

@@ -1385,7 +1385,6 @@ class lm_agent_cobel:
                     plan =  "send a message: " 
                     for partner in mes_to_send.keys():
                         plan += partner + " : " + mes_to_send[partner] + ". "
-
                     #TODO 完成信息发送
                 else:
                     plan = self.intuitive_planning()#直观规划
