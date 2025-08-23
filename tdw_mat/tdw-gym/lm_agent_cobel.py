@@ -769,7 +769,12 @@ class lm_agent_cobel:
             plan: 生成的计划 = 论文中的low-level plan
         """
 
-        plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subgoal,self.action_history)# and subgoal to be added in it 
+        plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subgoal,self.action_history,
+                                           self.current_room,
+                                           self.rooms_explored,
+                                           self.obs["held_objects"],
+                                            self.object_list,
+                                            self.object_per_room,)# and subgoal to be added in it 
         return plan
 
 
@@ -1374,10 +1379,13 @@ class lm_agent_cobel:
                 
                 #belief awareness
                 difference_score, difference_content = self.belief_awareness()
-
                 if difference_score > self.belief_threshold:
                     mes_to_send = self.adaptive_communication() #自适应通信
-                    plan =  "send a message:"
+
+                    plan =  "send a message: " 
+                    for partner in mes_to_send.keys():
+                        plan += partner + " : " + mes_to_send[partner] + ". "
+
                     #TODO 完成信息发送
                 else:
                     plan = self.intuitive_planning()#直观规划
