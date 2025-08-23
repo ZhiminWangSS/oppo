@@ -80,7 +80,8 @@ class LLM_cobel:
         #COBEL - zhimin
         rules_df = pd.read_csv("./LLM/belief_rules.csv")
         self.cobel_prompts_df = pd.read_csv("./LLM/cobel_prompts.csv")
-
+        with open("./belief_rules/rules.txt") as f:
+            self.rules = f.read()
         self.first_order_rules = rules_df['prompt'][0]# need to change rules
         self.zero_order_rules = rules_df['prompt'][1]
         self.prompt_template = (
@@ -323,9 +324,9 @@ class LLM_cobel:
         self.obj_per_room = None
 
         #COBEL - zhimin 初始化信念
-        self.belief_rules = self.zero_order_rules + "\n" + self.first_order_rules #整个任务不变
+        #self.belief_rules = self.zero_order_rules + "\n" + self.first_order_rules #整个任务不变
         # self.zero = self.init_beliefs(self.belief_rules, self.goal_desc, self.rooms)  # 初始化信念
-
+        self.belief_rules = self.rules
     def reset(self, rooms_name, goal_objects):
         """
         重置模型状态
@@ -989,11 +990,26 @@ class LLM_cobel:
       
       
     #COBEL  -shaokang
-    def intuitive_planning(self,zero_order_beliefs,subgaol,action_history):#TODO:subgoal need tobe change to formally the combination of the available plans
+    def intuitive_planning(self,zero_order_beliefs,subgaol,action_history,
+                           current_room,
+                           rooms_explored,
+                           holding_objects,
+                           object_list,
+                           obj_per_room,
+                           ):#TODO:subgoal need tobe change to formally the combination of the available plans
         # Done:action will be cleaned once the subgoal is done
+        #COBEL important information updating
+        self.current_room = current_room
+        self.rooms_explored = rooms_explored
+        self.holding_objects = holding_objects
+        self.object_list = object_list
+        self.obj_per_room = obj_per_room
+
+        prompt = self.cobel_prompts_df['prompt'][5]
         available_plans, num, available_plans_list = self.get_available_plans_cobel()
+        action_history = ",".join(action_history)
         prompt = (
-            self.cobel_prompts_df['prompt'][5]
+            prompt
             .replace('$AGENT_NAME$',self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace('$MYSTATE$',zero_order_beliefs)
@@ -1021,7 +1037,7 @@ class LLM_cobel:
         first_order_belief = first_match.group(1) if first_match else ""
 
         prompt = (
-            self.cobel_prompts_df["prompt"][6]  #-> init_beliefs
+            self.cobel_prompts_df["prompt"][7]  #-> init_beliefs
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$FIRST_ORDER_BELIEF_DIFFERENCE$", first_order_belief)

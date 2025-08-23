@@ -49,8 +49,61 @@ Available actions: $AVAILABLEACTIONS$
 Answer:
 
 "
-init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don’t know any information, just put Unknown in () to represent it. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
+init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don’t know any information, just put Unknown in () to represent it. For items with an unknown quantity, generate only a single instance. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
+Here is an example in the view of Kate:
+```
+zero_order_beliefs(Kate)# my zero order belief
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+  ...
+  ...
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Kate)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- agent_state(Bob)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+...
+...
+- bed_location()
+  - location(Unknown)
 
+first_order_beliefs(Bob) # my first order belief about bob's belief
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+...
+...
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Kate)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- agent_state(Bob)
+  - location(Unknown)
+  - subgoal(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+...
+...
+- bed_location()
+  - location(Unknown)
+
+```
 Belief rules:
 $BELIEF_RULES$
 Goal:
@@ -58,11 +111,9 @@ $GOAL$
 Room list:
 $ROOM_LIST$
 
-Answer in this format:
-Zero order beliefs:
-First order beliefs:
-
-
+Answer in this format(including the annotation):
+Zero order beliefs:# my zero order belief
+First order beliefs:# my first order belief of ?agent's belief
 "
 adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference.
 
@@ -92,4 +143,4 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
-misalignment_test,
+misalignment_test,""
