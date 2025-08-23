@@ -16,7 +16,7 @@ current_dir = os.path.dirname(__file__)
 
 sys.path.append(base_path)
 sys.path.append(current_dir)
-from belief_symbolic_representation import belief_builder##COBEL init the rules bulider
+from belief_symbolic_representation import belief_builder #COBEL init the rules bulider
 from h_agent import H_agent
 # from lm_agent import lm_agent
 from lm_agent_cobel import lm_agent_cobel

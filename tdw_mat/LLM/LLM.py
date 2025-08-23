@@ -9,12 +9,12 @@ import torch
 from tqdm import tqdm
 import logging
 import os
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    LlamaForCausalLM,
-    LlamaTokenizer,
-)
+# from transformers import (
+#     AutoTokenizer,
+#     AutoModelForCausalLM,
+#     LlamaForCausalLM,
+#     LlamaTokenizer,
+# )
 from openai import AzureOpenAI
 from openai import OpenAIError
 from openai import OpenAI

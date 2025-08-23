@@ -13,7 +13,6 @@ base_path = os.getcwd()
 sys.path.append(base_path)
 
 from h_agent import H_agent
-from lm_agent_oppo import lm_agent_oppo
 from lm_agent import lm_agent
 from lm_agent_capo import lm_agent_capo
 
