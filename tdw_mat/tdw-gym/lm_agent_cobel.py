@@ -1363,7 +1363,6 @@ class lm_agent_cobel:
                         message = "None"
                     
                     
-                    
                     #measurement update
                     self.measurement_update(visual_observation, message)    
                     self.obs_not_updated = False
@@ -1382,9 +1381,11 @@ class lm_agent_cobel:
                 difference_score, difference_content = self.belief_awareness()
                 if difference_score > self.belief_threshold:
                     mes_to_send = self.adaptive_communication() #自适应通信
+
                     plan =  "send a message: " 
                     for partner in mes_to_send.keys():
                         plan += partner + " : " + mes_to_send[partner] + ". "
+
                     #TODO 完成信息发送
                 else:
                     plan = self.intuitive_planning()#直观规划
