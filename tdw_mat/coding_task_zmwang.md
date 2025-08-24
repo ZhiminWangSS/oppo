@@ -39,6 +39,9 @@ capo : discussion 3 steps
 3. 模糊
 
 
+
+problem: 因为一开始给了模板，所以在刚开始的oppo prediction会受到belief template影响导致过于激进
+
 UPDATE 0814：
 Module1 : measurement update
 根据info和message更新belief内容

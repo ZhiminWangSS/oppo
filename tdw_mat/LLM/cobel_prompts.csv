@@ -115,15 +115,15 @@ Answer in this format(including the annotation):
 Zero order beliefs:# my zero order belief
 First order beliefs:# my first order belief of ?agent's belief
 "
-adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference.
+adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference. When you need to describe entity, convey it in original format like <livingroom>(2000) , <banana>(12345)
 
 
-Belief difference: $BELIEF_DIFFERENCE$
+Belief difference: 
+$BELIEF_DIFFERENCE$
 
 
 Answer in this format:
-{ to_agent1: message1,
-to_agent2: message2 }"
+{ “to_$OPPO_NAME$” : “message” }"
 measurement_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and my own visual observation, what $OPPO_NAME$'s mental knowledge now about object and my state? Remember that $OPPO_NAME$  don’t know $AGENT_NAME$’s Visual Observation. Use the rules below to refine and update $OPPO_NAME$'s mental knowledge:
 $AGENT_NAME$’s Visual Observation: $VISUAL_OBSERVATION$
 Message: 
@@ -143,4 +143,4 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
-misalignment_test,""
+misalignment_test,
