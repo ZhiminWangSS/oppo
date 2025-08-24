@@ -1369,6 +1369,8 @@ class lm_agent_cobel:
             },
         }
 
+        print(self.visible_obj)
+
         action = None
         lm_times = 0
         message_time = 0 #记录发送消息的次数
