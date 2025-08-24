@@ -744,7 +744,7 @@ class LLM_cobel:
             self.holding_objects[0]["type"] is None #COBEL - zhimin 出现了 Nonetype报错的情况
             or self.holding_objects[1]["type"] is None
         ):
-            for obj in self.object_list[0]:
+            for obj in self.object_list[0]: #TODO
                 available_plans.append(
                     f"go grasp target object <{obj['name']}> ({obj['id']})"
                 )

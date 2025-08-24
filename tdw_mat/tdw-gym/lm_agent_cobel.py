@@ -81,7 +81,7 @@ class lm_agent_cobel:
         self.env_api = None
         self.max_frames = max_frames
         self.output_dir = output_dir
-        self.map_size = (240, 130)
+        self.map_size = (240, 130) #COBEL size该过了
         self.save_img = True
 
         # 场景边界
@@ -749,8 +749,10 @@ class lm_agent_cobel:
         # self.episode_logger.info(
         #     f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
         # )
-        print(f"=====first-order-after-subgoal======\n",self.first_order_beliefs)
-        print(f"=====zero-order-after-subgoal======\n",self.zero_order_beliefs)
+        print("======opposubgoal========",opponent_subgoal)
+        print("======mysubgoal========",my_subgoal)
+        # print(f"=====first-order-after-subgoal======\n",self.first_order_beliefs)
+        # print(f"=====zero-order-after-subgoal======\n",self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
 
     #COBEL-zhimin
@@ -818,7 +820,7 @@ class lm_agent_cobel:
                             container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '),  '
                     container[id] += "in it. "
         if holding[0] == '' and holding[1] == '':
-            pro_holding = "holding nothing "
+            pro_holding = "holding nothing."
         else:
             pro_holding = " holding" + holding[0] + container[0] 
             pro_holding += ' and ' if holding[0] != None and holding[1] != None else ''
@@ -1441,7 +1443,7 @@ class lm_agent_cobel:
                     self.plan_logger.info(
                         f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
                     )
-                    #TODO 完成信息发送
+                    
                 else:
                     plan = self.intuitive_planning()#直观规划
                     message_time = 0
