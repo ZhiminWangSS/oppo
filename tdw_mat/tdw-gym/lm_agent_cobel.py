@@ -11,6 +11,7 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 import re
+import ast
 
 from LLM.LLM_cobel import LLM_cobel
 
@@ -150,16 +151,17 @@ class lm_agent_cobel:
         # print(f"是否启用通信：{self.communication}")
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
-
+        self.plan_logger = None #记录subgoal plan等等
         # COBEL-zhimin
         self.belief_rules = None
         self.zero_order_beliefs = "None"
         self.first_order_beliefs = "None"
         self.subgoal_done = True  # 是否完成子目标
         self.obs_not_updated = True  # 是否更新了观测
+        self.max_message_time = 1
 
         self.belief_threshold = 5
-        self.my_subgoal = "None"
+        self.my_subgoal = None
         self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
 
 
@@ -411,7 +413,8 @@ class lm_agent_cobel:
         gt_mask=True,
         save_img=True,
         episode=None,
-        episode_logger=None
+        episode_logger=None,
+        plan_logger=None
     ):
         self.force_ignore = []
         self.characters = 0 
@@ -492,6 +495,8 @@ class lm_agent_cobel:
         self.navigation_threshold = 5
 
         self.episode_logger = episode_logger
+
+        self.plan_logger = plan_logger
         # print(self.rooms_name)
         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
         initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
@@ -712,11 +717,10 @@ class lm_agent_cobel:
         else:
             self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
             self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, "None", message, self.belief_rules)
+        
+        beliefs = self.zero_order_beliefs + '\n' + self.first_order_beliefs
         self.episode_logger.info(
-            f"zero_order_beliefs:\n{self.zero_order_beliefs}"
-        )
-        self.episode_logger.info(
-            f"first_order_belief:\n{self.first_order_beliefs}"
+            f"\nat {self.steps}  steps {self.agent_names[self.agent_id]}\n meaturementw_updated_beliefs:\n{beliefs}"
         )
 
 
@@ -729,22 +733,22 @@ class lm_agent_cobel:
 
         """
         # COBEL logger done
-        opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs)
+        opponent_subgoal = self.LLM.prediction_first_order(self.first_order_beliefs,self.episode_logger)
         oppo_subgoals_dic = {
             self.agent_names[1 - self.agent_id]: opponent_subgoal
         }
         # self.first_order_beliefs = self.update_subgoals(self.first_order_beliefs,oppo_subgoals_dic)
         self.zero_order_beliefs = self.update_subgoals(self.zero_order_beliefs, oppo_subgoals_dic)
-        my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs)
+        my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs,self.episode_logger)
         agent_subgoals_dic = {
                     self.agent_names[self.agent_id]: my_subgoal,
                     # self.agent_names[1 - self.agent_id]: opponent_subgoal,
                 }
 
         self.zero_order_beliefs = self.update_subgoals(self.zero_order_beliefs, agent_subgoals_dic)
-        self.episode_logger.info(
-            f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
-        )
+        # self.episode_logger.info(
+        #     f"opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
+        # )
         print(f"=====first-order-after-subgoal======\n",self.first_order_beliefs)
         print(f"=====zero-order-after-subgoal======\n",self.zero_order_beliefs)
         return opponent_subgoal, my_subgoal
@@ -774,7 +778,9 @@ class lm_agent_cobel:
                                            self.rooms_explored,
                                            self.obs["held_objects"],
                                             self.object_list,
-                                            self.object_per_room,)# and subgoal to be added in it 
+                                            self.object_per_room,
+                                            self.episode_logger
+                                            )# and subgoal to be added in it 
         return plan
 
 
@@ -840,13 +846,13 @@ class lm_agent_cobel:
                                 oppo_container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '), '
                         oppo_container[id] += "in it. "
         if oppo_holding[0] == '' and oppo_holding[1] == '':
-            oppo_pro_holding = " holding nothing"
+            oppo_pro_holding = " holding nothing."
         else:
             oppo_pro_holding = " holding" + oppo_holding[0] + oppo_container[0]
             oppo_pro_holding += " and " if oppo_holding[0] != None and oppo_holding[1] != None else ''
             oppo_pro_holding += oppo_holding[1] + oppo_container[1] 
         observation = "At " + str(current_frames) + " frames, I'm in " + current_room + ', ' + pro_holding + seeing 
-        observation += ("I saw partner at " + last_see_frame + ' frames at ' + last_agent_position + oppo_pro_holding) if last_see_frame is not None else ''
+        observation += ("I saw "+ self.agent_names[self.opponent_agent_id] + " at " + last_see_frame + ' frames at ' + last_agent_position + oppo_pro_holding) if last_see_frame is not None else ''
 
         explored_extend = 'I have '
         for item in self.new_room_explored.keys():
@@ -859,7 +865,37 @@ class lm_agent_cobel:
         explored_extend = explored_extend if explored_extend != 'I have ' else ""
         observation += explored_extend
         measurement_observation['observation'] = observation
-        measurement_observation['messages'] = self.obs['messages']
+        # measurement_observation['messages'] = self.obs['messages']
+        # 先把上次自己发的消息加上
+        measurement_observation['messages'] = {}
+        for receiver_name in self.agent_names:
+            if self.obs['messages'][self.agent_id] is not None:
+                measurement_observation['messages'][receiver_name] = f"{receiver_name}:" #str
+                measurement_observation['messages'][receiver_name] += self.obs['messages'][self.agent_id]
+                measurement_observation['messages'][receiver_name] += '\n'
+            else:
+                measurement_observation['messages'][receiver_name] = ""
+        # 再把收到的消息加上
+        for idx, sender_name in enumerate(self.agent_names):
+            if self.obs['messages'][idx] is not None:
+                mes_dic = ast.literal_eval(self.obs['messages'][idx])
+                for receiver_name in self.agent_names:
+                    for key,value in mes_dic.items():
+                        if receiver_name in key:
+                            measurement_observation['messages'][receiver_name] += f"{sender_name}:" #str
+                            measurement_observation['messages'][receiver_name] += value #str
+                            measurement_observation['messages'][receiver_name] += '\n'
+
+        for idx, receiver_name in enumerate(self.agent_names):
+            if measurement_observation['messages'][receiver_name] == "":
+                measurement_observation['messages'][receiver_name] = "None"
+
+
+        #Done send to specific agent
+        self.plan_logger.info(
+                        f"\nAt {self.steps} steps, {self.agent_names[self.agent_id]}:\nvisual_obs:\n{measurement_observation['observation']}\nMessages:\n{measurement_observation['messages'][self.agent_names[self.agent_id]]}"
+                    )
+
         return measurement_observation
 
 
@@ -1076,9 +1112,9 @@ class lm_agent_cobel:
                     for idx, agent_name in enumerate(self.agent_names):
                         if mes_list[idx]:
                             message += f"{agent_name}: {mes_list[idx]}\n"
-                    self.episode_logger.info(
-                        f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
-                    )
+                    # self.episode_logger.info(
+                    #     f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
+                    # )
                 else:
                     message = "None"
                 
@@ -1333,6 +1369,7 @@ class lm_agent_cobel:
 
         action = None
         lm_times = 0
+        message_time = 0 #记录发送消息的次数
         while action is None: #SUBGOAL DONE
             if self.plan is None: #COBEL  需要处理一种情况 当subgoal done之后其实是不需要在observation update一次的 所以直接跳过就好
                 self.target_pos = None
@@ -1347,22 +1384,23 @@ class lm_agent_cobel:
                 if self.obs_not_updated:
                     observation = self.observation2text(info)
                     visual_observation = observation['observation']
-                    mes_list = observation['messages'] 
-                    
-                    #消息列表转换为对话形式\
+                    mes_dic = observation['messages']
+
+                    #消息列表转换为对话形式
                     #TODO 监测是否有消息
-                    if not all(item is None for item in mes_list):
-                        message = ""
-                        for idx, agent_name in enumerate(self.agent_names):
-                            if mes_list[idx]:
-                                message += f"{agent_name}: {mes_list[idx]}\n"
-                        self.episode_logger.info(
-                            f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
-                        )
-                    else:
-                        message = "None"
+                    # if not all(item is None for item in mes_list):
+                    #     message = ""
+                    #     for idx, agent_name in enumerate(self.agent_names):
+                    #         if mes_list[idx]:
+                    #             message += f"{agent_name}: {mes_list[idx]}\n"
+                    #     self.episode_logger.info(
+                    #         f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
+                    #     )
+                    # else:
+                    #     message = "None"
                     
-                    
+                    message = mes_dic[self.agent_names[self.agent_id]]
+
                     #measurement update
                     self.measurement_update(visual_observation, message)    
                     self.obs_not_updated = False
@@ -1371,6 +1409,10 @@ class lm_agent_cobel:
                 if self.my_subgoal is None:
                     #TODO:add prediction here
                     opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
+
+                    self.plan_logger.info(
+                        f"\n{self.agent_names[self.agent_id]}:opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
+                    )
                     self.my_subgoal = my_subgoal
                     self.action_history = []#COBEL clean the action history
                     continue
@@ -1379,15 +1421,33 @@ class lm_agent_cobel:
                 
                 #belief awareness
                 difference_score, difference_content = self.belief_awareness()
-                if difference_score > self.belief_threshold:
-                    mes_to_send = self.adaptive_communication() #自适应通信
+                #TODO difference content不太稳定
+                self.plan_logger.info(
+                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
+                )
+
+                self.episode_logger.info(
+                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
+                )
+                self
+                if int(difference_score) > self.belief_threshold and message_time < self.max_message_time: #TODO 这里可以改成adaptive的
+                    mes_to_send = self.adaptive_communication(difference_content) #自适应通信
 
                     plan =  "send a message: " 
-                    for partner in mes_to_send.keys():
-                        plan += partner + " : " + mes_to_send[partner] + ". "
+                    message_time += 1
+                    # for partner in mes_to_send.keys():
+                    #     plan += partner + " : " + mes_to_send[partner] + ". "
+                    plan += str(mes_to_send) #COBEL - zhimin 字典转字符串 然后在接受时转回dic
+                    self.plan_logger.info(
+                        f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                    )
                     #TODO 完成信息发送
                 else:
                     plan = self.intuitive_planning()#直观规划
+                    message_time = 0
+                    self.plan_logger.info(
+                        f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                    )
                     if plan == "SUBGOAL DONE": #TODO:have to program a fuzzy match in parse
                         self.my_subgoal = None
                         # self.plan = None #其实不需要

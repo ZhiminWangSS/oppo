@@ -7,7 +7,7 @@ import time
 import pickle
 import logging
 import sys
-
+import re
 
 # add this dictionary to python env path:
 base_path = os.getcwd()
@@ -117,7 +117,7 @@ class Challenge:
             float: 平均完成率
         """
         ##COBEL init the rules builder
-        self.rules_builder()
+        # self.rules_builder() #COBEL - zhimin 暂时不用
 
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -131,7 +131,7 @@ class Challenge:
         for i, episode in enumerate(eval_episodes):
             #COBEL belief info logger
             episode_logger = init_episode_logs(self.output_dir, episode)
-
+            plan_logger = init_plan_logs(self.output_dir, episode)
             print(f"当前执行的episode为：{episode}")
             start_time = time.time()
             # 检查是否已经评估过该回合
@@ -203,7 +203,8 @@ class Challenge:
                             rooms_name=info["rooms_name"],
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
-                            episode_logger=episode_logger
+                            episode_logger=episode_logger,
+                            plan_logger = plan_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -227,9 +228,9 @@ class Challenge:
                 for agent_id, agent in enumerate(agents):
                     
                     # print(f"agent状态：{state[str(agent_id)]}")
-                    actions[str(agent_id)] = agent.act(state[str(agent_id)])
+                    actions[str(agent_id)] = agent.act_cobel(state[str(agent_id)])
                     # 执行大模型推理获得动作
-                    print(f"agent_id:{agent_id}\n",agent.get_tokens())
+                    print(f"agent_id:{agent_id}\ntoken_cost:{agent.get_tokens()}")
                 state, reward, done, info = self.env.step(actions)
                 local_reward += reward
                 local_finish = self.env.check_goal()
@@ -324,10 +325,10 @@ def init_episode_logs(output_dir, episode):
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
-    episode_logger = logging.getLogger(f"episode_{episode}")
+    episode_logger = logging.getLogger(f"belief_episode_{episode}")
     episode_logger.setLevel(logging.DEBUG)
     
-    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_belief_{episode}.log"))
     fh.setLevel(logging.DEBUG)
     
     formatter = logging.Formatter(
@@ -338,6 +339,29 @@ def init_episode_logs(output_dir, episode):
     episode_logger.addHandler(fh)
     
     return episode_logger
+
+def init_plan_logs(output_dir, episode):
+    """
+    初始化每个episode的日志记录器
+    """
+    episode_dir = os.path.join(output_dir, str(episode))
+    os.makedirs(episode_dir, exist_ok=True)
+    
+    plan_logger = logging.getLogger(f"plan_episode_{episode}")
+    plan_logger.setLevel(logging.DEBUG)
+    
+    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+    fh.setLevel(logging.DEBUG)
+    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    fh.setFormatter(formatter)
+    
+    plan_logger.addHandler(fh)
+    
+    return plan_logger
+
 
 
 def main():
@@ -401,8 +425,35 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     args.output_dir = os.path.join(args.output_dir, args.experiment_name)
     os.makedirs(args.output_dir, exist_ok=True)
+
+
+    # 自动推导 run_id
+    if args.run_id is None or args.run_id == "":
+        # 查找已有的 run_x 目录
+        existing_runs = [
+            d for d in os.listdir(args.output_dir)
+            if re.match(r"^run_\d+$", d) and os.path.isdir(os.path.join(args.output_dir, d))
+        ]
+        if existing_runs:
+            # 提取数字并找最大值
+            run_numbers = [int(d.split("_")[1]) for d in existing_runs]
+            next_run_id = max(run_numbers) + 1
+        else:
+            next_run_id = 0
+        args.run_id = f"run_{next_run_id}"
+    else:
+        # 如果用户手动指定了 run_id，但不满足 run_x 格式，也允许
+        pass
+
+
+
     args.output_dir = os.path.join(args.output_dir, args.run_id)
     os.makedirs(args.output_dir, exist_ok=True)
+
+
+
+
+
     logger,time_logger = init_logs(args.output_dir)#COBEL normal logger
     
 

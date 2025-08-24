@@ -80,7 +80,7 @@ class LLM_cobel:
         #COBEL - zhimin
         rules_df = pd.read_csv("./LLM/belief_rules.csv")
         self.cobel_prompts_df = pd.read_csv("./LLM/cobel_prompts.csv")
-        with open("./belief_rules/rules.txt") as f:
+        with open("./belief_rules/rules.txt") as f: #修改为rules
             self.rules = f.read()
         self.first_order_rules = rules_df['prompt'][0]# need to change rules
         self.zero_order_rules = rules_df['prompt'][1]
@@ -866,7 +866,7 @@ class LLM_cobel:
         return updated_zero_order_beliefs
 
     #COBEL-zhimin
-    def prediction_first_order(self, first_order_beliefs):
+    def prediction_first_order(self, first_order_beliefs, episode_logger):
         prompt = (
             self.cobel_prompts_df["prompt"][2]
             .replace("$AGENT_NAME$", self.agent_name)
@@ -885,11 +885,14 @@ class LLM_cobel:
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========opponent_subgoal=============: \n{output[0]}")
-
+        
+        # episode_logger.info(
+        #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
+        # )
         return opponent_subgoal
     
     #COBEL-zhimin
-    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs):
+    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs, episode_logger):
         prompt = (
             self.cobel_prompts_df["prompt"][3] 
             .replace("$AGENT_NAME$", self.agent_name)
@@ -911,7 +914,9 @@ class LLM_cobel:
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========my_subgoal=============: \n{output[0]}")
-  
+        # episode_logger.info(
+        #     f"\n{self.agent_name}predict_zero_order:\n{output[0]}"
+        # )
 
         return my_subgoal
     
@@ -944,13 +949,16 @@ class LLM_cobel:
         difference_score = difference_score_match.group(1) if difference_score_match else None
 
         # Extract Difference content
-        difference_content_match = re.search(r'- Different content:\s*(.*?)^-*', output[0], re.DOTALL | re.MULTILINE)
-        difference_content = difference_content_match.group(1).strip() if difference_content_match else None
+        # difference_content_match = re.search(r'- Different content:\s*(.*?)^-*', output[0], re.DOTALL | re.MULTILINE)
+        # difference_content = difference_content_match.group(1).strip() if difference_content_match else None
 
+        difference_content = "\n".join(
+            re.findall(r'- Different content:\s*(?:  - [^\n]*\n?)+', output[0], re.DOTALL)
+        ).strip()
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========difference=============: \n{output[0]}")
-
+        
         return difference_score, difference_content
     
     #COBEL - zhimin
@@ -1003,6 +1011,7 @@ class LLM_cobel:
                            holding_objects,
                            object_list,
                            obj_per_room,
+                           episode_logger
                            ):#TODO:subgoal need tobe change to formally the combination of the available plans
         # Done:action will be cleaned once the subgoal is done
         #COBEL important information updating
@@ -1028,6 +1037,14 @@ class LLM_cobel:
         output,usage = self.generator(
             chat_prompt,self.sampling_params
         )
+        if self.belief_debug:
+            print(f"=========plan_prompt===========: \n{prompt}")
+            print(f"=========intuitive_planning=============: \n{output[0]}")
+        
+        episode_logger.info(
+            f"\n{self.agent_name}intuitive_planning:\n{output[0]}"
+        )
+
         #TODO: COBEL parse checking the efficiency
         plan, flags = self.parse_answer(available_plans_list, output[0])
         return plan
@@ -1047,6 +1064,7 @@ class LLM_cobel:
             self.cobel_prompts_df["prompt"][7]  #-> init_beliefs
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$BELIEF_DIFFERENCE$", difference_content)
             .replace("$FIRST_ORDER_BELIEF_DIFFERENCE$", first_order_belief)
             .replace("$ZERO_ORDER_BELIEF_DIFFERENCE$", zero_order_belief)
         )
@@ -1247,70 +1265,6 @@ class LLM_cobel:
         return plan, info
     
 
-
-
-
-
-
-    def intuitive_planning(
-        self,
-        current_step,
-        current_room,
-        rooms_explored,
-        holding_objects,
-        satisfied,
-        object_list,
-        action_history,
-        dialogue_history,
-        opponent_grabbed_objects=None,
-        opponent_last_room=None,
-        episode_logger = None
-    ):
-        
-        info = {}
-        print("current_step", current_step)
-        # llm_logger.info(f"当前步骤: {current_step}")
-        self.current_room = current_room
-        self.rooms_explored = rooms_explored
-        self.holding_objects = holding_objects
-        self.object_list = object_list
-
-        #COBEL - zhimin 这里会涉及初始化
-
-
-        available_plans, num, available_plans_list = self.get_available_plans_cobel()
-        if num == 0:
-            print("Warning! No available plans!")
-            plan = None
-            info.update({"num_available_actions": num, "plan": None})
-            return plan, info
-
-        prompt = prompt.replace("$AVAILABLE_ACTIONS$", available_plans)
-
-
-        plan, flags = self.parse_answer(available_plans_list, output)
-        #这里plan就是包含消息的动作
-        if flags == "COMMUNICATION":
-            self.communication_cost += 1
-            self.characters += len(plan.split(" ")) #send a message: "xxxxx" character
-            # # 新增：记录通信内容
-            # if plan.startswith("send a message:"):
-            #     message_content = plan[len("send a message:"):].strip()
-                # llm_logger.info(f"{self.agent_name} 发送消息内容: {message_content}\n当前通信次数{self.communication_cost}")
-            # llm_logger.info(f"{self.agent_name}:当前计划:\n{plan}")
-        if self.debug:
-            print(f"plan: {plan}\n")
-        info.update(
-            {
-                "num_available_actions": num,
-                "prompt_plan_stage_2": normal_prompt,
-                "output_plan_stage_2": output,
-                "parse_exception": flags,
-                "plan": plan,
-                "total_cost": self.total_cost,
-            }
-        )
-        return plan, info
     
 
     #COBEL-zhimin
