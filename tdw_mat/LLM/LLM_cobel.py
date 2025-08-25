@@ -179,16 +179,42 @@ class LLM_cobel:
         def lm_engine(source, lm_id):
 
             @backoff.on_exception(backoff.expo, OpenAIError)
-            def openai_generate(prompt, sampling_params):
+            def openai_generate(prompt, sampling_params, model_size="large"):
                 usage = 0
+                # 初始化token计数器（如果不存在）
+                if not hasattr(self, 'small_model_tokens_in'):
+                    self.small_model_tokens_in = 0
+                    self.small_model_tokens_out = 0
+                    self.large_model_tokens_in = 0
+                    self.large_model_tokens_out = 0
+                
                 try:
+                    # 根据model_size参数选择不同的模型
+                    if model_size == "small":
+                        # 使用小参数模型
+                        model_to_use = "qwen2.5-7b-instruct" #TODO
+                    else:
+                        # 使用大参数模型（默认）
+                        model_to_use = self.lm_id #TODO
+                    
                     if self.chat:
                         response = client.chat.completions.create(
-                            model=self.lm_id, messages=prompt, **sampling_params
+                            model=model_to_use, messages=prompt, **sampling_params
                         )
                         self.api += 1
-                        usage = response.usage.completion_tokens ## input:prompt output completion total:total
+                        usage = response.usage.completion_tokens
+                        
+                        # 根据模型大小记录token使用情况
+                        if model_size == "small":
+                            self.small_model_tokens_in += response.usage.prompt_tokens
+                            self.small_model_tokens_out += response.usage.completion_tokens
+                        else:
+                            self.large_model_tokens_in += response.usage.prompt_tokens
+                            self.large_model_tokens_out += response.usage.completion_tokens
+                        
+                        # 总token计数
                         self.tokens += response.usage.completion_tokens
+                        
                         if self.debug:
                             with open(f"LLM/chat_raw.json", "a") as f:
                                 f.write(
@@ -212,9 +238,20 @@ class LLM_cobel:
                     #                   range(sampling_params['n'])]
                     elif "text-" in lm_id:
                         response = client.completions.create(
-                            model=lm_id, prompt=prompt, **sampling_params
+                            model=model_to_use, prompt=prompt, **sampling_params
                         )
+                        
+                        # 根据模型大小记录token使用情况
+                        if model_size == "small":
+                            self.small_model_tokens_in += response.usage.prompt_tokens
+                            self.small_model_tokens_out += response.usage.completion_tokens
+                        else:
+                            self.large_model_tokens_in += response.usage.prompt_tokens
+                            self.large_model_tokens_out += response.usage.completion_tokens
+                            
+                        # 总token计数
                         self.tokens += response.usage.completion_tokens
+                        
                         # print(json.dumps(response, indent=4))
                         if self.debug:
                             with open(f"LLM/raw.json", "a") as f:
@@ -304,13 +341,12 @@ class LLM_cobel:
                     print(generated_samples)
                 return generated_samples, 0
 
-            def _generate(prompt, sampling_params):
+            def _generate(prompt, sampling_params, model_size="large"):
                 usage = 0
                 if source == "openai":
-                    return openai_generate(prompt, sampling_params)
+                    return openai_generate(prompt, sampling_params, model_size)
                 elif self.source == "hf":
                     return hf_generate(prompt, sampling_params)
-
                 else:
                     raise ValueError("invalid source")
 
@@ -892,7 +928,7 @@ class LLM_cobel:
         return opponent_subgoal
     
     #COBEL-zhimin
-    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs, episode_logger):
+    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs, episode_logger, model_size="large"):
         prompt = (
             self.cobel_prompts_df["prompt"][3] 
             .replace("$AGENT_NAME$", self.agent_name)
@@ -903,7 +939,7 @@ class LLM_cobel:
 
         chat_prompt = [{"role": "user", "content": prompt}]
         output, usage = self.generator(
-                    chat_prompt, self.sampling_params
+                    chat_prompt, self.sampling_params, model_size
                 ) # usage token cost
         # match = re.search(r'Subgoal[：:]\s*(.+?)(?:\n\S|\Z)', output[0], re.DOTALL)
         # if match:
@@ -962,7 +998,7 @@ class LLM_cobel:
         return difference_score, difference_content
     
     #COBEL - zhimin
-    def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str]):
+    def init_beliefs(self, belief_rules:str, goal:str, room_list:List[str], model_size="large"):
 
 
         room_des = ""
@@ -980,7 +1016,7 @@ class LLM_cobel:
 
         chat_prompt = [{"role": "user", "content": prompt}]
         output, usage = self.generator(
-                    chat_prompt, self.sampling_params
+                    chat_prompt, self.sampling_params, model_size
                 ) # usage token cost
         initial_beliefs = output[0]
         if self.belief_debug:
@@ -1050,7 +1086,7 @@ class LLM_cobel:
         return plan
       
     #COBEL - zhimin
-    def message_generation(self, difference_content):
+    def message_generation(self, difference_content, model_size="large"):
 
             # 使用正则表达式提取zero_order_belief后面的内容
         zero_match = re.search(r'Zero_order_belief:\s*(.*?)(?:\n|$)', difference_content)
@@ -1071,7 +1107,7 @@ class LLM_cobel:
 
         chat_prompt = [{"role": "user", "content": prompt}]
         output, usage = self.generator(
-                    chat_prompt, self.sampling_params
+                    chat_prompt, self.sampling_params, model_size
                 ) # usage token cost
         mes_list = output[0]
         if self.belief_debug:
