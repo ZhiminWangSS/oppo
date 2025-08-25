@@ -160,7 +160,7 @@ class lm_agent_cobel:
         self.obs_not_updated = True  # 是否更新了观测
         self.max_message_time = 1
 
-        self.belief_threshold = 5
+        self.belief_threshold = 6
         self.my_subgoal = None
         self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
 
@@ -817,7 +817,7 @@ class lm_agent_cobel:
                     container[id] = 'with'
                     for index,obj in enumerate(item["contained"]):
                         if obj != None:
-                            container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '),  '
+                            container[id] += '<' + item['contained_name'][index] + '> ' + '(' + str(obj) + '),  '
                     container[id] += "in it. "
         if holding[0] == '' and holding[1] == '':
             pro_holding = "holding nothing."
@@ -843,7 +843,7 @@ class lm_agent_cobel:
                     oppo_holding[id] = '<' + item["name"] + "> " + '(' + str(item["id"]) + ")"
                     if item['contained'] != [None, None, None]:
                         oppo_container[id] = 'with'
-                        for obj,index in enumerate(item["contained"]):
+                        for index,obj in enumerate(item["contained"]):
                             if obj != None:
                                 oppo_container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '), '
                         oppo_container[id] += "in it. "
