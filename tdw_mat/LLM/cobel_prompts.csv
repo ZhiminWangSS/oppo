@@ -18,30 +18,29 @@ $ZERO_ORDER_BELIEFS$
 Belief rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
-prediction_first_order,"I'm $OPPO_NAME$. My friend $AGENT_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given my mental knowledge organized in a structured format. Please reason over these information and predict the goals’ perhaps states and then infer what should i will do next to maximize the efficiency. First give your reasons and answer me  with the subgoal only.
+prediction_first_order,"I'm $OPPO_NAME$ . My friend $AGENT_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time including object or containers. A container can hold at least 3 objects. Given my mental knowledge organized in a structured format. Please reason over these information and predict the target objects’ perhaps locations and then infer what should I will do next to maximize the efficiency based on my state. First give your reasons( at most five reasons) and answer me  with the subgoal only. The subgoal should be the subprogress to finish the incompleted, composing of several actions.
 
 My own Mental Knowledge: 
 $FIRST_ORDER_BELIEFS$
 Reasons:
 Subgoal:"
-prediction_zero_order,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. Given my mental knowledge and the $OPPO_NAME$’s mental knowledge I believe. Please reason over these information and predict the goals’ perhaps states and then infer what should i will do next to maximize the efficiency. First give your reasons and answer me  with the subgoal only.
+prediction_zero_order,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time including object or containers. A container can hold at least 3 objects. Given my mental knowledge and the $OPPO_NAME$’s subgoal I believe. Please reason over these information and predict the target objects’ perhaps states， and then infer what should i do next to maximize the efficiency based on my state. First give your reasons( at most five reasons) and answer me  with the subgoal only. The subgoal should be the subprogress to finish the incompleted goal, composing of several actions.
 My own Mental Knowledge: 
 $ZERO_ORDER_BELIEFS$
-$OPPO_NAME$.’s Knowledge: 
-$FIRST_ORDER_BELIEFS$
+$OPPO_NAME$.’s Subgoal: 
+$OPPO_SUBGOAL$
 Reasons:
 Subgoal:"
 belief_awareness,"zero order belief:
  $ZERO_ORDER_BELIEFS$
 first order beliefs: 
 $FIRST_ORDER_BELIEFS$
-Evaluate the different content first_order_belief and zero_order_belief, regardless of format and give a difference index from 0-10 0 for nearly identical 10 for large differences. And then list the difference parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
+Evaluate the different content first_order_belief and zero_order_belief, regardless of format and give a difference index from 0-10 0 for nearly identical 10 for large differences in both different belief’ count and content. And then list the difference parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
 - Difference score: 
 - Different content: 
   - Zero_order_belief: 
   - First_order_belief:"
-intuitive_planning,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subgoal and previous actions. In order to achieve a subgoal, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this sub-goal. If I have done all actions need in the subgoal, just answer SUBGOAL DONE. 
-
+intuitive_planning,"I'm $AGENT_NAME$ My friend $OPPO_NAME$. and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subgoal and previous actions. In order to achieve a subgoal, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this sub-goal. If I have done all actions need in the subgoal, just answer SUBGOAL DONE. Don’t give any  analysis and reasoning progress, just output the action.
 My state: $MYSTATE$
 Subgoal: $SUBGOAL$
 Previous actions: $PREVIOUSACTIONS$

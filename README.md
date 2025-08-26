@@ -60,3 +60,7 @@ TIPs:
 
 
 - 此外，如果性能不好，考虑引入重规划，刚开始的subgoal不太稳定，还可能一直误导后面的intuitive planning。
+
+
+
+- bed的位置好像不用知道 直接transport过去就行了

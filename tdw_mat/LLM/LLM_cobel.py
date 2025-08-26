@@ -928,12 +928,12 @@ class LLM_cobel:
         return opponent_subgoal
     
     #COBEL-zhimin
-    def prediction_zero_order(self, first_order_beliefs, zero_order_beliefs, episode_logger, model_size="large"):
+    def prediction_zero_order(self, oppo_subgoal, zero_order_beliefs, episode_logger, model_size="large"):
         prompt = (
             self.cobel_prompts_df["prompt"][3] 
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$OPPO_SUBGOAL$", oppo_subgoal)
             .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
         )
 
@@ -1060,6 +1060,7 @@ class LLM_cobel:
         prompt = self.cobel_prompts_df['prompt'][5]
         available_plans, num, available_plans_list = self.get_available_plans_cobel()
         action_history = ",".join(action_history)
+        
         prompt = (
             prompt
             .replace('$AGENT_NAME$',self.agent_name)

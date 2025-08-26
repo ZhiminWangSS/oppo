@@ -12,6 +12,7 @@ from PIL import Image
 from agent_memory import AgentMemory
 import re
 import ast
+from concurrent.futures import ThreadPoolExecutor
 
 from LLM.LLM_cobel import LLM_cobel
 
@@ -159,8 +160,8 @@ class lm_agent_cobel:
         self.subgoal_done = True  # 是否完成子目标
         self.obs_not_updated = True  # 是否更新了观测
         self.max_message_time = 1
-
-        self.belief_threshold = 6
+        self.action_history_max_length = 3
+        self.belief_threshold = 8
         self.my_subgoal = None
         self.oppo_subgoal = {self.agent_names[self.opponent_agent_id]: "None"}
 
@@ -715,9 +716,19 @@ class lm_agent_cobel:
             self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
         
         else:
-            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
-            self.first_order_beliefs = self.LLM.update_first_order_beliefs(self.first_order_beliefs, "None", message, self.belief_rules)
-        
+            # 并行执行零阶和一阶信念更新
+
+            with ThreadPoolExecutor() as executor:
+                future_zero = executor.submit(
+                    self.LLM.update_zero_order_beliefs,
+                    self.zero_order_beliefs, visual_observation, message, self.belief_rules
+                )
+                future_first = executor.submit(
+                    self.LLM.update_first_order_beliefs,
+                    self.first_order_beliefs, "None", message, self.belief_rules
+                )
+                self.zero_order_beliefs = future_zero.result()
+                self.first_order_beliefs = future_first.result()
         beliefs = self.zero_order_beliefs + '\n' + self.first_order_beliefs
         self.episode_logger.info(
             f"\nat {self.steps}  steps {self.agent_names[self.agent_id]}\n meaturementw_updated_beliefs:\n{beliefs}"
@@ -739,7 +750,7 @@ class lm_agent_cobel:
         }
         # self.first_order_beliefs = self.update_subgoals(self.first_order_beliefs,oppo_subgoals_dic)
         self.zero_order_beliefs = self.update_subgoals(self.zero_order_beliefs, oppo_subgoals_dic)
-        my_subgoal = self.LLM.prediction_zero_order(self.first_order_beliefs, self.zero_order_beliefs,self.episode_logger)
+        my_subgoal = self.LLM.prediction_zero_order(opponent_subgoal, self.zero_order_beliefs,self.episode_logger)
         agent_subgoals_dic = {
                     self.agent_names[self.agent_id]: my_subgoal,
                     # self.agent_names[1 - self.agent_id]: opponent_subgoal,
@@ -774,7 +785,7 @@ class lm_agent_cobel:
         返回:
             plan: 生成的计划 = 论文中的low-level plan
         """
-
+        self.plan_logger.info(f"\naction_hsitory:{self.action_history}\naction_history_num:{len(self.action_history)} actions")
         plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subgoal,self.action_history,
                                            self.current_room,
                                            self.rooms_explored,
@@ -831,8 +842,8 @@ class lm_agent_cobel:
         
         for item in info["visible_objects"].values():
             if item["type"] != 3:
-                # seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
-                seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + info['current_room'] + '. '
+                seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + item["position"] + '. '
+                # seeing += '<' + item["name"] + '> ' + '(' + str(item["id"]) + ')' + " in " + info['current_room'] + '. '
             else:
                 last_agent_position = item['position'][5:]
                 last_see_frame = item['position'][:2]
@@ -845,7 +856,7 @@ class lm_agent_cobel:
                         oppo_container[id] = 'with'
                         for index,obj in enumerate(item["contained"]):
                             if obj != None:
-                                oppo_container[id] += '<' + item['contained_name'][index] + '> ' + '(' + obj + '), '
+                                oppo_container[id] += '<' + item['contained_name'][index] + '> ' + '(' + str(obj) + '), '
                         oppo_container[id] += "in it. "
         if oppo_holding[0] == '' and oppo_holding[1] == '':
             oppo_pro_holding = " holding nothing."
@@ -1410,12 +1421,16 @@ class lm_agent_cobel:
                     self.obs_not_updated = False
                 #COBEL justify the completion of the subgoal
 
-                if self.my_subgoal is None:
+                if self.my_subgoal is None or len(self.action_history) >= self.action_history_max_length:
                     #TODO:add prediction here
                     opponent_subgoal,my_subgoal = self.prediction() #这里就是subgoal的文本，内部已经完成了beleifs的subgoal更新
 
                     self.plan_logger.info(
                         f"\n{self.agent_names[self.agent_id]}:opponent_subgoal:{opponent_subgoal}\nmy_subgoal:{my_subgoal}"
+                    )
+
+                    self.plan_logger.info(
+                        f"\ncompleted goals：{self.satisfied}\n all goals:{self.goal_objects}"
                     )
                     self.my_subgoal = my_subgoal
                     self.action_history = []#COBEL clean the action history
@@ -1527,7 +1542,7 @@ class lm_agent_cobel:
     def get_total_cost(self):## for generated content counting
         return self.LLM.total_cost
     
-    import re
+    
 
     def update_subgoals(self, text, agent_subgoal_dic):
         """
@@ -1585,3 +1600,7 @@ class lm_agent_cobel:
                         print(f"  未找到 agent({agent_name}) 后的 subgoal，跳过替换")
 
         return result_text
+    
+    #COBEL
+    def update_beliefs(self, updated_beliefs,old_beliefs):
+        pass
