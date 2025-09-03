@@ -1,0 +1,14 @@
+- target_object(?obj)
+  - location(?room or ?hand)
+  - task_status(?complete or ?incomplete)
+- container_state(?container)
+  - location(?room or ?hand)
+  - contents[?object,?object,?object]#at most three; ?object must be target_object
+- agent_state(?agent)
+  - location(?room)
+  - subgoal(?description)
+  - object_in_hand[?item,?item]#at most two; ?item can be target_object or container
+- room_state(?room)
+  - exploration_state(?None or ?Part or ?All)
+- bed(?bed)
+  - location(?room)

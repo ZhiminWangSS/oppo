@@ -1,18 +1,14 @@
 type,prompt
-measurement_first_order,"$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $OPPO_NAME$ know? Use the rules below to refine and update my known information:
+measurement_first_order,"$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $OPPO_NAME$ know? Use the rules below to formulate my known information:
 $AGENT_NAME$'s Visual Observation: $VISUAL_OBSERVATION$
 Message: $MESSAGE$
-$OPPO_NAME$' s known information: 
-$FIRST_ORDER_BELIEFS$
 Construction rules: 
 $BELIEF_RULES$
-Just output in the rules form, without any analysis and reasoning progress, and don’t delete the any entities in known information. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
 measurement_zero_order,"
-$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $AGENT_NAME$ know? Use the rules below to refine and update my known information:
+$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $AGENT_NAME$ know? Use the rules below to formulate my known information:
 $AGENT_NAME$'s Visual Observation: $VISUAL_OBSERVATION$
 Message: $MESSAGE$
-$AGENT_NAME$' s known information: 
-$ZERO_ORDER_BELIEFS$
 Construction rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress,and don’t delete the any entities in known information. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
@@ -24,7 +20,7 @@ explore partial-explored rooms;
 My known information:  
 $FIRST_ORDER_BELIEFS$
 Reasons:
-subplan:"
+Subplan:"
 prediction_zero_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my known information and the $OPPO_NAME$'s subplan. Please reason over these information and predict the objects' perhaps states such as location and completion state, and then infer what should i do next to maximize the efficiency based on my known information, avoiding redundance with $OPPO_NAME$' subplan. First give your reasons (at most five reasons) and answer me  with the subplan only. The subplan should be a local goal to contribute to finish transport imcompleted object, composing of several actions. Here are few example of subplans: 
 explore current room and transport objects here to the bed;
 explore and fill the container with objects;
@@ -34,12 +30,12 @@ $ZERO_ORDER_BELIEFS$
 $OPPO_NAME$'s subplan: 
 $OPPO_SUBPLAN$
 Reasons:
-subplan:"
+Subplan:"
 belief_awareness,"zero order belief:
  $ZERO_ORDER_BELIEFS$
 first order beliefs: 
 $FIRST_ORDER_BELIEFS$
-Evaluate the different content $AGENT_NAME$ knows and $OPPO_NAME$ knows, regardless of format difference and give a difference score from 0-10 0 for nearly identical 10 for large differences. And then list the differen parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
+Evaluate the different content $AGENT_NAME$ knows and $OPPO_NAME$ knows, regardless of format difference and give a difference score from 0-10 0 for nearly identical 10 for large differences. And then list the different parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
 
 Here are some output examples:
 
@@ -128,8 +124,8 @@ Room list:
 $ROOM_LIST$
 
 Answer in this format(including the annotation):
-Zero order beliefs($AGENT_NAME$):
-First order beliefs($OPPO_NAME$):
+Zero order beliefs:# my zero order belief
+First order beliefs:# my first order belief of ?agent's belief
 "
 adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference. When you need to describe entity, convey it in original format like <livingroom>(2000) , <banana>(12345)
 

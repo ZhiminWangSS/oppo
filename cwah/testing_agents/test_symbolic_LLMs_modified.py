@@ -9,9 +9,10 @@ import numpy as np
 from pathlib import Path
 
 from envs.unity_environment import UnityEnvironment
+from envs.unity_environment_capo import UnityEnvironment_capo##TODO:change the env engine
 from agents import LLM_agent
 from arguments import get_args
-from cwah.algos.arena_mp2 import ArenaMP
+from algos.arena_mp2 import ArenaMP
 
 
 if __name__ == '__main__':
@@ -81,34 +82,33 @@ if __name__ == '__main__':
         test_episodes = episode_ids
     for iter_id in range(num_tries):
         steps_list, failed_tasks = [], []
+
+        #record the results
         if not os.path.isfile(args.record_dir + '/results.pik'):
             test_results = {}
         else:
             test_results = pickle.load(open(args.record_dir + '/results.pik', 'rb'))
 
         current_tried = iter_id
-        #COBEL
         #countting for every iter
-        #COBEL
-        total_0_comm_chars = 0
-        total_1_comm_chars = 0
-        total_0_com = 0
-        total_1_com = 0
-        total_0_api = 0
-        total_1_api = 0
-        total_0_tokens = 0
-        total_1_tokens = 0
-        total_0_total_tokens = 0
-        total_1_total_tokens = 0
-        total_0_comm_tokens = 0
-        total_1_comm_tokens = 0
+        total_character_0 = 0
+        total_character_1 = 0
+        total_comm_0 = 0
+        total_comm_1 = 0
 
         for episode_id in test_episodes:
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
                 iter_id)
+            
+            #count for episode
+            episode_character_0 = 0
+            episode_character_1 = 0
+            episode_comm_num_0 = 0
+            episode_comm_num_1 = 0
 
+            #log somehow
             if os.path.isfile(curr_log_file_name):
                 with open(curr_log_file_name, 'rb') as fd:
                     file_data = pickle.load(fd)
@@ -129,33 +129,24 @@ if __name__ == '__main__':
             # try:
             arena.reset(episode_id)
             success, steps, saved_info = arena.run()
-
-            #COBEL episode count
-            episode_0_comm_chars = arena.agents[0].comm_chars
-            episode_1_comm_chars = arena.agents[1].comm_chars
-            episode_0_com = arena.agents[0].comm_num
-            episode_1_com = arena.agents[1].comm_num
-            episode_0_api = arena.agents[0].get_api_num()
-            episode_1_api = arena.agents[1].get_api_num()
-            episode_0_tokens = arena.agents[0].get_completion_tokens()
-            episode_1_tokens = arena.agents[1].get_completion_tokens()
-            episode_0_total_tokens = arena.agents[0].get_total_tokens()
-            episode_1_total_tokens = arena.agents[1].get_total_tokens()
-            episode_0_comm_tokens = arena.agents[0].get_comm_tokens()
-            episode_1_comm_tokens = arena.agents[1].get_comm_tokens()
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-            total_0_comm_tokens += episode_0_comm_tokens
-            total_1_comm_tokens += episode_1_comm_tokens
+            #episode
+            episode_character_0 = arena.character_0
+            episode_character_1 = arena.character_1
+            episode_comm_num_0 = arena.comm_0
+            episode_comm_num_1 = arena.comm_1
+            #whole
+            total_character_0 += episode_character_0
+            total_character_1 += episode_character_1
+            total_comm_0 += episode_comm_num_0
+            total_comm_1 += episode_comm_num_1
+            os.makedirs("./count",exist_ok=True)
+            with open(f"./count/episode_{episode_id}.txt","a+") as f:
+                f.write(f"character_0:,{episode_character_0}")
+                f.write(f"character_1:,{episode_character_1}")
+                f.write(f"total_character:,{episode_character_0+episode_character_1}")
+                f.write(f"comm_0:,{episode_comm_num_0}")
+                f.write(f"comm_1:,{episode_comm_num_1}")
+            
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -182,21 +173,18 @@ if __name__ == '__main__':
             L[episode_id].append(steps)
 
             test_results[episode_id] = {'S': S[episode_id],
-                                        'L': L[episode_id],
-                                        'COBEL': {
-                                            'episode_0_comm_chars': episode_0_comm_chars,
-                                            'episode_1_comm_chars': episode_1_comm_chars,
-                                            'episode_0_com': episode_0_com,
-                                            'episode_1_com': episode_1_com,
-                                            'episode_0_api': episode_0_api,
-                                            'episode_1_api': episode_1_api,
-                                            'episode_0_tokens': episode_0_tokens,
-                                            'episode_1_tokens': episode_1_tokens,
-                                            'episode_0_total_tokens': episode_0_total_tokens,
-                                            'episode_1_total_tokens': episode_1_total_tokens,
-                                            'episode_0_comm_tokens': episode_0_comm_tokens,
-                                            'episode_1_comm_tokens': episode_1_comm_tokens,
-                                        }}
+                                        'L': L[episode_id]}
+        with open(f"./iter_count/{time.time()}{iter_id}.txt") as f:
+            f.write(f"total_character_0:{total_character_0}")
+            f.write(f"total_character_1:{total_character_1}")
+            f.write(f"total_character:{total_character_0+total_character_1}")
+            f.write(f"total_comm_0:{total_comm_0}")
+            f.write(f"total_comm_1:{total_comm_1}")
+            f.write(f"character_per_episode_0:{total_character_0/episode_ids}")
+            f.write(f"character_per_episode_1:{total_character_1/episode_ids}")
+            f.write(f"comm_per_episode_0:{total_comm_0/episode_ids}")
+            f.write(f"comm_per_episode_1:{total_comm_1/episode_ids}")
+
 
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)

@@ -14,13 +14,13 @@ sys.path.append(base_path)
 
 from h_agent import H_agent
 from lm_agent import lm_agent
-from lm_agent_capo import lm_agent_capo
+
 
 # 注册测试环境
 gym.envs.registration.register(id="transport_challenge_MA", entry_point="tdw_gym:TDW")
 
 
-class Challenge_oppo:
+class Challenge:
     """
     多智能体运输挑战环境管理类
     用于管理环境、执行评估和记录结果
@@ -29,14 +29,13 @@ class Challenge_oppo:
     def __init__(
         self,
         logger,
-        time_logger,
         port,
         data_path,
         output_dir,
         number_of_agents=2,
         max_frames=3000,
         launch_build=True,
-        screen_size=256,
+        screen_size=512,
         data_prefix="dataset/nips_dataset/",
         gt_mask=True,
         save_img=True,
@@ -70,12 +69,12 @@ class Challenge_oppo:
         )
         self.gt_mask = gt_mask
         self.logger = logger
-        self.time_logger = time_logger
         self.logger.debug(port)
         self.logger.info("Environment Created")
         self.output_dir = output_dir
         self.max_frames = max_frames
         self.save_img = save_img
+        print(data_path)
         self.data = json.load(open(os.path.join(data_prefix, data_path), "r"))
         self.logger.info("done")
 
@@ -83,7 +82,7 @@ class Challenge_oppo:
         """
         执行智能体评估过程
 
-        参数:
+        参数:   
             agents: 智能体列表
             logger: 日志记录器
             eval_episodes: 要评估的回合列表
@@ -91,7 +90,6 @@ class Challenge_oppo:
         返回:
             float: 平均完成率
         """
-
         total_finish = 0.0
         if eval_episodes[0] == -1:
             eval_episodes = range(len(self.data))
@@ -99,34 +97,11 @@ class Challenge_oppo:
         # 无循环部分
         start = time.time()
         results = {}
-        #all episode charaters
-        total_0_comm_chars = 0
-        total_1_comm_chars = 0
-        total_0_com = 0
-        total_1_com = 0
-        total_0_api = 0
-        total_1_api = 0
-        total_0_tokens = 0
-        total_1_tokens = 0
-        total_0_total_tokens = 0
-        total_1_total_tokens = 0
-
+        total_tokens = [0,0]
+        total_com = [0,0]
         for i, episode in enumerate(eval_episodes):
-            
-            episode_logger = init_episode_logs(self.output_dir, episode)
-
-            #characters per episode
-            episode_0_charaters = 0
-            episode_1_charaters = 0
-            episode_0_com = 0
-            episode_1_com = 0
-            episode_0_api = 0
-            episode_1_api = 0
-            episode_0_tokens = 0
-            episode_1_tokens = 0
             print(f"当前执行的episode为：{episode}")
             start_time = time.time()
-
             # 检查是否已经评估过该回合
             if os.path.exists(
                 os.path.join(self.output_dir, str(episode), "result_episode.json")
@@ -173,31 +148,6 @@ class Challenge_oppo:
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
                         )
-                    elif agent.agent_type =="lm_agent_capo":
-                        agent.reset(
-                            obs=state[str(id)],
-                            goal_objects=info["goal_description"],
-                            output_dir=os.path.join(self.output_dir, str(episode)),
-                            env_api=curr_api,
-                            agent_color=info["agent_colors"][id],
-                            agent_id=id,
-                            rooms_name=info["rooms_name"],
-                            gt_mask=self.gt_mask,
-                            save_img=self.save_img,
-                            episode_logger = episode_logger
-                        )
-                    elif agent.agent_type == "lm_agent_oppo":
-                        agent.reset(
-                            obs=state[str(id)],
-                            goal_objects=info["goal_description"],
-                            output_dir=os.path.join(self.output_dir, str(episode)),
-                            env_api=curr_api,
-                            agent_color=info["agent_colors"][id],
-                            agent_id=id,
-                            rooms_name=info["rooms_name"],
-                            gt_mask=self.gt_mask,
-                            save_img=self.save_img,
-                        )
                     elif agent.agent_type == "lm_agent":
                         agent.reset(
                             obs=state[str(id)],
@@ -209,8 +159,6 @@ class Challenge_oppo:
                             rooms_name=info["rooms_name"],
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
-                            episode=episode,
-                            episode_logger=episode_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -219,102 +167,67 @@ class Challenge_oppo:
             self.logger.info(f"Environment Reset. Took {time.time() - start_time} secs")
 
             # 执行评估过程
-            episode_start_time = time.time()  # 记录本episode总计时
-            act_total_time = 0.0  # 记录act方法总时间
-            act_num = 0
-            ## check1 tickle
             local_finish = self.env.check_goal()
             done = False
             step_num = 0
-            
             local_reward = 0.0
             while not done:
-                #step anotate
                 step_num += 1
                 actions = {}
-                llm_info = {}
                 # 保存图片
-                #print("是否保存图片",self.save_img)
                 if self.save_img:
                     self.env.save_images(
                         os.path.join(self.output_dir, str(episode), "Images")
                     )
                 for agent_id, agent in enumerate(agents):
-                    act_start = time.time()
-                    actions[str(agent_id)] = agent.act(state[str(agent_id)])##check 2 almost
-                    act_end = time.time()
-                    act_num += 1
-                    act_total_time += (act_end - act_start)
-                    print(actions[str(agent_id)]['type'],"tokens",agent.get_tokens(),"api_num:",agent.get_api_num(),"characters:",agent.characters,"comm_num:",agent.comm_num)
-                    # if actions[str(agent_id)]['type'] == 6 and agent_id ==0:
-                    #     communication_num_0 += 1
-                    #     print("Communication action taken by agent:", agent.agent_names[agent.agent_id])
-                    # if actions[str(agent_id)]['type'] == 6 and agent_id ==1:
-                    #     communication_num_1 += 1
-                    #     print("Communication action taken by agent:", agent.agent_names[agent.agent_id])
-                    print(f"agent_name:{agent.agent_names[agent.agent_id]}, action: {actions[str(agent_id)]}\n")
-                state, reward, done, info = self.env.step(actions)##check 3
-                local_reward += reward##seem no use
+                    
+                    # print(f"agent状态：{state[str(agent_id)]}")
+                    actions[str(agent_id)] = agent.act(state[str(agent_id)])
+                    # 执行大模型推理获得动作
+                    print(f"agent_id:{agent_id}\n",agent.get_tokens())
+                state, reward, done, info = self.env.step(actions)
+                local_reward += reward
                 local_finish = self.env.check_goal()
-                
-
                 self.logger.info(
                     f"Executing step {step_num} for episode: {episode}, actions: {actions}, finish: {local_finish}, frame: {self.env.num_frames}"
                 )
                 if done:
                     break
+                # for agent_id, agent in enumerate(agents):
+                #     if actions[str(agent_id)] == "send a message":
+                #         communication_num += 1
+                #         print("Communication action taken by agent:", agent_id)
 
-
-            
-            #episode count
-            episode_0_comm_chars = agents[0].comm_chars
-            episode_1_comm_chars = agents[1].comm_chars
-            episode_0_com = agents[0].comm_num
-            episode_1_com = agents[1].comm_num
-            episode_0_api = agents[0].get_api_num()
-            episode_1_api = agents[1].get_api_num()
-            episode_0_tokens = agents[0].get_tokens()
-            episode_1_tokens = agents[1].get_tokens()
-            episode_0_total_tokens = agents[0].get_total_tokens()
-            episode_1_total_tokens = agents[1].get_total_tokens()
-
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-
-            episode_total_time = time.time() - episode_start_time
-            self.time_logger.info(f"Episode {episode} total time: {episode_total_time:.4f} secs")
-            self.time_logger.info(f"Episode {episode} total act() time: {act_total_time:.4f} secs")
 
             # 记录结果
+            for agent_id,agent in enumerate(agents):
+                print(f"{agent_id}:{agent.get_com_cost()}")
+                comm_chars[agent_id] += agent.get_com_cost()
+                completion_tokens[agent_id] += agent.get_tokens()
+                total_tokens[agent_id] += agent.get_total_cost()
+                api_num[agent_id] += agent.get_api_num()
+                
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
                 "total": local_finish[1],
                 "step_num": step_num,
-                "frame": self.env.num_frames,
-                "communication num_0": episode_0_com,
-                "communication num_1": episode_1_com,
-                "comm_chars_0":episode_0_comm_chars,
-                "comm_chars_1":episode_1_comm_chars,
-                "episode_total_time": episode_total_time,
-                "act_total_time": act_total_time,
-                "act_num": act_num,
-                "api_0":episode_0_api,
-                "api_1":episode_1_api,
-                "completion_tokens_0":episode_0_tokens,
-                "completion_tokens_1":episode_1_tokens,
-                "total_tokens_0":episode_0_total_tokens,
-                "total_tokens_1":episode_1_total_tokens,
+                "comm_chars":comm_chars[0]+comm_chars[1],
+                "agent_0_comm_chars":comm_chars[0], #character
+                "agent_1_comm_chars":comm_chars[1], #character
+                "total_completion_token":completion_tokens[0]+completion_tokens[1],
+                "agent_0_completion_token":completion_tokens[0], #count TODO
+                "agent_1_completion_token":completion_tokens[1],
+                "total_tokens":total_tokens[0]+total_tokens[1],
+                "agent_0_total_tokens":total_tokens[0],
+                "agent_1_total_tokens":total_tokens[1],
+                "total_api_num":api_num[0]+api_num[1],
+                "agent_0_api_num":api_num[0],
+                "agent_1_api_num":api_num[1],
+                "tokens_per_step":(completion_tokens[0]+completion_tokens[1])/step_num
+                #"communication num": communication_num
             }
+
             with open(
                 os.path.join(self.output_dir, str(episode), "result_episode.json"), "w"
             ) as f:
@@ -326,28 +239,6 @@ class Challenge_oppo:
         results = {"episode_results": results, "avg_finish": avg_finish}
         with open(os.path.join(self.output_dir, "eval_result.json"), "w") as f:
             json.dump(results, f, indent=4)
-
-        #whole results
-        os.makedirs("./count_results",exist_ok=True)
-        with open("./count_results/counts.txt","a+") as f:
-            f.write(f"time:{time.time()}")
-            f.write(f"total_chars:{total_0_comm_chars+total_1_comm_chars}")
-            f.write(f"total_0_comm_chars:{total_0_comm_chars}")
-            f.write(f"total_1_comm_chars:{total_1_comm_chars}")
-            f.write(f"total_0_com:{total_0_com}")
-            f.write(f"total_1_com:{total_1_com}")
-            f.write(f"com_per_episode0:{total_0_com/len(eval_episodes)}")
-            f.write(f"com_per_episode1:{total_1_com/len(eval_episodes)}")
-            f.write(f"total_api_0{total_0_api}")
-            f.write(f"total_api_1{total_1_api}")
-            f.write(f"total_completion_tokens_0{total_0_tokens}")
-            f.write(f"total_completion_tokens_1{total_1_tokens}")
-            f.write(f"total_total_tokens_0{total_0_total_tokens}")
-            f.write(f"total_total_tokens_1{total_1_total_tokens}")
-            f.write(f"chars_per_episode0:{total_0_comm_chars/len(eval_episodes)}")
-            f.write(f"chars_per_episode1:{total_1_comm_chars/len(eval_episodes)}")
-
-
         self.logger.info(f"eval done, avg transport rate {avg_finish}")
         self.logger.info("time: {}".format(time.time() - start))
         return avg_finish
@@ -364,7 +255,7 @@ def init_logs(output_dir, name="simple_example"):
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(os.path.join(output_dir, "output.log"))
     fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler() # 控制台输出
+    ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
@@ -374,43 +265,7 @@ def init_logs(output_dir, name="simple_example"):
     ch.setFormatter(formatter)
     logger.addHandler(fh)
     logger.addHandler(ch)
-
-    # 新增一个logger用于记录时间信息
-    time_logger = logging.getLogger(f"{name}_time")
-    time_logger.setLevel(logging.DEBUG)
-    time_fh = logging.FileHandler(os.path.join(output_dir, "time.log"))
-    time_fh.setLevel(logging.DEBUG)
-    time_formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s"
-    )
-    time_fh.setFormatter(time_formatter)
-    time_logger.addHandler(time_fh)
-    
-    
-
-    return logger, time_logger
-
-def init_episode_logs(output_dir, episode):##logger
-    """
-    初始化每个episode的日志记录器
-    """
-    episode_dir = os.path.join(output_dir, str(episode))
-    os.makedirs(episode_dir, exist_ok=True)
-    
-    episode_logger = logging.getLogger(f"episode_{episode}")
-    episode_logger.setLevel(logging.DEBUG)
-    
-    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
-    fh.setLevel(logging.DEBUG)
-    
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    fh.setFormatter(formatter)
-    
-    episode_logger.addHandler(fh)
-    
-    return episode_logger
+    return logger
 
 
 def main():
@@ -439,7 +294,7 @@ def main():
     # LLM parameters
     parser.add_argument(
         "--source",
-        default="openai",
+        default="deepseek",
         choices=["hf", "openai", "deepseek"],
         help="openai API or load huggingface models",
     )
@@ -476,12 +331,10 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     args.output_dir = os.path.join(args.output_dir, args.run_id)
     os.makedirs(args.output_dir, exist_ok=True)
+    logger = init_logs(args.output_dir)
 
-    logger,time_logger = init_logs(args.output_dir) #不包含episode的路径
-
-    challenge = Challenge_oppo(
+    challenge = Challenge(
         logger,
-        time_logger,
         args.port,
         args.data_path,
         args.output_dir,
@@ -494,21 +347,15 @@ def main():
         save_img=not args.no_save_img,
     )
     agents = []
-    #create agents
     for i, agent in enumerate(args.agents):
         if agent == "h_agent":
             agents.append(H_agent(i, logger, args.max_frames, args.output_dir))
-        elif agent == "lm_agent_oppo":
-            agents.append(
-                lm_agent_oppo(i, logger, args.max_frames, args, args.output_dir)
-            )
         elif agent == "lm_agent":
             agents.append(lm_agent(i, logger, args.max_frames, args, args.output_dir))
-        elif agent == "lm_agent_capo":
-            agents.append(lm_agent_capo(i, logger, args.max_frames, args, args.output_dir))
         else:
             pass
     try:
+        print("yes")
         challenge.submit(agents, logger, args.eval_episodes)
         # 提交进入chanllenge遍历执行
     finally:

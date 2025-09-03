@@ -53,8 +53,6 @@ class LLM_agent:
 			"bedroom": None,
 			"bathroom": None,
 		}
-		self.comm_chars = 0
-		self.comm_num = 0
 
 
 	@property
@@ -148,15 +146,15 @@ class LLM_agent:
 		return self.LLM.run(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
 
 
-	def check_progress(self, state, goal_spec):
+	def check_progress(self, state, goal_spec):##need to debug
 		unsatisfied = {}
 		satisfied = []
 		id2node = {node['id']: node for node in state['nodes']}
 
-		for key, value in goal_spec.items():
+		for key, value in goal_spec.items():#goal_spec structure?
 			elements = key.split('_')
 			cnt = value[0]
-			for edge in state['edges']:
+			for edge in state['edges']:#what is edge?
 				if cnt == 0:
 					break
 				if edge['relation_type'].lower() == elements[0] and edge['to_id'] == self.goal_location_id and id2node[edge['from_id']]['class_name'] == elements[1]:
@@ -189,6 +187,8 @@ class LLM_agent:
 		:param goal:{predicate:[count, True, 2]}
 		:return:
 		"""
+
+		#maintain the dialogue history
 		if self.communication:
 			for i in range(len(observation["messages"])):
 				if observation["messages"][i] is not None:
@@ -197,7 +197,7 @@ class LLM_agent:
 		satisfied, unsatisfied = self.check_progress(observation, goal)
 		# print(f"satisfied: {satisfied}")
 		if len(satisfied) > 0:
-			self.unsatisfied = unsatisfied
+			self.unsatisfied = unsatisfied#{'on_pudding_<coffeetable> (268)': 1, 'on_juice_<coffeetable> (268)': 1, 'on_apple_<coffeetable> (268)': 1, 'on_cupcake_<coffeetable> (268)': 2}
 			self.satisfied = satisfied
 		obs = self.filter_graph(observation)
 		self.grabbed_objects = []
@@ -271,6 +271,7 @@ class LLM_agent:
 					print("No more things to do!")
 					plan = f"[wait]"
 				self.plan = plan
+				#maintain history
 				self.action_history.append('[send_message]' if plan.startswith('[send_message]') else plan)
 				a_info.update({"steps": self.steps})
 				info.update({"LLM": a_info})
@@ -284,8 +285,8 @@ class LLM_agent:
 			elif self.plan.startswith('[goput]'):
 				action = self.goput()
 			elif self.plan.startswith('[send_message]'):
-				self.comm_chars += len(self.plan) - len('[send_message] ')
-				self.comm_num += 1
+				self.LLM.characters += len(plan.split(" "))
+				self.LLM.comm_num += 1
 				action = self.plan[:]
 				self.plan = None
 			elif self.plan.startswith('[wait]'):
@@ -333,8 +334,10 @@ class LLM_agent:
 		self.goal_location = list(goal.keys())[0].split('_')[-1]
 		self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
 		self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None}
-		self.comm_chars = 0
-		self.comm_num = 0
+
+		self.LLM.characters = 0
+		self.LLM.comm_num = 0
+
 		self.unchecked_containers = {
 			"livingroom": None,
 			"kitchen": None,
@@ -356,13 +359,7 @@ class LLM_agent:
 		self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
 		self.dialogue_history = []
 		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
-	def get_completion_tokens(self):
-		return self.LLM.completion_tokens
-	def get_total_tokens(self):
-		return self.LLM.total_tokens
-	
-	def get_api_num(self):
-		return self.LLM.api_num
-	
-	def get_comm_tokens(self):
-		return self.LLM.comm_tokens
+	def get_character(self):
+		return self.LLM.characters
+	def get_comm_num(self):
+		return self.LLM.comm_num

@@ -21,6 +21,11 @@ class ArenaMP(object):
         self.task_goal = None
         self.record_dir = record_dir
         self.debug = debug
+        self.character_0 = 0
+        self.character_1 = 0
+        self.comm_0 = 0
+        self.comm_1 = 0
+
         print("Init Env")
         self.env = environment_fn(arena_id)
         for agent_type_fn in agent_fn:
@@ -108,7 +113,7 @@ class ArenaMP(object):
                     dict_actions[it], dict_info[it] = agent.get_action(obs[it], self.task_goal, action_space_ids=action_space[it])
 
             elif 'LLM' in agent.agent_type:
-                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)
+                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)#{'on_pudding_<coffeetable> (268)': [1, True, 2], 'on_juice_<coffeetable> (268)': [1, True, 2], 'on_apple_<coffeetable> (268)': [1, True, 2], 'on_cupcake_<coffeetable> (268)': [2, True, 2]}
 
         return dict_actions, dict_info
 
@@ -361,17 +366,18 @@ class ArenaMP(object):
         if self.env.steps == 0:
             pass
             #self.env.changed_graph = True
-        obs = self.env.get_observations()
+        obs = self.env.get_observations()#{0:{"messages":  ,"edges":  ,"nodes": } ,1:  }#TODO:need to change this function
         action_space = self.env.get_action_space()
         dict_actions, dict_info = self.get_actions(obs, action_space, true_graph=true_graph)
+        
         for i in range(len(dict_info)):
-            if len(dict_info) > 1 and 'subgoals' in dict_info[i]:
+            if len(dict_info) > 1 and 'subgoals' in dict_info[i]:## change here to check subgoal
                 dup = self.env.check_subgoal(dict_info[i]['subgoals'])
                 self.cnt_nouse_subgoal += dup
                 if i == 0 and 'subgoals' in dict_info[i + 1].keys() and dict_info[i]['subgoals'] == dict_info[i + 1]['subgoals']:
                     self.cnt_duplicate_subgoal += 1
         try:
-            step_info = self.env.step(dict_actions)
+            step_info = self.env.step(dict_actions)# structure
         except Exception as e:
             print("Exception occurs when performing action: ", dict_actions)
             raise Exception
@@ -411,6 +417,7 @@ class ArenaMP(object):
                     }
         success = False
         while True:
+            #LLM used in every step
             (obs, reward, done, infos, messages), actions, agent_info = self.step()
             success = infos['finished']
             # if infos['failed_exec']:
@@ -441,6 +448,11 @@ class ArenaMP(object):
                     pickle.dump(saved_info, open(os.path.join(self.record_dir, 'log.pik'), 'wb'))
             if done:
                 break
+        self.character_0 = self.agents[0].get_character()
+        self.character_1 = self.agents[1].get_character()
+        self.comm_0 = self.agents[0].get_comm_num()
+        self.comm_1 = self.agents[1].get_comm_num()
+        
         saved_info['finished'] = success
         if cnt_subgoal_info:
             saved_info['cnt_duplicate_subgoal'] = self.cnt_duplicate_subgoal
