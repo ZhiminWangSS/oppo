@@ -178,10 +178,14 @@ if __name__ == '__main__':
         total_character_1 = 0
         total_comm_0 = 0
         total_comm_1 = 0
-        total_tokens_0 = 0
-        total_tokens_1 = 0
+        total_whole_tokens_0 = 0
+        total_whole_tokens_1 = 0
         total_api_0 = 0
         total_api_1 = 0
+        total_complete_tokens_0 = 0
+        total_complete_tokens_1 = 0
+        total_comm_tokens_0 = 0
+        total_comm_tokens_1 = 0 
 
         for episode_id in test_episodes:
             kill_process_on_port(6315)
@@ -212,8 +216,12 @@ if __name__ == '__main__':
             episode_comm_num_1 = 0
             episode_api_0 = 0
             episode_api_1 = 0
-            episode_tokens_0 = 0
-            episode_tokens_1 = 0
+            episode_whole_tokens_0 = 0
+            episode_whole_tokens_1 = 0
+            episode_complete_tokens_0 = 0
+            episode_complete_tokens_1 = 0
+            episode_comm_tokens_0 = 0
+            episode_comm_tokens_1 = 0
 
             #log somehow
             if os.path.isfile(curr_log_file_name):
@@ -243,8 +251,12 @@ if __name__ == '__main__':
             episode_comm_num_1 = arena.agents[1].comm_num
             episode_api_0 = arena.agents[0].get_api()
             episode_api_1 = arena.agents[1].get_api()
-            episode_tokens_0 = arena.agents[0].get_tokens()
-            episode_tokens_1 = arena.agents[1].get_tokens()
+            episode_whole_tokens_0 = arena.agents[0].get_total_tokens()
+            episode_whole_tokens_1 = arena.agents[1].get_total_tokens()
+            episode_complete_tokens_0 = arena.agents[0].get_completion_tokens()
+            episode_complete_tokens_1 = arena.agents[1].get_completion_tokens()
+            episode_comm_tokens_0 = arena.agents[0].get_comm_tokens()
+            episode_comm_tokens_1 = arena.agents[1].get_comm_tokens()
             #whole
             total_character_0 += episode_character_0
             total_character_1 += episode_character_1
@@ -252,10 +264,14 @@ if __name__ == '__main__':
             total_comm_1 += episode_comm_num_1
             total_api_0 += episode_api_0
             total_api_1 += episode_api_1
-            total_tokens_0 += episode_tokens_0
-            total_tokens_1 += episode_tokens_1
+            total_whole_tokens_0 += episode_whole_tokens_0
+            total_whole_tokens_1 += episode_whole_tokens_1
+            total_complete_tokens_0 += episode_complete_tokens_0
+            total_complete_tokens_1 += episode_complete_tokens_1
+            total_comm_tokens_0 += episode_comm_tokens_0
+            total_comm_tokens_1 += episode_comm_tokens_1
             os.makedirs("./results_capo",exist_ok=True)
-            with open(f"./results_capo/episode_{episode_id}.txt","a+") as f:
+            with open(f"./results_capo/episode_{episode_id}.txt","w") as f:
                 f.write(f"character_0:{episode_character_0}\n")
                 f.write(f"character_1:{episode_character_1}\n")
                 f.write(f"total_character:{episode_character_0+episode_character_1}\n")
@@ -263,8 +279,12 @@ if __name__ == '__main__':
                 f.write(f"comm_1:{episode_comm_num_1}\n")
                 f.write(f"api_0:{episode_api_0}\n")
                 f.write(f"api_1:{episode_api_1}\n")
-                f.write(f"tokens_0:{episode_tokens_0}\n")
-                f.write(f"tokens_1:{episode_tokens_1}\n")
+                f.write(f"whole_tokens_0:{episode_whole_tokens_0}\n")
+                f.write(f"whole_tokens_1:{episode_whole_tokens_1}\n")
+                f.write(f"completion_tokens_0:{episode_complete_tokens_0}\n")
+                f.write(f"completion_tokens_1:{episode_complete_tokens_1}\n")
+                f.write(f"comm_tokens_0:{episode_comm_tokens_0}\n")
+                f.write(f"comm_tokens_1:{episode_comm_tokens_1}\n")
                 f.write(f"success: {success}")
                 f.write(f"steps: {steps}")
             
@@ -296,7 +316,7 @@ if __name__ == '__main__':
             test_results[episode_id] = {'S': S[episode_id],
                                         'L': L[episode_id]}
         os.makedirs("./iter_count_results_capo",exist_ok=True)
-        with open(f"./iter_count_results_capo/{time.time()}{iter_id}.txt") as f:
+        with open(f"./iter_count_results_capo/{time.time()}{iter_id}.txt","w") as f:
             f.write(f"total_character_0:{total_character_0}\n")
             f.write(f"total_character_1:{total_character_1}\n")
             f.write(f"total_character:{total_character_0+total_character_1}\n")
@@ -309,10 +329,12 @@ if __name__ == '__main__':
             f.write(f"total_api_0:{total_api_0}\n")
             f.write(f"total_api_1:{total_api_1}\n")
             f.write(f"total_api_per:{(total_api_0+total_api_1)/len(episode_ids)}\n")
-            f.write(f"total_tokens_0:{total_tokens_0}\n")
-            f.write(f"total_tokens_1:{total_tokens_1}\n")
-            f.write(f"total_tokens_per:{(total_tokens_0+total_tokens_1)/len(episode_ids)}\n")
-
+            f.write(f"total_whole_tokens_0:{total_whole_tokens_0}\n")
+            f.write(f"total_whole_tokens_1:{total_whole_tokens_1}\n")
+            f.write(f"total_complete_tokens_0:{total_complete_tokens_0}\n")
+            f.write(f"total_complete_tokens_1:{total_complete_tokens_1}\n")
+            f.write(f"total_comm_tokens_0:{total_comm_tokens_0}\n")            
+            f.write(f"total_comm_tokens_1:{total_comm_tokens_1}\n")
 
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)

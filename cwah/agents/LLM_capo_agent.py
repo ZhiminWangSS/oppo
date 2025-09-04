@@ -95,8 +95,9 @@ class capo_agent(LLM_agent):
         return f"{action} <{x['class_name']}> ({x['id']}) <{y['class_name']}> ({y['id']})"
 
     def LLM_metaplan_init(self):
-        output = self.LLM.meta_plan_init()
+        output,usage = self.LLM.meta_plan_init()
         self.characters += len(output.strip())
+        self.LLM.comm_tokens += usage
         self.comm_num += 1
         self.logger.info(
             f"{self.agent_id}: meta_plan: {output}"
@@ -104,7 +105,7 @@ class capo_agent(LLM_agent):
         return output
     def LLM_disscuss_refine(self,
                             refine):
-        output = self.LLM.disscuss_refine(refine,
+        output,usage= self.LLM.disscuss_refine(refine,
                                           self.metaplan,
                                           self.oppo_progress,
                                           self.current_room,
@@ -119,6 +120,7 @@ class capo_agent(LLM_agent):
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
         self.characters += len(output.strip())
+        self.LLM.comm_tokens += usage
         self.comm_num += 1
         self.logger.info(
             f"{self.agent_id}: message: {output}"
@@ -260,7 +262,7 @@ class capo_agent(LLM_agent):
                 metaplan = self.LLM_metaplan_init()
                 self.metaplan = metaplan
                 action = "[metaplan]" + "<" + metaplan + ">"
-                self.action_history.append("[init_metaplan]")
+                #self.action_history.append("[init_metaplan]")
                 
             else:
                 action = "[waiting]"
@@ -271,7 +273,7 @@ class capo_agent(LLM_agent):
         if obs["disscussion"] == 1 and obs["turns"] == 0:
             progress = self.LLM_progress_sending()
             action = "[progress]" + "<" + progress + ">"
-            self.action_history.append("[disscussion]")
+            #self.action_history.append("[disscussion]")
             updater()
             return action,info
         
@@ -390,13 +392,15 @@ class capo_agent(LLM_agent):
 
         return action, info
     
-    def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal):
+    def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal,episode_logger,task_id):
         super().reset(obs,
                       containers_name,
                       goal_objects_name,
                       rooms_name,
                       room_info,
-                      goal)
+                      goal,
+                      episode_logger,
+                      task_id)
         self.subplan = None
         self.oppo_progress = "" 
         self.metaplan = None
@@ -406,9 +410,14 @@ class capo_agent(LLM_agent):
         self.LLM.api = 0
         self.LLM.tokens = 0
     def get_api(self):
-        return self.LLM.api
-    def get_tokens(self):
-        return self.LLM.tokens
+        return self.LLM.api_num
+    def get_comm_tokens(self):
+        return self.LLM.comm_tokens
+    def get_completion_tokens(self):
+        return super().get_completion_tokens()
+    def get_total_tokens(self):
+        return super().get_total_tokens()
+
     def filter_graph(self, obs):
         relative_id = [node['id'] for node in obs['nodes'] if node['class_name'] in self.all_relative_name]
         relative_id = [x for x in relative_id if all([x != y['id'] for y in self.satisfied])]
