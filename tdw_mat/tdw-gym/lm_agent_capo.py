@@ -694,7 +694,7 @@ class lm_agent_capo:
             action: 要执行的动作
         """
         ##meta_plan init
-        if obs["ep_id"] == 0 :
+        if obs["ep_id"] == 0 : #这里的判断不太对
             if self.host:
                 meta_plan = self.LLM_meta_plan_init()
                 self.meta_plan = meta_plan
@@ -704,9 +704,9 @@ class lm_agent_capo:
                         "turns":"init",
                         "des":"metaplan"
                     }
-                self.action_history.append(
-                        f"{'init the meta_plan'} at step {self.num_frames}"
-                    )
+                # self.action_history.append(
+                #         f"{'init the meta_plan'} at step {self.num_frames}"
+                #     )
                 return action
             else:
                 return {"type":"waiting"}
@@ -740,12 +740,14 @@ class lm_agent_capo:
                 self.dialogue_history.append(
                     f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
                 )
+
+
         #receive the oppo_progress
         if obs["progress"][1-self.agent_id] is not None:
             self.oppo_progress = obs["progress"][1-self.agent_id]#TODO:adding inthe env
 
         if not self.host and obs["metaplan"][0] is not None:
-            self.meta_plan = obs["metaplan"][0] # TODO:mantor change? A: the mantor will not change
+            self.meta_plan = obs["metaplan"][0] # TODO:mentor change? A: the mentor will not change
         #print(self.meta_plan)
 
         self.position = self.obs["agent"][:3]
@@ -890,11 +892,12 @@ class lm_agent_capo:
                         "turns":0,
                         "des":"progress"
                     }
-                self.action_history.append(f"disscussion start at step {self.num_frames}")
+                # self.action_history.append(f"disscussion start at step {self.num_frames}")
                 return action
             
         if self.obs["disscussion"] == 1 and self.obs["turns"] == 1:#TODO:satisfied in the env and the round limitation
             if self.host:
+                #progress adapt plan
                 meta_plan = self.LLM_disscuss_refine(1,self.oppo_progress)#1 denote refine ,0 denote disscuss
                 self.episode_logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM meta_plan: {meta_plan} at frame {self.num_frames}, step {self.steps}"
@@ -1248,5 +1251,7 @@ class lm_agent_capo:
         return self.LLM.completion_tokens
     def get_comm_tokens(self):
         return self.LLM.comm_tokens
+    def get_total_tokens(self):
+        return self.LLM.total_tokens
     def get_api_num(self):
         return self.LLM.api

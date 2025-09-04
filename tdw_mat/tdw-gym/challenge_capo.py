@@ -21,7 +21,7 @@ from lm_agent_capo import lm_agent_capo
 gym.envs.registration.register(id="transport_challenge_MA", entry_point="tdw_gym_capo:TDW")
 
 
-class Challenge_oppo:
+class Challenge_capo:
     """
     多智能体运输挑战环境管理类
     用于管理环境、执行评估和记录结果
@@ -267,8 +267,8 @@ class Challenge_oppo:
             episode_1_com = agents[1].comm_num
             episode_0_api = agents[0].get_api_num()
             episode_1_api = agents[1].get_api_num()
-            episode_0_tokens = agents[0].get_tokens()
-            episode_1_tokens = agents[1].get_tokens()
+            episode_0_tokens = agents[0].get_completion_tokens()
+            episode_1_tokens = agents[1].get_completion_tokens()
             episode_0_total_tokens = agents[0].get_total_tokens()
             episode_1_total_tokens = agents[1].get_total_tokens()
             episode_0_comm_tokens = agents[0].get_comm_tokens()
@@ -457,7 +457,7 @@ def main():
 
     logger,time_logger = init_logs(args.output_dir) #不包含episode的路径
 
-    challenge = Challenge_oppo(
+    challenge = Challenge_capo(
         logger,
         time_logger,
         args.port,
