@@ -54,17 +54,11 @@ class Challenge:
         total_1_tokens = 0
         total_0_total_tokens = 0
         total_1_total_tokens = 0
+        total_0_comm_tokens = 0
+        total_1_comm_tokens = 0
         for i, episode in enumerate(eval_episodes):
             episode_logger = init_episode_logs(self.output_dir, episode)
-            #COBEL
-            episode_0_comm_chars = 0
-            episode_1_comm_chars = 0
-            episode_0_com = 0
-            episode_1_com = 0
-            episode_0_api = 0
-            episode_1_api = 0
-            episode_0_tokens = 0
-            episode_1_tokens = 0
+
             start_time = time.time()
             if os.path.exists(os.path.join(self.output_dir, str(episode), 'result_episode.json')):
                 with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'r') as f:

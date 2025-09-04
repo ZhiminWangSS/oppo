@@ -319,7 +319,7 @@ class LLM_agent:
 	
 		return action, info
 
-	def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal):
+	def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal, episode_logger,task_id):
 		self.steps = 0
 		self.containers_name = containers_name
 		self.goal_objects_name = goal_objects_name
@@ -335,6 +335,7 @@ class LLM_agent:
 		self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None}
 		self.comm_chars = 0
 		self.comm_num = 0
+		self.task_id = task_id
 		self.unchecked_containers = {
 			"livingroom": None,
 			"kitchen": None,
@@ -356,6 +357,8 @@ class LLM_agent:
 		self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
 		self.dialogue_history = []
 		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
+		self.episode_logger = episode_logger
+		
 	def get_completion_tokens(self):
 		return self.LLM.completion_tokens
 	def get_total_tokens(self):

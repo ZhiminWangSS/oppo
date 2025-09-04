@@ -11,7 +11,6 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-from tdw_mat.LLM.LLM import LLM
 from LLM.LLM_capo import LLM_capo
 
 CELL_SIZE = 0.125
@@ -39,9 +38,7 @@ class lm_agent_capo:
             args: 配置参数
             output_dir: 输出目录
         """
-        #counting
-        self.characters = 0 # model-generated-characters
-        self.comm_num = 0 # agent-communication-times
+
         # 环境状态相关变量
         self.with_oppo = None  # 对手持有的物体
         self.oppo_pos = None  # 对手位置
@@ -154,6 +151,8 @@ class lm_agent_capo:
         # print(f"是否启用通信：{self.communication}")
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
+        self.comm_chars = 0
+        self.comm_num = 0
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -355,26 +354,6 @@ class lm_agent_capo:
 
         # 配置日志
     
-    # def setup_logger(self,name, log_file, level=logging.INFO):
-    #     """设置日志记录器"""
-    #     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    #     handler = logging.FileHandler(log_file)
-    #     handler.setFormatter(formatter)
-
-    #     logger = logging.getLogger(name)
-    #     logger.setLevel(level)
-    #     logger.addHandler(handler)
-
-    #     return logger
-
-
-    # # 创建日志目录
-    # if not os.path.exists("logs"):
-    #     os.makedirs("logs")
-
-    # # 创建llm日志记录器
-    # log_filename = f"logs/coela_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    # llm_logger = setup_logger("llm_logger", log_filename)
 
     def reset(
         self,
@@ -391,7 +370,7 @@ class lm_agent_capo:
         episode_logger=None
     ):
         self.force_ignore = []
-        self.characters = 0 
+        self.comm_chars = 0 
         self.comm_num = 0 
         self.agent_memory = AgentMemory(
             agent_id=self.agent_id,
@@ -660,7 +639,7 @@ class lm_agent_capo:
 
     def LLM_meta_plan_init(self):
         output = self.LLM.meta_plan_init()
-        self.characters += len(output.split(" "))
+        self.comm_chars += len(output)
         self.comm_num += 1
         return output
     
@@ -681,7 +660,7 @@ class lm_agent_capo:
             opponent_grabbed_objects=self.obs["oppo_held_objects"],
             opponent_last_room = self.oppo_last_room
         )
-        self.characters += len(output.split(" "))
+        self.comm_chars += len(output)
         self.comm_num += 1
         return output
     
@@ -702,7 +681,6 @@ class lm_agent_capo:
             self.oppo_last_room
 
         )
-        self.characters += len(output.split(" "))
         return output
     
     def act_capo(self, obs):
@@ -1265,8 +1243,10 @@ class lm_agent_capo:
             self.logger.debug(info)
         self.last_action = action
         return action
-    
-    def get_tokens(self):
-        return self.LLM.tokens
+
+    def get_completion_tokens(self):
+        return self.LLM.completion_tokens
+    def get_comm_tokens(self):
+        return self.LLM.comm_tokens
     def get_api_num(self):
         return self.LLM.api

@@ -8,6 +8,7 @@ from tqdm import tqdm
 import time
 import json
 import atexit
+import logging
 
 # @ray.remote
 class ArenaMP(object):
@@ -38,6 +39,28 @@ class ArenaMP(object):
         return self.env.port_number
 
 
+    def init_episode_logs(self,output_dir, episode):##logger
+        """
+        初始化每个episode的日志记录器
+        """
+        episode_dir = os.path.join(output_dir, str(episode))
+        os.makedirs(episode_dir, exist_ok=True)
+        
+        episode_logger = logging.getLogger(f"episode_{episode}")
+        episode_logger.setLevel(logging.DEBUG)
+        
+        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+        fh.setLevel(logging.DEBUG)
+        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        fh.setFormatter(formatter)
+
+        episode_logger.addHandler(fh)
+    
+        return episode_logger
+
     def reset(self, task_id=None):
         self.cnt_duplicate_subgoal = 0
         self.cnt_nouse_subgoal = 0
@@ -51,14 +74,15 @@ class ArenaMP(object):
 
         for it, agent in enumerate(self.agents):
             if 'LLM_vision' in agent.agent_type:
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it])
+                episode_logger = self.init_episode_logs(self.record_dir, task_id)
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id)
             elif 'vision' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, self.env.all_room_name, self.env.all_containers_name, self.env.all_goal_objects_name, seed=agent.seed)
                 'TODO: dwh still work on it now'
             elif 'MCTS' in agent.agent_type or 'Random' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it])
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
             else:
                 agent.reset(self.env.full_graph)
 
