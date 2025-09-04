@@ -100,14 +100,16 @@ class Challenge_oppo:
         start = time.time()
         results = {}
         #all episode charaters
-        total_0_charaters = 0
-        total_1_charaters = 0
+        total_0_comm_chars = 0
+        total_1_comm_chars = 0
         total_0_com = 0
         total_1_com = 0
         total_0_api = 0
         total_1_api = 0
         total_0_tokens = 0
         total_1_tokens = 0
+        total_0_total_tokens = 0
+        total_1_total_tokens = 0
 
         for i, episode in enumerate(eval_episodes):
             
@@ -265,24 +267,28 @@ class Challenge_oppo:
 
             
             #episode count
-            episode_0_charaters = agents[0].characters
-            episode_1_charaters = agents[1].characters
+            episode_0_comm_chars = agents[0].comm_chars
+            episode_1_comm_chars = agents[1].comm_chars
             episode_0_com = agents[0].comm_num
             episode_1_com = agents[1].comm_num
             episode_0_api = agents[0].get_api_num()
             episode_1_api = agents[1].get_api_num()
             episode_0_tokens = agents[0].get_tokens()
             episode_1_tokens = agents[1].get_tokens()
-            
+            episode_0_total_tokens = agents[0].get_total_tokens()
+            episode_1_total_tokens = agents[1].get_total_tokens()
+
             #total count
-            total_0_charaters += episode_0_charaters
-            total_1_charaters += episode_1_charaters
+            total_0_comm_chars += episode_0_comm_chars
+            total_1_comm_chars += episode_1_comm_chars
             total_0_com += episode_0_com
             total_1_com += episode_1_com
             total_0_api += episode_0_api
             total_1_api += episode_1_api
             total_0_tokens += episode_0_tokens
             total_1_tokens += episode_1_tokens
+            total_0_total_tokens += episode_0_total_tokens
+            total_1_total_tokens += episode_1_total_tokens
 
             episode_total_time = time.time() - episode_start_time
             self.time_logger.info(f"Episode {episode} total time: {episode_total_time:.4f} secs")
@@ -297,15 +303,17 @@ class Challenge_oppo:
                 "frame": self.env.num_frames,
                 "communication num_0": episode_0_com,
                 "communication num_1": episode_1_com,
-                "charater_0":episode_0_charaters,
-                "charater_1":episode_1_charaters,
+                "comm_chars_0":episode_0_comm_chars,
+                "comm_chars_1":episode_1_comm_chars,
                 "episode_total_time": episode_total_time,
                 "act_total_time": act_total_time,
                 "act_num": act_num,
                 "api_0":episode_0_api,
                 "api_1":episode_1_api,
-                "tokens_0":episode_0_tokens,
-                "tokens_1":episode_1_tokens
+                "completion_tokens_0":episode_0_tokens,
+                "completion_tokens_1":episode_1_tokens,
+                "total_tokens_0":episode_0_total_tokens,
+                "total_tokens_1":episode_1_total_tokens,
             }
             with open(
                 os.path.join(self.output_dir, str(episode), "result_episode.json"), "w"
@@ -323,19 +331,21 @@ class Challenge_oppo:
         os.makedirs("./count_results",exist_ok=True)
         with open("./count_results/counts.txt","a+") as f:
             f.write(f"time:{time.time()}")
-            f.write(f"total_characters:{total_0_charaters+total_1_charaters}")
-            f.write(f"total_0_characters:{total_0_charaters}")
-            f.write(f"total_1_characters:{total_1_charaters}")
+            f.write(f"total_chars:{total_0_comm_chars+total_1_comm_chars}")
+            f.write(f"total_0_comm_chars:{total_0_comm_chars}")
+            f.write(f"total_1_comm_chars:{total_1_comm_chars}")
             f.write(f"total_0_com:{total_0_com}")
             f.write(f"total_1_com:{total_1_com}")
             f.write(f"com_per_episode0:{total_0_com/len(eval_episodes)}")
             f.write(f"com_per_episode1:{total_1_com/len(eval_episodes)}")
             f.write(f"total_api_0{total_0_api}")
             f.write(f"total_api_1{total_1_api}")
-            f.write(f"total_tokens_0{total_0_tokens}")
-            f.write(f"total_tokens_1{total_1_tokens}")
-            f.write(f"character_per_episode0:{total_0_charaters/len(eval_episodes)}")
-            f.write(f"charactor_per_episode1:{total_1_charaters/len(eval_episodes)}")
+            f.write(f"total_completion_tokens_0{total_0_tokens}")
+            f.write(f"total_completion_tokens_1{total_1_tokens}")
+            f.write(f"total_total_tokens_0{total_0_total_tokens}")
+            f.write(f"total_total_tokens_1{total_1_total_tokens}")
+            f.write(f"chars_per_episode0:{total_0_comm_chars/len(eval_episodes)}")
+            f.write(f"chars_per_episode1:{total_1_comm_chars/len(eval_episodes)}")
 
 
         self.logger.info(f"eval done, avg transport rate {avg_finish}")

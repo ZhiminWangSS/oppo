@@ -12,19 +12,20 @@
             "module": "tdw-gym.challenge_cobel",
             "console": "integratedTerminal",
             "args": [
-                "--output_dir","results_cobelv1.1_0824",
+                "--output_dir","results_cobelv1.2_0901",
                 "--lm_id","deepseek-chat",
-                "--experiment_name","try",
-                "--run_id","",
+                "--experiment_name","LMs-$lm_id",
+                "--run_id","cobelv1.4_th=5",
                 "--port","10004",
+                "--belief_threshold","5",
                 "--agents","lm_agent_cobel","lm_agent_cobel",
                 "--communication",
-                "--prompt_template_path","LLM/prompt_com.csv",
+                "--prompt_template_path","LLM/cobel_prompts.csv",
                 "--max_tokens","1024",
                 "--data_prefix","dataset/dataset_test/",
-                "--eval_episodes","0","1","4","9","10",
+                "--eval_episodes","9","10","11",
                 "--screen_size","256",
-                
+
             ],
             "cwd":"${workspaceFolder}/tdw_mat",
             "env": {

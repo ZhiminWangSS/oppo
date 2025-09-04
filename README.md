@@ -60,3 +60,91 @@ TIPs:
 
 
 - 此外，如果性能不好，考虑引入重规划，刚开始的subgoal不太稳定，还可能一直误导后面的intuitive planning。
+
+
+
+- bed的位置好像不用知道 直接transport过去就行了
+
+- TODO
+  - 完成物体更新到belief里面
+  - intuitive plan 传入state即可
+
+======opposubplan======== explore current room and fill containers with objects here.
+======mysubplan======== explore Office(3000) and fill containers with objects here
+没有container喜欢加cotainer
+- 为什么能抓别人手上的
+
+
+- target_object_state(banana(Unknown)): location(Kitchen(5000))
+    - target_object_state(bread(Unknown)): location(Kitchen(5000))
+    - target_object_state(apple(Unknown)): location(Kitchen(5000))
+
+
+update也不稳定 成本也高
+
+
+
+differet content十分不稳定
+
+
+
+实验表：
+- coela
+- roco 还没做
+- capo
+- embodied
+- belief的更新不太好
+
+
+0830记录
+两版本实验：
+- 输出belief差距
+- 只输出0阶的
+
+TODO：
+- 第一阶段的规则生成需要改很多prompt 这个可以给禾姐做
+- 观察一下 isaw还会不会有物体重复出现的问题（在手上+在屋子里）SOLVED
+- 优化subgoal的设计 
+  - 房间的探索情况应该被映射为物品可能情况 比如剩一个苹果 剩两个房间未被探索 所以应该去那两个房间探索
+    - 这一步可以使用可能情况的列表来表示 prediction时，同时进行 比如得到apple3 in [livingroom1000, kitchen3000] 交给intuitive planning去做
+    - 然后如果通过通信知道了在哪个房间，应该先explore and locate object location and then grasp it and transport 这个其实应该是intuitive来做 或者说subplan就定成这种
+    - 然后如果是刚开始 subplan可以是抽象一点的 explore current room and grasp objects as many as possible
+      - 解析为 explore current room -> 看到几个物品 -> go grasp -> go grasp -> 满了 -> SUBPLAN DONE
+
+- 替换好像还有点问题
+- init不太稳定 ongoing SOLVED 后续需要调整prompt减少示例
+- V1prompt 没有对init进行增强
+- send a message 重复次数太多
+
+
+实验一些fancy的点：
+- 设置严苛的通信条件 对不不同算法的性能 比如一帧50个字母
+  - 分三个等级来做 一个500 一个100 一个50（极端情况） 但是没有量纲的概念
+  - cwah可以换算成步数
+- 主表是成功率对比+通信成本对比（两个维度：一是通信api次数 二是平均字数）
+- 模型使用deepseekV3 + 小模型（未定）
+- 消融实验
+  - 消融符号表征 改成跟coela一样的自然语言文本描述
+  - 消除预测更新 仅靠观测更新
+
+Goal:
+Transport 6 apples, 2 breads, 1 loaf_bread, 1 burger to the bed.
+Room list:
+<Office> (1000), <Livingroom> (2000), <Livingroom> (3000), <Office> (4000), <Kitchen> (5000), <Livingroom> (7000), <Bedroom> (8000). 
+
+V1.5 新的prompt(only_zero+new subplan) + mes_th = 2 + action_th = 3 有completion更新（没debug）
+  - check completion 更新
+  - check difference
+  - check subplan （这一版的log比较简洁）
+  - ep 9 10 11 19 20 21
+V1.4 旧promt（不同+old subplan) + mes_th =2 + action_th = 3 无completion更新（没de bug）
+
+V1.5.1 (run2)
+  - 加了推理 （intuitive）
+  - prediction指定了是几个动作的组合
+  
+V1.5.2 
+  - intuitive改成理由
+  - 重写了logger 更清晰
+  - 修改了action history 防止send message占据任务长度
+  - debug visible_obj不更新

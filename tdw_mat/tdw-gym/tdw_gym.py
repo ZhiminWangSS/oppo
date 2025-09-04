@@ -83,7 +83,6 @@ class TDW(Env):
         self.enable_collision_detection = enable_collision_detection
         self.controller = None
         self.message_per_frame = 500
-        self.info_goal = None
         rgb_space = gym.spaces.Box(0, 256,
                                  (3,
                                   self.screen_size,
@@ -310,14 +309,6 @@ class TDW(Env):
             else:
                 self.goal_description[self.object_names[i]] = 1
 
-        self.info_goal = {}
-        for i in self.target_object_ids:
-            if self.object_names[i] in self.info_goal:
-                self.info_goal[self.object_names[i]+str(i)] += 1
-            else:
-                self.info_goal[self.object_names[i]+str(i)] = 1
-        
-
         room_type_path = f'./dataset/room_types.json'
         with open(room_type_path, 'r') as f: room_types = json.load(f)
         
@@ -479,7 +470,7 @@ class TDW(Env):
                 for object_id in self.segmentation_colors:
                     segmentation_color = tuple(self.segmentation_colors[object_id])
                     object_name = self.object_names[object_id]
-                    if segmentation_color in colors:#colors is the what specific agent see,s_color is the whole thing
+                    if segmentation_color in colors:
                         obs[id]['visible_objects'].append({
                             'id': object_id,
                             'type': self.get_object_type(object_id),
@@ -511,7 +502,7 @@ class TDW(Env):
                     'name': None,
                 })
             x, y, z = self.controller.replicants[replicant_id].dynamic.transform.position
-            fx, fy, fz = self.controller.replicants[replicant_id].dynamic.transform.forward# what direction of the agent?
+            fx, fy, fz = self.controller.replicants[replicant_id].dynamic.transform.forward
             obs[id]['agent'] = [x, y, z, fx, fy, fz]
             held_objects = list(self.controller.state.replicants[replicant_id].values())
             obs[id]['held_objects'] = []
@@ -618,14 +609,13 @@ class TDW(Env):
                 inst[x] = []
         return self.add_name(inst)
 
-    def step(self, actions):# message in action and send to the environment
+    def step(self, actions):
         '''
         Run one timestep of the environment's dynamics
         '''
         start = time.time()
         # Receive actions
         for replicant_id in self.controller.replicants:
-            # print("Replicant ID:", replicant_id)
             action = actions[str(replicant_id)]
             if action['type'] == 'ongoing': continue
             # otherwise we start an action directly
@@ -717,7 +707,7 @@ class TDW(Env):
 
         self.num_frames += num_frames
         self.action_list.append(actions)
-        goal_put, goal_total, self.success = self.check_goal()#whole success
+        goal_put, goal_total, self.success = self.check_goal()
         reward = 0
         for replicant_id in self.controller.replicants:
             action = actions[str(replicant_id)]
@@ -746,7 +736,7 @@ class TDW(Env):
         # add messages to obs
         if self.number_of_agents == 2:
             for replicant_id in self.controller.replicants:
-                obs[str(replicant_id)]['messages'] = copy.deepcopy(self.messages)#
+                obs[str(replicant_id)]['messages'] = copy.deepcopy(self.messages)
             self.messages = [None for _ in range(self.number_of_agents)]
 
         for replicant_id in self.controller.replicants:
@@ -757,7 +747,6 @@ class TDW(Env):
         info['done'] = done
         info['num_frames_for_step'] = num_frames
         info['num_step'] = self.num_step
-        info["statisfied"] = self.satisfied
         if done:
             info['reward'] = self.reward
 

@@ -1,4 +1,5 @@
 import random
+
 import openai
 import torch
 import json
@@ -7,32 +8,7 @@ import pandas as pd
 from openai import OpenAIError
 import backoff
 from openai import OpenAI
-import logging
-from datetime import datetime
-
-
-
-# 配置日志
-def setup_logger(name, log_file, level=logging.INFO):
-    """设置日志记录器"""
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    handler = logging.FileHandler(log_file)
-    handler.setFormatter(formatter)
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(handler)
-
-    return logger
-
-
-# 创建日志目录
-if not os.path.exists("message_logs"):
-    os.makedirs("message_logs")
-
-# 创建llm日志记录器
-log_filename = f"message_logs/coela_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-llm_logger = setup_logger("llm_logger", log_filename)
+import os
 
 class LLM:
 	def __init__(self,
@@ -50,7 +26,8 @@ class LLM:
 		self.agent_name = "Alice" if agent_id == 1 else "Bob"
 		self.oppo_name = "Alice" if agent_id == 2 else "Bob"
 		self.oppo_pronoun = "she" if agent_id == 2 else "he"
-		self.debug = sampling_parameters.debug
+		# self.debug = sampling_parameters.debug
+		self.debug = True
 		self.goal_location = None
 		self.goal_location_id = None
 		self.roomname2id = {}
@@ -68,25 +45,22 @@ class LLM:
 		self.cot = cot
 		self.source = source
 		self.lm_id = lm_id
-		self.chat = 'gpt-3.5-turbo' in lm_id or 'gpt-4' in lm_id or 'deepseek' in lm_id or 'chatglm' in lm_id or 'chatgpt' in lm_id
+		self.chat = True
 		self.OPENAI_KEY = None
-		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-
-		self.tokens = 0
-		self.communication_cost = 0
-		self.characters = 0
-		self.comm_num = 0
-
-		
+		self.total_cost = 0
+		self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+		#COBEL
+		self.completion_tokens = 0
+		self.total_tokens = 0
+		self.comm_tokens = 0
+		self.api_num = 0
 		if self.source == 'openai':
-			# openai.api_key = os.getenv("OPENAI_KEY")
-			#print(f"Using OpenAI API key: {os.getenv('OPENAI_KEY')}")
-			#print(f"Using OpenAI API base URL: {os.getenv('API_BASE')}")
+			api_key=os.environ.get("CHATANYWHERE_API_KEY")
+			base_url=os.environ.get("CHATANYWHERE_URL")
 			client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1"
+                api_key=api_key,
+                base_url=base_url,
             )
-			print(f"loading openai model =============={lm_id}")
 			if self.chat:
 				self.sampling_params = {
 					"max_tokens": sampling_parameters.max_tokens,
@@ -146,9 +120,6 @@ class LLM:
 				if source == 'openai':
 					try:
 						if self.chat:
-							# response = openai.ChatCompletion.create(
-							# 	model=lm_id, messages=prompt, **sampling_params
-							# )
 							response = client.chat.completions.create(
 								model=lm_id, messages=prompt, **sampling_params
 							)
@@ -157,22 +128,19 @@ class LLM:
 								with open(f"LLM/chat_raw.json", 'a') as f:
 									f.write(json.dumps(response.to_dict(), indent=4))
 									f.write('\n')
-							# generated_samples = [response['choices'][i]['message']['content'] for i in
-							# 					 range(sampling_params['n'])]
-							# 新版 SDK 的正确访问方式
 							generated_samples = [
 								choice.message.content 
 								for choice in response.choices  # 直接遍历 choices 对象
 							]
-							if 'gpt-4' in self.lm_id:
-								# usage = response['usage']['prompt_tokens'] * 0.03 / 1000 + response['usage']['completion_tokens'] * 0.06 / 1000
-								# 计算费用（新版 SDK 的正确方式）
-								usage_cost = (response.usage.prompt_tokens * 0.03 / 1000 + 
-										response.usage.completion_tokens * 0.06 / 1000)
-							elif 'gpt-3.5' in self.lm_id:
-								usage = ( response.usage.prompt_tokens + response.usage.completion_tokens ) * 0.002 / 1000
-							elif 'deepseek-r1' in self.lm_id:
-								usage = (( response.usage.prompt_tokens * 0.0024 )+ (response.usage.completion_tokens * 0.0096)) / 1000
+							self.completion_tokens += response.usage.completion_tokens
+							self.total_tokens += response.usage.total_tokens
+							self.api_num += 1
+							#COBEL usage = completion token
+							usage = response.usage.completion_tokens
+							# if 'gpt-4' in self.lm_id:
+							# 	usage = response['usage']['prompt_tokens'] * 0.03 / 1000 + response['usage']['completion_tokens'] * 0.06 / 1000
+							# elif 'gpt-3.5' in self.lm_id:
+							# 	usage = response['usage']['total_tokens'] * 0.002 / 1000
 						# mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
 						# 				  range(sampling_params['n'])]
 						elif "text-" in lm_id:
@@ -182,8 +150,6 @@ class LLM:
 								with open(f"LLM/raw.json", 'a') as f:
 									f.write(json.dumps(response, indent=4))
 									f.write('\n')
-							# generated_samples = [response['choices'][i]['text'] for i in range(sampling_params['n'])]
-							# 新版 SDK 的正确访问方式
 							generated_samples = [
 								choice.message.content 
 								for choice in response.choices  # 直接遍历 choices 对象
@@ -215,8 +181,6 @@ class LLM:
 				else:
 					raise ValueError("invalid source")
 				# generated_samples = [sample.strip().lower() for sample in generated_samples]
-				if self.debug:
-					print(f"generated_samples: {generated_samples}")
 				return generated_samples, usage
 
 			return _generate
@@ -227,6 +191,10 @@ class LLM:
 	def reset(self, rooms_name, roomname2id, goal_location, unsatisfied):
 		self.rooms = rooms_name
 		self.roomname2id = roomname2id
+		self.completion_tokens = 0
+		self.comm_tokens = 0
+		self.total_tokens = 0
+		self.api_num = 0
 		self.goal_location = goal_location
 		self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
 		self.goal_desc, self.goal_location_with_r = self.goal2description(unsatisfied, None)
@@ -309,7 +277,8 @@ class LLM:
 			if f"{option} " in text or act in text or name in text or id in text:
 				return action
 		print("WARNING! No available action parsed!!! Random choose one")
-		return random.choice(available_actions) if len(available_actions) > 0 else ["wait"]  ##may cause exception
+		return random.choice(available_actions)
+
 
 	def progress2text(self, current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored):
 		sss = {}
@@ -448,9 +417,12 @@ class LLM:
 				gen_prompt = gen_prompt.replace('$ACTION_HISTORY$', action_history_desc)
 				gen_prompt = gen_prompt.replace('$DIALOGUE_HISTORY$', dialogue_history_desc)
 				gen_prompt = gen_prompt + f"\n{self.agent_name}:"
-				chat_prompt = [{"role": "user", "content": gen_prompt}]
-				outputs, usage = self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)	
-				self.total_cost += usage
+				system_prompt = "Just output the message content without any additional analysis, quotes or reasons. Just output the message. "
+				chat_prompt = [{"role": "system", "content": system_prompt},
+                               {"role": "user", "content": gen_prompt}]
+				outputs, usage= self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)
+				self.comm_tokens += usage
+				self.total_cost += usage #COBEL 这里的usage等于token
 				message = outputs[0]
 				info['message_generator_prompt'] = gen_prompt
 				info['message_generator_outputs'] = outputs
@@ -495,18 +467,15 @@ class LLM:
 		else:
 			if self.debug:
 				print(f"base_prompt:\n{prompt}")
-			outputs, usage = self.generator([{"role": "user", "content": prompt}] if self.chat else prompt, self.sampling_params)
+			system_prompt = "Don't output any additional analysis and reasons, just output the answer chosen from available actions. A standard response is: Answer:A. go to a room."
+			chat_prompt = [{"role": "system", "content": system_prompt},
+                           {"role": "user", "content": prompt}]
+			outputs, usage = self.generator(chat_prompt if self.chat else prompt, self.sampling_params)
 			output = outputs[0]
 			info['cot_usage'] = usage
 			if self.debug:
 				print(f"base_output:\n{output}")
 		plan = self.parse_answer(available_plans_list, output)
-		if plan.startswith('[send_message]'):
-			self.communication_cost += 1
-			llm_logger.info(f"{self.agent_name}进行通信：message: {plan}\n当前通信次数{self.communication_cost}")
-   
-		else:
-			llm_logger.info(f"{self.agent_name}进行动作：action: {plan}")
 		if self.debug:
 			print(f"plan: {plan}\n")
 		info.update({"num_available_actions": num,

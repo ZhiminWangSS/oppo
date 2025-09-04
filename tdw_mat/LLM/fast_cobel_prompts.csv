@@ -1,0 +1,158 @@
+type,prompt
+measurement_first_order,"$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $OPPO_NAME$ know? Use the rules below to formulate my known information:
+$AGENT_NAME$'s Visual Observation: $VISUAL_OBSERVATION$
+Message: $MESSAGE$
+Construction rules: 
+$BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+measurement_zero_order,"
+$AGENT_NAME$ and $OPPO_NAME$ want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and visual observation, what does $AGENT_NAME$ know? Use the rules below to formulate my known information:
+$AGENT_NAME$'s Visual Observation: $VISUAL_OBSERVATION$
+Message: $MESSAGE$
+Construction rules: 
+$BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress,and don’t delete the any entities in known information. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+prediction_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my known information, please reason over these information and predict the objects' perhaps states such as location and completion state, and then infer what should i do next to maximize the transport efficiency.  First give your reasons (at most five reasons) and answer me  with the subplan only. The subplan should be a local goal to contribute to finish transport imcompleted object, composing of several actions. Here are few example of subplans: 
+explore current room and transport objects here to the bed;
+explore and fill the container with objects;
+explore partial-explored rooms;
+
+My known information:  
+$FIRST_ORDER_BELIEFS$
+Reasons:
+Subplan:"
+prediction_zero_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my known information and the $OPPO_NAME$'s subplan. Please reason over these information and predict the objects' perhaps states such as location and completion state, and then infer what should i do next to maximize the efficiency based on my known information, avoiding redundance with $OPPO_NAME$' subplan. First give your reasons (at most five reasons) and answer me  with the subplan only. The subplan should be a local goal to contribute to finish transport imcompleted object, composing of several actions. Here are few example of subplans: 
+explore current room and transport objects here to the bed;
+explore and fill the container with objects;
+explore partial-explored rooms;
+My known information: 
+$ZERO_ORDER_BELIEFS$
+$OPPO_NAME$'s subplan: 
+$OPPO_SUBPLAN$
+Reasons:
+Subplan:"
+belief_awareness,"zero order belief:
+ $ZERO_ORDER_BELIEFS$
+first order beliefs: 
+$FIRST_ORDER_BELIEFS$
+Evaluate the different content $AGENT_NAME$ knows and $OPPO_NAME$ knows, regardless of format difference and give a difference score from 0-10 0 for nearly identical 10 for large differences. And then list the different parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
+
+Here are some output examples:
+
+first_order_belief:
+agent_state(alice):
+- location(livingroom(1000))
+target_object(orange(11023))
+- location(kitchen(2000))
+zero_order_belief:
+agent_state(alice):
+- location(Unknown)
+target_object(orange(11023))
+- location(bob)
+- Difference score: 
+- Different content: 
+  - Zero_order_belief: 
+  - First_order_belief:"
+intuitive_planning,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subplan and previous actions. In order to achieve a subplan, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this subplan. If I have done all actions need in the subplan, just answer SUBPLAN DONE. Don't give any analysis and reasoning progress, just output the action.
+My state: $MYSTATE$
+Subplan: $SUBPLAN$
+Previous actions: $PREVIOUSACTIONS$
+Available actions: $AVAILABLEACTIONS$
+Answer:
+
+"
+init_beliefs,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms . Given the goal and room list, please help me construct a mental knowledge template with the belief rules. The rules describe how the information in the task be formulated in a structured form to guide collaboration. Since you don’t know any information, just put Unknown in () to represent it. For items with an unknown quantity, generate only a single instance. Keep the tips in the rules like number constraints. Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). 
+Here is an example in the view of Kate:
+```
+zero_order_beliefs(Kate)# my zero order belief
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+- target_object_state(apple(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+  ...
+  ...
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Kate)
+  - location(Unknown)
+  - subplan(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- agent_state(Bob)
+  - location(Unknown)
+  - subplan(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+...
+...
+- bed_location()
+  - location(Unknown)
+
+first_order_beliefs(Bob) # my first order belief about bob's belief
+- target_object_state(orange(Unknown))
+  - location(Unknown)
+  - completion(Unknown)
+...
+...
+- container_state(Unknown)
+  - location(Unknown)
+  - contents[Unknown, Unknown, Unknown]
+- agent_state(Kate)
+  - location(Unknown)
+  - subplan(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- agent_state(Bob)
+  - location(Unknown)
+  - subplan(Unknown)
+  - object_in_hand[Unknown, Unknown]
+- room_state(Livingroom(1000))
+  - exploration_state(Unknown)
+...
+...
+- bed_location()
+  - location(Unknown)
+
+```
+Belief rules:
+$BELIEF_RULES$
+Goal:
+$GOAL$
+Room list:
+$ROOM_LIST$
+
+Answer in this format(including the annotation):
+Zero order beliefs:# my zero order belief
+First order beliefs:# my first order belief of ?agent's belief
+"
+adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference. When you need to describe entity, convey it in original format like <livingroom>(2000) , <banana>(12345)
+
+
+Belief difference: 
+$BELIEF_DIFFERENCE$
+
+
+Answer in this format:
+{ “to_$OPPO_NAME$” : “message” }"
+measurement_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and my own visual observation, what $OPPO_NAME$'s mental knowledge now about object and my state? Remember that $OPPO_NAME$  don’t know $AGENT_NAME$’s Visual Observation. Use the rules below to refine and update $OPPO_NAME$'s mental knowledge:
+$AGENT_NAME$’s Visual Observation: $VISUAL_OBSERVATION$
+Message: 
+$MESSAGE$
+$OPPO_NAME$'s Historic Mental knowledge: 
+$FIRST_ORDER_BELIEFS$
+Belief rules: 
+$BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id).  If you think $OPPO_NAME$ don't no any information, just put ""Unknown"" in the ().If nothing was in hand or container, just leave it Null."
+measurement_zero_order,"
+I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Based on the message and my own visual observation, what information I should know? Use the rules below to refine and update my own historic mental knowledge:
+$AGENT_NAME$’s Visual Observation: $VISUAL_OBSERVATION$
+Message: 
+$MESSAGE$
+My Own Historic Mental knowledge: 
+$ZERO_ORDER_BELIEFS$
+Belief rules: 
+$BELIEF_RULES$
+Just output in the rules form, without any analysis and reasoning progress. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
+misalignment_test,
