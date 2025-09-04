@@ -10,7 +10,7 @@ from openai import OpenAI
 import logging
 from datetime import datetime
 
-from LLM import LLM
+from cwah.LLM.LLM import LLM
 
 class LLM_capo(LLM):
     def __init__(self,

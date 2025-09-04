@@ -49,3 +49,4 @@ virtualhome_userinferface/port_*.txt
 virtualhome_userinferface/.*
 virtualhome_userinferface/record_graph/
 virtualhome_userinferface/saved_images/
+*.pik

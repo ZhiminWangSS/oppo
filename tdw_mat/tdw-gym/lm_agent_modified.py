@@ -11,15 +11,13 @@ import copy
 from PIL import Image
 from agent_memory import AgentMemory
 
-
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from tdw_mat.LLM.LLM_modified import LLM
 
 CELL_SIZE = 0.125
 ANGLE = 15
+import logging
 
-
-class lm_agent_oppo:
+class lm_agent:
     """
     大模型驱动的智能体类
     主要功能：
@@ -40,7 +38,10 @@ class lm_agent_oppo:
             args: 配置参数
             output_dir: 输出目录
         """
-        # 环境状态相关变量
+                #counting
+        self.characters = 0 # model-generated-characters
+        self.comm_num = 0 # agent-communication-times
+                # 环境状态相关变量
         self.with_oppo = None  # 对手持有的物体
         self.oppo_pos = None  # 对手位置
         self.with_character = None  # 角色持有的物体
@@ -49,7 +50,8 @@ class lm_agent_oppo:
         self.object_list = None  # 物体列表
         self.container_held = None  # 持有的容器
         self.gt_mask = None  # 是否使用真实掩码
-
+        self.episode = None
+        self.info = None
         # 物体信息存储
         self.object_info = (
             {}
@@ -64,7 +66,7 @@ class lm_agent_oppo:
 
         # 智能体基本信息
         self.agent_id = agent_id
-        self.agent_type = "lm_agent_oppo"
+        self.agent_type = "lm_agent"
         self.agent_names = ["Alice", "Bob"]
         self.opponent_agent_id = 1 - agent_id
 
@@ -72,7 +74,7 @@ class lm_agent_oppo:
         self.env_api = None
         self.max_frames = max_frames
         self.output_dir = output_dir
-        self.map_size = (240, 120)
+        self.map_size = (240, 130)
         self.save_img = True
 
         # 场景边界
@@ -101,6 +103,8 @@ class lm_agent_oppo:
         self.goal_objects = None  # 目标物体
         self.dropping_object = None  # 正在放置的物体
 
+        #COBEL
+        self.comm_chars = 0
         # 大模型配置
         self.source = args.source
         self.lm_id = args.lm_id
@@ -108,7 +112,7 @@ class lm_agent_oppo:
         self.communication = args.communication
         self.cot = args.cot
         self.args = args
-        self.LLM = LLM_oppo(
+        self.LLM = LLM(
             self.source,
             self.lm_id,
             self.prompt_template_path,
@@ -136,9 +140,9 @@ class lm_agent_oppo:
 
         # 通信相关配置
         self.communication = args.communication  # 是否启用通信功能
-        print(f"是否启用通信：{self.communication}")
+        # print(f"是否启用通信：{self.communication}")
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
-        self.agent_names = ["Alice", "Bob"]  # 智能体名称列表，用于标识消息发送者
+        self.episode_logger = None  # 记录当前episode的日志
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -224,12 +228,12 @@ class lm_agent_oppo:
         object_list = {0: [], 1: [], 2: []}
         self.object_per_room = {room: {0: [], 1: [], 2: []} for room in self.rooms_name}
         for object_type in [0, 1, 2]:
-            obj_map_indices = np.where(self.object_map == object_type + 1)
+            obj_map_indices = np.where(self.object_map == object_type + 1)##object_map update from getting new object
             if obj_map_indices[0].shape[0] == 0:
                 continue
             for idx in range(0, len(obj_map_indices[0])):
                 i, j = obj_map_indices[0][idx], obj_map_indices[1][idx]
-                id = self.id_map[i, j]
+                id = self.id_map[i, j]#check4 :id_map where it comes from? A:from updating new objects
                 if (
                     id in self.satisfied
                     or id in self.holding_objects_id
@@ -239,7 +243,7 @@ class lm_agent_oppo:
                     continue
                 object_list[object_type].append(self.object_info[id])
                 room = self.env_api["belongs_to_which_room"](
-                    self.object_info[id]["position"]
+                    self.object_info[id]["position"]#check5 object_info where the position comes from?   A:from getting new object
                 )
                 if room is None:
                     self.logger.warning(f"obj {self.object_info[id]} not in any room")
@@ -248,7 +252,7 @@ class lm_agent_oppo:
                 self.object_per_room[room][object_type].append(self.object_info[id])
         self.object_list = object_list
 
-    def get_new_object_list(self):
+    def get_new_object_list(self):## key function
         self.visible_objects = self.obs["visible_objects"]
         self.new_object_list = {0: [], 1: [], 2: []}
         for o_dict in self.visible_objects:
@@ -267,16 +271,16 @@ class lm_agent_oppo:
                 continue
             object_id = o_dict["id"]
             new_obj = False
-            if object_id not in self.object_info:
+            if object_id not in self.object_info:#can know that the object_info is personlize
                 self.object_info[object_id] = {}
                 new_obj = True
             self.object_info[object_id]["id"] = object_id
             self.object_info[object_id]["type"] = o_dict["type"]
             self.object_info[object_id]["name"] = o_dict["name"]
-            if o_dict["type"] == 3:  # the agent
+            if o_dict["type"] == 3:  # the agent'information updating
                 if o_dict["id"] == self.opponent_agent_id:
                     position = self.cal_object_position(o_dict)
-                    self.oppo_pos = position
+                    self.oppo_pos = position#update the partner's position
                     if position is not None:
                         oppo_last_room = self.env_api["belongs_to_which_room"](position)
                         if oppo_last_room is not None:
@@ -324,7 +328,7 @@ class lm_agent_oppo:
     def l2_distance(self, st, g):
         return ((st[0] - g[0]) ** 2 + (st[1] - g[1]) ** 2) ** 0.5
 
-    def reach_target_pos(self, target_pos, threshold=1.0):
+    def reach_target_pos(self, target_pos, threshold=1.0):# check if agent reach the pos
         x, _, z = self.obs["agent"][:3]
         gx, _, gz = target_pos
         d = self.l2_distance((x, z), (gx, gz))
@@ -334,6 +338,32 @@ class lm_agent_oppo:
             ) != self.env_api["belongs_to_which_room"](np.array([gx, 0, gz])):
                 return False
         return d < threshold
+
+
+
+
+        # 配置日志
+    
+    # def setup_logger(self,name, log_file, level=logging.INFO):
+    #     """设置日志记录器"""
+    #     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    #     handler = logging.FileHandler(log_file)
+    #     handler.setFormatter(formatter)
+
+    #     logger = logging.getLogger(name)
+    #     logger.setLevel(level)
+    #     logger.addHandler(handler)
+
+    #     return logger
+
+
+    # # 创建日志目录
+    # if not os.path.exists("logs"):
+    #     os.makedirs("logs")
+
+    # # 创建llm日志记录器
+    # log_filename = f"logs/coela_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    # llm_logger = setup_logger("llm_logger", log_filename)
 
     def reset(
         self,
@@ -346,8 +376,12 @@ class lm_agent_oppo:
         agent_id=0,
         gt_mask=True,
         save_img=True,
+        episode=None,
+        episode_logger=None
     ):
         self.force_ignore = []
+        self.characters = 0 
+        self.comm_num = 0 
         self.agent_memory = AgentMemory(
             agent_id=self.agent_id,
             agent_color=agent_color,
@@ -376,7 +410,7 @@ class lm_agent_oppo:
         self.id_map = np.zeros(self.map_size, np.int32)
         self.object_map = np.zeros(self.map_size, np.int32)
 
-        self.object_info = {}
+        self.object_info = {}#personlized attribution
         self.object_list = {0: [], 1: [], 2: []}
         self.new_object_list = {0: [], 1: [], 2: []}
         self.container_held = None
@@ -396,13 +430,15 @@ class lm_agent_oppo:
         self.current_room = self.env_api["belongs_to_which_room"](self.position)
         self.rotated = None
         self.rooms_explored = {}
-
+        
+        
+        #COBEL
+        self.comm_chars = 0
         self.plan = None
-        self.action_history = [f"go to {self.current_room} at initial step"]
+        self.action_history = [f"go to {self.current_room} a initial step"]
         self.dialogue_history = []
         self.gt_mask = gt_mask
-        self.info = None# denote the important information may be used
-        if self.gt_mask == True:
+        if self.gt_mask == True:##check6 what is gt_mask?
             self.detection_threshold = 5
         else:
             self.detection_threshold = 3
@@ -415,10 +451,12 @@ class lm_agent_oppo:
         # print(self.rooms_name)
         self.LLM.reset(self.rooms_name, self.goal_objects)
         self.save_img = save_img
+        self.episode = episode
+        self.episode_logger = episode_logger
 
     def move(self, target_pos):
         self.local_step += 1
-        action, path_len = self.agent_memory.move_to_pos(target_pos)
+        action, path_len = self.agent_memory.move_to_pos(target_pos)#check7 what is the action here? A:like the action down here
         return action
 
     def gotoroom(self):
@@ -431,14 +469,13 @@ class lm_agent_oppo:
         if self.current_room == target_room and self.room_distance == 0:
             self.plan = None
             return None
-        # add an interruption if anything new happens
+        # add an interruption if anything new happens cobel TODO
         if (
             len(self.new_object_list[0])
             + len(self.new_object_list[1])
             + len(self.new_object_list[2])
             > 0
         ):
-            #更新动作历史
             self.action_history[-1] = self.action_history[-1].replace(
                 self.plan, f"go to {self.current_room}"
             )
@@ -459,7 +496,7 @@ class lm_agent_oppo:
             self.rotated = 0
         if self.rotated == 16:
             self.roatated = 0
-            self.rooms_explored[target_room] = "all"
+            self.rooms_explored[target_room] = "all"#every direction going through
             self.plan = None
             return None
         self.rotated += 1
@@ -575,8 +612,13 @@ class lm_agent_oppo:
             plan: 规划结果，可能包含通信动作
             a_info: 规划信息
         """
-        # 将对话历史作为上下文输入传递给大模型
-        # 这样大模型可以根据历史对话内容做出更合理的决策
+        # # 可视化并保存当前obs的rgb为jpg图片
+        # if "rgb" in self.obs and self.obs["rgb"] is not None:
+        #     img = Image.fromarray(self.obs["rgb"].astype(np.uint8))
+        #     os.makedirs(self.output_dir, exist_ok=True)
+        #     img.save(os.path.join(self.output_dir,f"obs_rgb_{self.num_frames}.jpg"))
+        # # 将对话历史作为上下文输入传递给大模型
+        # # 这样大模型可以根据历史对话内容做出更合理的决策
         return self.LLM.run(
             self.num_frames,
             self.current_room,
@@ -589,6 +631,7 @@ class lm_agent_oppo:
             self.dialogue_history,  # 对话历史作为上下文输入
             self.obs["oppo_held_objects"],
             self.oppo_last_room,
+            self.episode_logger #add logger to recorde llm input and output
         )
 
     def act(self, obs):
@@ -596,7 +639,7 @@ class lm_agent_oppo:
         执行动作
 
         参数:
-            obs: 环境观察 文本形式
+            obs: 环境观察
 
         返回:
             action: 要执行的动作
@@ -606,11 +649,10 @@ class lm_agent_oppo:
         self.num_frames = obs["current_frames"]
         self.steps += 1
 
-        if not self.gt_mask:
+        if not self.gt_mask:# using dectection model to get visble object
             self.obs["visible_objects"], self.obs["seg_mask"] = self.detect()
 
-        #无效动作处理
-        if obs["valid"] == False:
+        if obs["valid"] == False:#how to be invalid?
             if self.last_action is not None and "object" in self.last_action:
                 self.object_map[np.where(self.id_map == self.last_action["object"])] = 0
                 self.id_map[np.where(self.id_map == self.last_action["object"])] = 0
@@ -619,11 +661,12 @@ class lm_agent_oppo:
             self.plan = None
             assert self.invalid_count < 10, "invalid action for 10 times"
 
+        # print(f"是否启用通信：{self.communication}")
         # 处理通信消息
         if self.communication:
 
             # 遍历所有接收到的消息
-            for i in range(len(obs["messages"])): #长度为2 Alice+Bob
+            for i in range(len(obs["messages"])):
                 if obs["messages"][i] is not None:
                     # 将消息添加到对话历史中，格式为"智能体名称: 消息内容"
                     # 使用copy.deepcopy确保消息内容不会被意外修改
@@ -633,27 +676,23 @@ class lm_agent_oppo:
 
         self.position = self.obs["agent"][:3]
         self.forward = self.obs["agent"][3:]
-        # 更新当前房间
         current_room = self.env_api["belongs_to_which_room"](self.position)
-        if current_room is not None:                                                                                                                                            
+        if current_room is not None:
             self.current_room = current_room
-        
         self.room_distance = self.env_api["get_room_distance"](self.position)
         if (
             self.current_room not in self.rooms_explored
             or self.rooms_explored[self.current_room] != "all"
         ):
             self.rooms_explored[self.current_room] = "part"
-
         if self.agent_id not in self.with_character:
             self.with_character.append(
                 self.agent_id
             )  # DWH: buggy env, need to solve later.
-        #查询手中的物体
         self.holding_objects_id = []
         self.with_oppo = []
         self.oppo_holding_objects_id = []
-        for x in self.obs["held_objects"]: #更新
+        for x in self.obs["held_objects"]:
             if x["type"] == 0:
                 self.holding_objects_id.append(x["id"])
                 if x["id"] not in self.with_character:
@@ -717,8 +756,8 @@ class lm_agent_oppo:
 
         ignore_obstacles = []
         ignore_ids = []
-        self.with_character = [self.agent_id]##
-        temp_with_oppo = []##
+        self.with_character = [self.agent_id]
+        temp_with_oppo = []
         for x in self.obs["held_objects"]:
             if x is None or x["id"] is None:
                 continue
@@ -734,8 +773,8 @@ class lm_agent_oppo:
         for x in self.obs["oppo_held_objects"]:
             if x is None or x["id"] is None:
                 continue
-            temp_with_oppo.append(x["id"])## temp with oppo?
-            if "contained" in x:##contain structure
+            temp_with_oppo.append(x["id"])
+            if "contained" in x:
                 for y in x["contained"]:
                     if y is not None:
                         temp_with_oppo.append(y)
@@ -745,7 +784,7 @@ class lm_agent_oppo:
         ignore_ids = temp_with_oppo + ignore_ids
         ignore_ids += self.satisfied
         ignore_obstacles += self.satisfied
-        #更新记忆
+
         self.agent_memory.update(
             obs,
             ignore_ids=ignore_ids,
@@ -753,20 +792,21 @@ class lm_agent_oppo:
             save_img=self.save_img,
         )
 
-        if self.obs["status"] == 0:  # ongoing 这里就不调用了
+        if self.obs["status"] == 0:  # ongoing###
             return {"type": "ongoing"}
 
         self.get_new_object_list()
-        #print(self.new_object_list)
-        self.get_object_list()# the object list has the position information and room information that can be used.
+        # print(self.new_object_list)
+        self.get_object_list()
 
         info = {
-            "satisfied": self.satisfied,
+            "satisfied": self.satisfied,# maintain in agent level
             "object_list": self.object_list,
             "new_object_list": self.new_object_list,
             "current_room": self.current_room,
-            "object_per_rooms":self.object_per_room,
             "visible_objects": self.filtered(self.obs["visible_objects"]),
+            "object_per_rooms":self.object_per_room,
+            "room_explored":self.rooms_explored,
             "obs": {
                 k: v
                 for k, v in self.obs.items()
@@ -785,6 +825,9 @@ class lm_agent_oppo:
                 if lm_times > 3:
                     raise Exception(f"retrying LM_plan too many times")
                 plan, a_info = self.LLM_plan()
+                self.episode_logger.debug(
+                    f"agent_name: {self.agent_names[self.agent_id]}:LLM plan: {plan} at frame {self.num_frames}, step {self.steps}"
+                )
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
@@ -805,9 +848,9 @@ class lm_agent_oppo:
             elif self.plan.startswith("put"):
                 action = self.putin()
             elif self.plan.startswith("transport"):
-                action = self.goput() #high-level action
+                action = self.goput()
             #    self.with_character = [self.agent_id]
-            elif self.plan.startswith("send a message"):
+            elif self.plan.startswith("send a message:"):
                 # 发送消息动作
                 action = {
                     "type": 6,  # 动作类型6表示发送消息
@@ -815,7 +858,9 @@ class lm_agent_oppo:
                         self.plan.split(" ")[3:]
                     ),  # 提取消息内容，去掉"send a message:"前缀
                 }
-                self.plan = None  # 清除当前计划，准备执行下一个动作
+                self.comm_num += 1
+                self.comm_chars += len(action["message"])
+                self.plan = None  # 清除当前计划，准备执行下一个动作,other actions will maintain the plan
             elif self.plan.startswith("wait"):
                 action = None
                 break
@@ -826,44 +871,16 @@ class lm_agent_oppo:
         if self.debug:
             self.logger.info(self.plan)
             self.logger.debug(info)
-            # print(
-            #     f"{self.agent_names}当前的动作和计划是 action: {action}, plan: {self.plan}"
-            # )
         self.last_action = action
         self.info = info
         return action
-
     
-
-    def visualize_semantic_map(self, save_path=None):
-        """
-        可视化语义地图（object_map），不同类型用不同颜色显示，并可选保存到文件
-        """
-        # 定义颜色映射：0-空地，1-普通物体，2-容器，3-目标物体
-        color_map = {
-            0: [255, 255, 255],  # 白色-空地
-            1: [0, 255, 0],      # 绿色-普通物体
-            2: [0, 0, 255],      # 蓝色-容器
-            3: [255, 0, 0],      # 红色-目标物体
-        }
-        h, w = self.object_map.shape
-        vis_map = np.zeros((h, w, 3), dtype=np.uint8)
-        for k, color in color_map.items():
-            vis_map[self.object_map == k] = color
-
-        plt.figure(figsize=(10, 5))
-        plt.imshow(vis_map)
-        plt.title("Semantic Map (object_map)")
-        # 图例
-        patches = [
-            mpatches.Patch(color=np.array(color_map[k])/255, label=f"type {k}")
-            for k in color_map
-        ]
-        plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.axis('off')
-        if save_path:
-            plt.savefig(save_path, bbox_inches='tight')
-        plt.show()
-
-    # 用法示例（在lm_agent_oppo对象中调用）：
-    # self.visualize_semantic_map("semantic_map.png")
+    def get_tokens(self):
+        return self.LLM.tokens
+    
+    def get_com_cost(self):
+        return self.comm_chars
+    def get_api_num(self):
+        return self.LLM.api
+    def get_total_tokens(self):## for generated content counting
+        return self.LLM.total_tokens

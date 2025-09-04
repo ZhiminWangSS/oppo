@@ -7,7 +7,7 @@ import time
 import pickle
 import logging
 import sys
-
+import re
 
 # add this dictionary to python env path:
 base_path = os.getcwd()
@@ -16,10 +16,11 @@ current_dir = os.path.dirname(__file__)
 
 sys.path.append(base_path)
 sys.path.append(current_dir)
-from belief_symbolic_representation import belief_builder##COBEL init the rules bulider
+from belief_symbolic_representation import belief_builder #COBEL init the rules bulider
 from h_agent import H_agent
 # from lm_agent import lm_agent
 from lm_agent_cobel import lm_agent_cobel
+from datetime import datetime
 
 BeliefBuilder = belief_builder.BeliefBuilder
 # 注册测试环境
@@ -117,7 +118,7 @@ class Challenge:
             float: 平均完成率
         """
         ##COBEL init the rules builder
-        self.rules_builder()
+        # self.rules_builder() #COBEL - zhimin 暂时不用
 
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -126,12 +127,12 @@ class Challenge:
         # 无循环部分
         start = time.time()
         results = {}
-        total_tokens = [0,0]
-        total_com = [0,0]
+        total_tokens = {}
+        total_com_counts = {}
         for i, episode in enumerate(eval_episodes):
             #COBEL belief info logger
             episode_logger = init_episode_logs(self.output_dir, episode)
-
+            plan_logger = init_plan_logs(self.output_dir, episode)
             print(f"当前执行的episode为：{episode}")
             start_time = time.time()
             # 检查是否已经评估过该回合
@@ -203,7 +204,8 @@ class Challenge:
                             rooms_name=info["rooms_name"],
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
-                            episode_logger=episode_logger
+                            episode_logger=episode_logger,
+                            plan_logger = plan_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -227,9 +229,9 @@ class Challenge:
                 for agent_id, agent in enumerate(agents):
                     
                     # print(f"agent状态：{state[str(agent_id)]}")
-                    actions[str(agent_id)] = agent.act(state[str(agent_id)])
+                    actions[str(agent_id)] = agent.act_cobel(state[str(agent_id)])
                     # 执行大模型推理获得动作
-                    print(f"agent_id:{agent_id}\n",agent.get_tokens())
+                    print(f"agent_id:{agent_id}\ntoken_cost:{agent.get_tokens()}")
                 state, reward, done, info = self.env.step(actions)
                 local_reward += reward
                 local_finish = self.env.check_goal()
@@ -242,25 +244,26 @@ class Challenge:
                 #     if actions[str(agent_id)] == "send a message":
                 #         communication_num += 1
                 #         print("Communication action taken by agent:", agent_id)
-
+            episode_time = time.time() - start_time
 
             # 记录结果
+            #COBEL - TODO
             for agent_id,agent in enumerate(agents):
-                print(f"{agent_id}:{agent.get_com_cost()}")
-                total_com[agent_id] += agent.get_com_cost()
-                total_tokens[agent_id] += agent.get_tokens()
+                total_com_counts[agent_id] = agent.get_com_counts()
+                total_tokens[agent_id] = agent.get_tokens()
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
                 "total": local_finish[1],
                 "step_num": step_num,
-                "comunication_tokens":total_tokens[0]+total_tokens[1],
-                "agent_0_com_tokens":total_tokens[0], #character
-                "agent_1_com_tokens":total_tokens[1], #character
-                "agent_0_com_num":total_com[0], #count TODO
-                "agent_1_com_num":total_com[1],
-                "tokens_per_step":(total_tokens[0]+total_tokens[1])/step_num
-                #"communication num": communication_num
+                "frame": self.env.num_frames,
+                "agent_0_tokens":total_tokens[0], #character
+                "agent_1_tokens":total_tokens[1], #character
+                "agent_0_com_num":total_com_counts[0], #count TODO
+                "agent_1_com_num":total_com_counts[1],
+                "tokens_per_step_1":(total_tokens[0]['large_model']['prompt']+total_tokens[0]['large_model']['completion'])/step_num,
+                "tokens_per_step_2":(total_tokens[1]['large_model']['prompt']+total_tokens[1]['large_model']['completion'])/step_num,
+                "episode_time": episode_time                     
             }
 
             with open(
@@ -324,10 +327,10 @@ def init_episode_logs(output_dir, episode):
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
-    episode_logger = logging.getLogger(f"episode_{episode}")
+    episode_logger = logging.getLogger(f"belief_episode_{episode}")
     episode_logger.setLevel(logging.DEBUG)
     
-    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_belief_{episode}.log"))
     fh.setLevel(logging.DEBUG)
     
     formatter = logging.Formatter(
@@ -339,6 +342,29 @@ def init_episode_logs(output_dir, episode):
     
     return episode_logger
 
+def init_plan_logs(output_dir, episode):
+    """
+    初始化每个episode的日志记录器
+    """
+    episode_dir = os.path.join(output_dir, str(episode))
+    os.makedirs(episode_dir, exist_ok=True)
+    
+    plan_logger = logging.getLogger(f"plan_episode_{episode}")
+    plan_logger.setLevel(logging.DEBUG)
+    
+    fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+    fh.setLevel(logging.DEBUG)
+    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    fh.setFormatter(formatter)
+    
+    plan_logger.addHandler(fh)
+    
+    return plan_logger
+
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -349,6 +375,7 @@ def main():
     parser.add_argument("--data_prefix", type=str, default="dataset/dataset_train/")
     parser.add_argument("--port", default=1071, type=int)
     parser.add_argument("--agents", nargs="+", type=str, default=("h_agent",))
+    parser.add_argument("--belief_threshold", default=6, type=int)
     parser.add_argument(
         "--eval_episodes",
         nargs="+",
@@ -401,8 +428,26 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     args.output_dir = os.path.join(args.output_dir, args.experiment_name)
     os.makedirs(args.output_dir, exist_ok=True)
+
+
+    # 自动推导 run_id
+    if args.run_id is None or args.run_id == "0":
+        # 根据当前时间生成 run_id，格式为 run_YYYYMMDD_HHMM
+        now = datetime.now()
+        args.run_id = f"run_{now.strftime('%Y%m%d_%H%M')}"
+    else:
+        # 如果用户手动指定了 run_id，但不满足 run_x 格式，也允许
+        pass
+
+
+
     args.output_dir = os.path.join(args.output_dir, args.run_id)
     os.makedirs(args.output_dir, exist_ok=True)
+
+
+
+
+
     logger,time_logger = init_logs(args.output_dir)#COBEL normal logger
     
 
@@ -427,7 +472,7 @@ def main():
         elif agent == "lm_agent":
             agents.append(lm_agent(i, logger, args.max_frames, args, args.output_dir))
         elif agent == "lm_agent_cobel":
-            agents.append(lm_agent_cobel(i, logger, args.max_frames, args, args.output_dir))
+            agents.append(lm_agent_cobel(i, logger, args.max_frames, args, args.output_dir,args.belief_threshold))
         else:
             pass
     try:

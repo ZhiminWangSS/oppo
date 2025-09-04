@@ -16,7 +16,7 @@ $ZERO_ORDER_BELIEFS$
 Construction rules: 
 $BELIEF_RULES$
 Just output in the rules form, without any analysis and reasoning progress,and don’t delete the any entities in known information. Remember the full name of objects , containers and rooms is in the form of <name>(id). If you think I don't no any information, just put ""Unknown"" in the (). If nothing was in hand or container, just leave it Null."
-prediction_first_order,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my known information, please reason over these information and predict the objects' perhaps states such as location and completion state, and then infer what should i do next to maximize the transport efficiency.  First give your reasons (at most five reasons) and answer me  with the subplan only. The subplan should be a local goal to contribute to finish transport imcompleted object, composing of several actions. Here are few example of subplans: 
+prediction_first_order,"I'm $OPPO_NAME$. My friend $AGENT_NAME$ and I want to transport as many objects as possible to the bed with the help of containers in a household scene with multiple rooms. All objects are randomly placed in each room. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my known information, please reason over these information and predict the objects' perhaps states such as location and completion state, and then infer what should i do next to maximize the transport efficiency.  First give your reasons (at most five reasons) and answer me  with the subplan only. The subplan should be a local goal to contribute to finish transport imcompleted object, composing of several actions. Here are few example of subplans: 
 explore current room and transport objects here to the bed;
 explore and fill the container with objects;
 explore partial-explored rooms;
@@ -39,10 +39,10 @@ belief_awareness,"zero order belief:
  $ZERO_ORDER_BELIEFS$
 first order beliefs: 
 $FIRST_ORDER_BELIEFS$
-Evaluate the different content $AGENT_NAME$ knows and $OPPO_NAME$ knows, regardless of format difference and give a difference score from 0-10 0 for nearly identical 10 for large differences. And then list the differen parts between the two parts. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
+Evaluate the different content $AGENT_NAME$ knows and $OPPO_NAME$ knows, regardless of format difference and give a difference score from 0-10 0 for nearly identical 10 for large differences. And then list the different contents in zero-order beliefs. Keep the output content the same as the original content Answer in this format and don't output additional analysis or summary:
 
-Here are some output examples:
-
+Here are some examples:
+Input:
 first_order_belief:
 agent_state(alice):
 - location(livingroom(1000))
@@ -50,13 +50,16 @@ target_object(orange(11023))
 - location(kitchen(2000))
 zero_order_belief:
 agent_state(alice):
-- location(Unknown)
+- location(livingroom(1000))
 target_object(orange(11023))
 - location(bob)
+
+Output:
+target_object(orange(11023))
+- location(bob)
+
 - Difference score: 
-- Different content: 
-  - Zero_order_belief: 
-  - First_order_belief:"
+- Different content: "
 intuitive_planning,"I'm $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Given my state, my previous actions, please help me choose the best available action according to my subplan and previous actions. In order to achieve a subplan, I may need to complete several actions, so you need to choose a best action based on previous actions to continue to complete this subplan. If I have done all actions need in the subplan, just answer SUBPLAN DONE. Don't give any analysis and reasoning progress, just output the action.
 My state: $MYSTATE$
 Subplan: $SUBPLAN$
@@ -128,13 +131,12 @@ Room list:
 $ROOM_LIST$
 
 Answer in this format(including the annotation):
-Zero order beliefs($AGENT_NAME$):
-First order beliefs($OPPO_NAME$):
+Zero order beliefs:
+First order beliefs:
 "
-adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the different knowledge between zero-order beliefs and first-order beliefs, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the difference. When you need to describe entity, convey it in original format like <livingroom>(2000) , <banana>(12345)
+adaptive_comm,"I’m $AGENT_NAME$. My friend $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers in a household scene with multiple rooms. Given the knowledge you know, please generate a message to inform collaborators to achieve a information alignment. You can generate the message according to the knowledge. When you need to describe entity, convey it in original format like <livingroom>(2000) , <banana>(12345). Don’t just use names and ignore the id.
 
-
-Belief difference: 
+Your knowledge: 
 $BELIEF_DIFFERENCE$
 
 

@@ -20,7 +20,11 @@ from openai import OpenAIError
 from openai import OpenAI
 from datetime import datetime
 
-class LLM_oppo:
+
+
+
+
+class LLM:
     """
     大语言模型接口类
     主要功能：
@@ -59,10 +63,11 @@ class LLM_oppo:
         self.agent_name = "Alice" if agent_id == 0 else "Bob"  # 智能体名称
         self.oppo_name = "Alice" if agent_id == 1 else "Bob"  # 对手名称
         self.oppo_pronoun = "she" if agent_id == 1 else "he"  # 对手代词
-
+        self.chars = 0
+        self.tokens = 0
+        self.api = 0
         # 调试和配置
-        # self.debug = sampling_parameters.debug  # 调试模式
-        self.debug = False  # 调试模式
+        self.debug = sampling_parameters.debug  # 调试模式
         self.rooms = []  # 房间列表
 
         # 提示词模板相关
@@ -91,16 +96,21 @@ class LLM_oppo:
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
         self.chat = (
-            "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "chat" in lm_id
+            "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id
         )  # 是否为聊天模型
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.total_cost = 0  # 总花费
+        self.total_tokens = 0  # 总token数
         self.communication_cost = 0  # 通信花费
-
         # 根据不同来源初始化模型
         if self.source == "openai":
             # OpenAI模型初始化
-            client = AzureOpenAI()
+            api_key=os.environ.get("ALIYUN_API_KEY")
+            base_url=os.environ.get("ALIYUN_URL")
+            client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+            )
             if self.chat:
                 self.sampling_params = {
                     "max_tokens": sampling_parameters.max_tokens,
@@ -120,8 +130,8 @@ class LLM_oppo:
         elif self.source == "deepseek":
             # DeepSeek模型初始化
             client = OpenAI(
-                api_key="sk-fcb978b480de4ab48fa0031403decb34",
-                base_url="https://api.deepseek.com/v1",
+                api_key="sk-57d87ae693d94216971bc2905b0a2647",
+                base_url="https://api.deepseek.com",
             )
             if self.chat:
                 self.sampling_params = {
@@ -169,6 +179,10 @@ class LLM_oppo:
                         response = client.chat.completions.create(
                             model=self.lm_id, messages=prompt, **sampling_params
                         )
+                        self.api += 1
+                        usage = response.usage.completion_tokens## generated response tokens
+                        self.tokens += response.usage.completion_tokens
+                        self.total_tokens += response.usage.total_tokens
                         if self.debug:
                             with open(f"LLM/chat_raw.json", "a") as f:
                                 f.write(
@@ -194,6 +208,7 @@ class LLM_oppo:
                         response = client.completions.create(
                             model=lm_id, prompt=prompt, **sampling_params
                         )
+                        self.tokens += response.usage.completion_tokens
                         # print(json.dumps(response, indent=4))
                         if self.debug:
                             with open(f"LLM/raw.json", "a") as f:
@@ -285,7 +300,7 @@ class LLM_oppo:
 
             def _generate(prompt, sampling_params):
                 usage = 0
-                if source == "deepseek":
+                if source == "openai":
                     return openai_generate(prompt, sampling_params)
                 elif self.source == "hf":
                     return hf_generate(prompt, sampling_params)
@@ -312,7 +327,11 @@ class LLM_oppo:
         """
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
-
+        self.tokens = 0
+        self.communication_cost = 0
+        self.api = 0
+        self.total_cost = 0
+        self.total_tokens = 0
     def goal2description(self, goals):  # {predicate: count}
         """
         将目标转换为描述文本
@@ -336,7 +355,7 @@ class LLM_oppo:
         解析模型回答
 
         参数:
-            available_actions: 可用动作列表 = action list
+            available_actions: 可用动作列表
             text: 模型生成的文本
 
         返回:
@@ -347,6 +366,7 @@ class LLM_oppo:
             action = available_actions[i]
             if action.startswith("send a message:"):
                 action = "send a message"
+                flags = "COMMUNICATION"
             if action.lower() in text.lower():
                 return available_actions[i], flags
         sents = text.split("\n")  # Split by space
@@ -610,8 +630,7 @@ class LLM_oppo:
 
         return s
 
-    def get_available_plans(self):
-        # TODO:更改逻辑，不输入message
+    def get_available_plans(self, message):#plans according to the state
         """
         获取可用的规划
 
@@ -630,10 +649,8 @@ class LLM_oppo:
         send a message: ""
         """
         available_plans = []
-        # DONE 不传入message
-        if self.communication is not None:
-            available_plans.append("send a message")
-        # 增加
+        if self.communication and message is not None:
+            available_plans.append(f"send a message: {message}")
         if (
             self.holding_objects[0]["type"] is None
             or self.holding_objects[1]["type"] is None
@@ -672,7 +689,6 @@ class LLM_oppo:
             and len(self.object_list[2]) != 0
         ):
             available_plans.append(f"transport objects I'm holding to the bed")
-        # 增加去哪个屋子的动作
         for room in self.rooms:
             if room == self.current_room or room is None or room == "None":
                 continue
@@ -689,42 +705,8 @@ class LLM_oppo:
 
         return plans, len(available_plans), available_plans
 
-    def parse_model_response(self, text):
-        """
-        解析模型响应文本，提取四个关键部分：
-        1. 对手推理内容 ([opponent reasoning begin] 到 [opponent reasoning end])
-        2. 预测的对手行动 ([predict opponent action] 开头的内容)
-        3. 自身推理内容 ([reasoning begin] 到 [reasoning end])
-        4. 选择的动作 ([my action]: 开头的内容)
 
-        参数:
-        text (str): 模型生成的完整响应文本
 
-        返回:
-        tuple: (opponent_reasoning, predicted_opponent_action, 
-                self_reasoning, chosen_action)
-        """
-        # 1. 解析对手推理部分
-        oppo_reasoning_pattern = r"\[opponent reasoning begin\](.*?)\[opponent reasoning end\]"
-        oppo_match = re.search(oppo_reasoning_pattern, text, re.DOTALL)
-        opponent_reasoning = oppo_match.group(1).strip() if oppo_match else None
-
-        # 2. 解析预测的对手行动
-        pred_oppo_pattern = r"\[predict opponent action\]\s*(.*?)(?=\n|$|\[)"
-        pred_match = re.search(pred_oppo_pattern, text)
-        predicted_opponent_action = pred_match.group(1).strip() if pred_match else None
-
-        # 3. 解析自身推理部分
-        self_reasoning_pattern = r"\[reasoning begin\](.*?)\[reasoning end\]"
-        self_reasoning_match = re.search(self_reasoning_pattern, text, re.DOTALL)
-        self_reasoning = self_reasoning_match.group(1).strip() if self_reasoning_match else None
-
-        # 4. 解析选择的动作
-        action_pattern = r"\[my action\s*\]\s*(.*?)(?=\n|$)"
-        action_match = re.search(action_pattern, text)
-        chosen_action = action_match.group(1).strip() if action_match else None
-
-        return opponent_reasoning, predicted_opponent_action, self_reasoning, chosen_action
 
     def run(
         self,
@@ -739,6 +721,7 @@ class LLM_oppo:
         dialogue_history,
         opponent_grabbed_objects=None,
         opponent_last_room=None,
+        episode_logger = None
     ):
         """
         运行模型生成规划
@@ -761,6 +744,7 @@ class LLM_oppo:
         """
         info = {}
         print("current_step", current_step)
+        # llm_logger.info(f"当前步骤: {current_step}")
         self.current_room = current_room
         self.rooms_explored = rooms_explored
         self.holding_objects = holding_objects
@@ -778,44 +762,40 @@ class LLM_oppo:
         prompt = self.prompt_template.replace("$GOAL$", self.goal_desc)
         prompt = prompt.replace("$PROGRESS$", progress_desc)
         prompt = prompt.replace("$ACTION_HISTORY$", action_history_desc)
-        prompt = prompt.replace("$DIALOGUE_HISTORY$", dialogue_history_desc)
+        message = None
 
-        # message = None
+        if self.communication:
+            prompt = prompt.replace("$DIALOGUE_HISTORY$", dialogue_history_desc)
+            if not action_history[-1].startswith("send a message"):
+                gen_prompt = self.generator_prompt_template.replace(
+                    "$GOAL$", self.goal_desc
+                )
+                gen_prompt = gen_prompt.replace("$PROGRESS$", progress_desc)
+                gen_prompt = gen_prompt.replace("$ACTION_HISTORY$", action_history_desc)
+                gen_prompt = gen_prompt.replace(
+                    "$DIALOGUE_HISTORY$", dialogue_history_desc
+                )
+                gen_prompt = gen_prompt + f"\n{self.agent_name}:"
+                chat_prompt = [{"role": "user", "content": gen_prompt}]
+                outputs, usage = self.generator(
+                    chat_prompt if self.chat else gen_prompt, self.sampling_params
+                ) # usage token cost
+                self.total_cost += usage
+                message = outputs[0]
+                if len(message) > 0 and message[0] != '"':
+                    message = re.search(r'"([^"]+)"', message)
+                    if message:
+                        message = '"' + message.group(1) + '"'
+                info["prompt_comm"] = gen_prompt
+                info["output_comm"] = outputs
+                info["usage_comm"] = usage
+                if self.debug:
+                    print(f"prompt_comm:\n{gen_prompt}")
+                print(f"output_comm:\n{message}")
+                episode_logger.info(f"output_message:\n{message}")
 
-        # 注释掉原本的通信部分
-
-        # if self.communication:
-        #     print("++++++++++本次调用进行了通信!!+++++++++++++++")
-        #     prompt = prompt.replace("$DIALOGUE_HISTORY$", dialogue_history_desc)
-        #     if not action_history[-1].startswith("send a message"):
-        #         gen_prompt = self.generator_prompt_template.replace(
-        #             "$GOAL$", self.goal_desc
-        #         )
-        #         gen_prompt = gen_prompt.replace("$PROGRESS$", progress_desc)
-        #         gen_prompt = gen_prompt.replace("$ACTION_HISTORY$", action_history_desc)
-        #         gen_prompt = gen_prompt.replace(
-        #             "$DIALOGUE_HISTORY$", dialogue_history_desc
-        #         )
-        #         gen_prompt = gen_prompt + f"\n{self.agent_name}:"
-        #         chat_prompt = [{"role": "user", "content": gen_prompt}]
-        #         outputs, usage = self.generator(
-        #             chat_prompt if self.chat else gen_prompt, self.sampling_params
-        #         )
-        #         self.total_cost += usage
-        #         message = outputs[0]
-        #         if len(message) > 0 and message[0] != '"':
-        #             message = re.search(r'"([^"]+)"', message)
-        #             if message:
-        #                 message = '"' + message.group(1) + '"'
-        #         info["prompt_comm"] = gen_prompt
-        #         info["output_comm"] = outputs
-        #         info["usage_comm"] = usage
-        #         if self.debug:
-        #             print(f"prompt_comm:\n{gen_prompt}")
-        #             print(f"output_comm:\n{message}")
-        # # 获取可用的动作列表
-        available_plans, num, available_plans_list = self.get_available_plans()
-        if num == 0 or (num == 1):
+        available_plans, num, available_plans_list = self.get_available_plans(message) #因为要传入消息,only for message in the available plans
+        if num == 0 or (message is not None and num == 1):
             print("Warning! No available plans!")
             plan = None
             info.update({"num_available_actions": num, "plan": None})
@@ -827,11 +807,11 @@ class LLM_oppo:
             prompt = prompt + " Let's think step by step."
             if self.debug:
                 print(f"cot_prompt:\n{prompt}")
+            
             chat_prompt = [{"role": "user", "content": prompt}]
             outputs, usage = self.generator(
                 chat_prompt if self.chat else prompt, self.sampling_params
             )
-            # 调用API
             output = outputs[0]
             ## truncate the unfinished cot
             last_index = output.rfind(".")
@@ -842,7 +822,6 @@ class LLM_oppo:
             self.total_cost += usage
             # info['outputs_cot'] = outputs
             # info['usage_plan_stage_1'] = usage
-            origin_answer = output
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
             chat_prompt = [
@@ -859,45 +838,42 @@ class LLM_oppo:
                 + output
                 + " Answer with only one best next action. So the answer is option"
             )
+            episode_logger.info(f"input_prompt:\n{normal_prompt}")
             outputs, usage = self.generator(
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            # 使用token量
+            episode_logger.info(f"output_plan:\n{output}")
             self.total_cost += usage
-            # info['usage_plan_stage_2'] = usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
                 print(f"total cost: {self.total_cost}")
         else:
             normal_prompt = prompt
-            chat_prompt = [{"role": "user", "content": prompt}]#prompt something unused
+            episode_logger.info(f"input_prompt:\n{normal_prompt}")
+            chat_prompt = [{"role": "user", "content": prompt}]
             if self.debug:
                 print(f"base_prompt:\n{prompt}")
-            # print("LLM prompt: ", prompt)
             outputs, usage = self.generator(
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            # info['usage_step_1'] = usage
+            episode_logger.info(f"output_plan:\n{output}")
+            self.total_cost += usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
-
-        # 解析模型的回答
-        print("原始回答:\n", output)
-        opponent_reasoning, predicted_opponent_action, self_reasoning, chosen_action = self.parse_model_response(output)
-        if chosen_action.startswith("send a message"):
-            plan = f"send a message: {chosen_action[14:].strip()}"
-            flags = "Communication"
-        else:
-            plan, flags = self.parse_answer(available_plans_list, chosen_action)
-            oppo_logger.info(f"{self.agent_name}当前计划: {plan}\n")
-
-        # plan, flags = self.parse_answer(available_plans_list, output)
-        
+        plan, flags = self.parse_answer(available_plans_list, output)
+        #这里plan就是包含消息的动作
+        if flags == "COMMUNICATION":
+            self.communication_cost += 1
+            #send a message: "xxxxx" character
+            # # 新增：记录通信内容
+            # if plan.startswith("send a message:"):
+            #     message_content = plan[len("send a message:"):].strip()
+                # llm_logger.info(f"{self.agent_name} 发送消息内容: {message_content}\n当前通信次数{self.communication_cost}")
+            # llm_logger.info(f"{self.agent_name}:当前计划:\n{plan}")
         if self.debug:
             print(f"plan: {plan}\n")
-            
         info.update(
             {
                 "num_available_actions": num,
