@@ -2,18 +2,21 @@ lm_id=deepseek-chat
 port=10008
 pkill -f -9 "port $port"
 
-python3 tdw-gym/challenge_coela.py \
---output_dir results_coela_chat_coela_0726 \
---lm_id $lm_id \
+python3 tdw-gym/challenge_oppo.py \
+--output_dir results_capo_ds-v3/retest \
 --experiment_name LMs-$lm_id \
 --run_id run_1 \
+--data_prefix dataset/dataset_test/ \
 --port $port \
---agents lm_agent lm_agent \
+--agents lm_agent_capo lm_agent_capo \
+--eval_episodes 3 8 9 14 17 19 22 23 \
 --communication \
 --debug \
---prompt_template_path LLM/prompt_com.csv \
---max_tokens 512 \
---data_prefix dataset/dataset_test/ \
---eval_episodes 7 8 10 14 19 20 \
---screen_size 256
+--source deepseek \
+--lm_id $lm_id \
+--prompt_template_path LLM/capo_prompt.csv \
+--max_tokens 2048 \
+--screen_size 256 \
+--no_save_img 
+
 pkill -f -9 "port $port"
