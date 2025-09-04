@@ -5,7 +5,7 @@ class capo_agent(LLM_agent):
     '''
     from LLM_agent
     '''
-    def __init__ (self,agent_id, char_index, args):
+    def __init__ (self,agent_id, char_index, args,logger):
         super().__init__(agent_id,char_index,args)
         self.LLM = LLM_capo(self.source, self.lm_id, self.prompt_template_path, self.communication, self.cot, self.args, self.agent_id)
         self.subplan = None
@@ -16,6 +16,7 @@ class capo_agent(LLM_agent):
         #counting 
         self.comm_num = 0
         self.characters = 0
+        self.logger = logger# metaplan, message, subplan
 
     def goexplore(self):
         target_room_id = int(self.subplan.split(' ')[-1][1:-1])
@@ -95,8 +96,11 @@ class capo_agent(LLM_agent):
 
     def LLM_metaplan_init(self):
         output = self.LLM.meta_plan_init()
-        self.characters += len(output.split(""))
+        self.characters += len(output.strip())
         self.comm_num += 1
+        self.logger.info(
+            f"{self.agent_id}: meta_plan: {output}"
+        )
         return output
     def LLM_disscuss_refine(self,
                             refine):
@@ -114,8 +118,11 @@ class capo_agent(LLM_agent):
                                           self.opponent_grabbed_objects,
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
-        self.characters += len(output.split(""))
+        self.characters += len(output.strip())
         self.comm_num += 1
+        self.logger.info(
+            f"{self.agent_id}: message: {output}"
+        )
         return output
     def LLM_parsing(self):
         output = self.LLM.parsing(self.metaplan,
@@ -130,7 +137,7 @@ class capo_agent(LLM_agent):
                                   self.opponent_grabbed_objects,
                                   self.id_inside_room[self.opponent_agent_id]
                                   )
-        self.characters += len(output.split(""))
+        #self.characters += len(output.strip()) not communication characters
         return output
     
     def LLM_progress_sending(self):
@@ -337,6 +344,9 @@ class capo_agent(LLM_agent):
         while action is None:
             if self.subplan is None:
                 subplan = self.LLM_parsing()
+                self.logger.info(
+                    f"{self.agent_id}: sub_plan: {subplan}"
+                )
                 self.subplan = subplan
                 self.action_history.append(self.subplan)
 
@@ -350,6 +360,8 @@ class capo_agent(LLM_agent):
                 action = self.goput()
             elif self.subplan.startswith('[wait]'):##TODO:change to waiting
                 action = None
+            elif self.subplan.startswith('[waiting]'):
+                action = "[waiting]"
                 break
             else:
                 raise ValueError(f"unavailable plan {self.plan}")

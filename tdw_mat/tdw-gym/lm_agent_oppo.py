@@ -402,6 +402,7 @@ class lm_agent_oppo:
         self.action_history = [f"go to {self.current_room} at initial step"]
         self.dialogue_history = []
         self.gt_mask = gt_mask
+        self.info = None# denote the important information may be used
         if self.gt_mask == True:
             self.detection_threshold = 5
         else:
@@ -757,14 +758,15 @@ class lm_agent_oppo:
             return {"type": "ongoing"}
 
         self.get_new_object_list()
-        print(self.new_object_list)
-        self.get_object_list()
+        #print(self.new_object_list)
+        self.get_object_list()# the object list has the position information and room information that can be used.
 
         info = {
             "satisfied": self.satisfied,
             "object_list": self.object_list,
             "new_object_list": self.new_object_list,
             "current_room": self.current_room,
+            "object_per_rooms":self.object_per_room,
             "visible_objects": self.filtered(self.obs["visible_objects"]),
             "obs": {
                 k: v
@@ -829,6 +831,7 @@ class lm_agent_oppo:
             #     f"{self.agent_names}当前的动作和计划是 action: {action}, plan: {self.plan}"
             # )
         self.last_action = action
+        self.info = info
         return action
 
     

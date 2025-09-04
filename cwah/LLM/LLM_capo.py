@@ -53,8 +53,8 @@ class LLM_capo(LLM):
 
         if self.source == 'openai':
             client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1"
+                api_key="sk-dd98729d7f9e4004a6ec69a743e85bdd",
+                base_url="https://api.deepseek.com"
             )
             print(f"loading openai model =============={lm_id}")
             if self.chat:

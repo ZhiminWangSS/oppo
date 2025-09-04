@@ -14,7 +14,89 @@ from agents import LLM_agent
 from agents.LLM_capo_agent import capo_agent
 from arguments import get_args
 from algos.arena_mp2 import ArenaMP
+import logging
+from datetime import datetime
+import subprocess
 
+#logger for metaplan, message and subplan
+def setup_logger(name=__name__, log_file='app.log', level=logging.INFO, encoding='utf-8'):
+    """
+    创建并配置一个 logger 实例，支持同时输出到文件和控制台。
+
+    参数：
+        name (str): logger 的名称（通常用模块名）
+        log_file (str): 日志文件路径，默认为 'app.log'
+        level (int): 日志级别，如 logging.INFO
+        encoding (str): 日志文件编码，推荐 utf-8 支持中文
+
+    返回：
+        logging.Logger: 配置好的 logger 实例
+    """
+    # 创建一个 logger 对象
+    logger = logging.getLogger(name)
+    
+    # 避免重复添加 handler（防止日志重复输出）
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # 设置日志等级
+    logger.setLevel(level)
+
+    # 定义日志格式
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # 确保日志目录存在
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # 文件处理器：写入日志文件
+    file_handler = logging.FileHandler(log_file, encoding=encoding)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # 控制台处理器：输出到终端
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    return logger
+# kill the process
+def kill_process_on_port(port):
+    try:
+        # 执行 lsof 命令获取占用指定端口的进程 PID
+        result = subprocess.run(
+            ['lsof', '-t', '-i', f':{port}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+            return
+        
+        pids = result.stdout.strip().split('\n')
+        pids = [pid for pid in pids if pid]  # 过滤空行
+
+        if not pids:
+            print(f"没有找到占用端口 {port} 的进程。")
+            return
+
+        print(f"找到占用端口 {port} 的进程 PID: {pids}")
+
+        # 使用 kill -9 终止每个进程
+        for pid in pids:
+            subprocess.run(['kill', '-9', pid])
+            print(f"已终止 PID {pid} 的进程。")
+
+    except Exception as e:
+        print(f"发生错误: {e}")
 
 if __name__ == '__main__':
     args = get_args()
@@ -73,17 +155,17 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    agents = [lambda x, y: capo_agent(**args_agent1), lambda x, y: capo_agent(**args_agent2)]
-    arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+    
 
     # copy the code below to record results
     if args.num_per_task != 10:
-        test_episodes = args.test_task
+        test_episodes = args.test_task#set tesk id
     else:
         test_episodes = episode_ids
     for iter_id in range(num_tries):
+        kill_process_on_port(6315)
         steps_list, failed_tasks = [], []
-
+        os.makedirs(f"./{iter_id}",exist_ok=True)
         #record the results
         if not os.path.isfile(args.record_dir + '/results.pik'):
             test_results = {}
@@ -102,11 +184,27 @@ if __name__ == '__main__':
         total_api_1 = 0
 
         for episode_id in test_episodes:
-            curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
+            kill_process_on_port(6315)
+            kill_process_on_port(6315)
+            curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(#env_task_set is the whole task set
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
                 iter_id)
-            
+            logger = setup_logger("llm-message",f"./{iter_id}/{episode_id}.log")
+
+            #add_logger
+            args_agent1.update(
+                {
+                    "logger":logger
+                }
+            )
+            args_agent2.update(
+                {
+                    "logger":logger
+                }
+            )
+            agents = [lambda x, y: capo_agent(**args_agent1), lambda x, y: capo_agent(**args_agent2)]
+            arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
             #count for episode
             episode_character_0 = 0
             episode_character_1 = 0
@@ -136,17 +234,17 @@ if __name__ == '__main__':
             is_finished = 0
             steps = 250
             # try:
-            arena.reset(episode_id)
+            arena.reset(episode_id)#go to specific task 
             success, steps, saved_info = arena.run()
-            #episode
-            episode_character_0 = agents[0].characters
-            episode_character_1 = agents[1].characters
-            episode_comm_num_0 = agents[0].comm_num
-            episode_comm_num_1 = agents[1].comm_num
-            episode_api_0 = agents[0].get_api()
-            episode_api_1 = agents[1].get_api()
-            episode_tokens_0 = agents[0].get_tokens()
-            episode_tokens_1 = agents[1].get_tokens()
+            #episode characters 
+            episode_character_0 = arena.agents[0].characters
+            episode_character_1 = arena.agents[1].characters
+            episode_comm_num_0 = arena.agents[0].comm_num
+            episode_comm_num_1 = arena.agents[1].comm_num
+            episode_api_0 = arena.agents[0].get_api()
+            episode_api_1 = arena.agents[1].get_api()
+            episode_tokens_0 = arena.agents[0].get_tokens()
+            episode_tokens_1 = arena.agents[1].get_tokens()
             #whole
             total_character_0 += episode_character_0
             total_character_1 += episode_character_1
@@ -156,8 +254,8 @@ if __name__ == '__main__':
             total_api_1 += episode_api_1
             total_tokens_0 += episode_tokens_0
             total_tokens_1 += episode_tokens_1
-            os.makedirs("./count",exist_ok=True)
-            with open(f"./count/episode_{episode_id}.txt","a+") as f:
+            os.makedirs("./results_capo",exist_ok=True)
+            with open(f"./results_capo/episode_{episode_id}.txt","a+") as f:
                 f.write(f"character_0:{episode_character_0}\n")
                 f.write(f"character_1:{episode_character_1}\n")
                 f.write(f"total_character:{episode_character_0+episode_character_1}\n")
@@ -167,6 +265,8 @@ if __name__ == '__main__':
                 f.write(f"api_1:{episode_api_1}\n")
                 f.write(f"tokens_0:{episode_tokens_0}\n")
                 f.write(f"tokens_1:{episode_tokens_1}\n")
+                f.write(f"success: {success}")
+                f.write(f"steps: {steps}")
             
             print('-------------------------------------')
             print('success' if success else 'failure')
@@ -195,8 +295,8 @@ if __name__ == '__main__':
 
             test_results[episode_id] = {'S': S[episode_id],
                                         'L': L[episode_id]}
-        os.makedirs("./iter_count",exist_ok=True)
-        with open(f"./iter_count/{time.time()}{iter_id}.txt") as f:
+        os.makedirs("./iter_count_results_capo",exist_ok=True)
+        with open(f"./iter_count_results_capo/{time.time()}{iter_id}.txt") as f:
             f.write(f"total_character_0:{total_character_0}\n")
             f.write(f"total_character_1:{total_character_1}\n")
             f.write(f"total_character:{total_character_0+total_character_1}\n")

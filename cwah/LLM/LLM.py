@@ -309,7 +309,7 @@ class LLM:
 			if f"{option} " in text or act in text or name in text or id in text:
 				return action
 		print("WARNING! No available action parsed!!! Random choose one")
-		return random.choice(available_actions) if len(available_actions) > 0 else ["wait"]  ##may cause exception
+		return random.choice(available_actions) if len(available_actions) > 0 else "[waiting]"  ##may cause exception
 
 	def progress2text(self, current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored):
 		sss = {}

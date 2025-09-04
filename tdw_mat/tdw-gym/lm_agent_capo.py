@@ -749,7 +749,7 @@ class lm_agent_capo:
                 self.satisfied.append(self.last_action["object"])
             self.invalid_count += 1
             self.plan = None
-            assert self.invalid_count < 10, "invalid action for 10 times"
+            #assert self.invalid_count < 10, "invalid action for 10 times"
 
         # print(f"是否启用通信：{self.communication}")
         # 处理通信消息

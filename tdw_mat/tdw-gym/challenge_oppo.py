@@ -77,7 +77,7 @@ class Challenge_oppo:
         self.output_dir = output_dir
         self.max_frames = max_frames
         self.save_img = save_img
-        self.data = json.load(open(os.path.join(data_prefix, data_path), "r"))
+        self.data = json.load(open(os.path.join(data_prefix, data_path), "r"))#deciding the task is food or stuff
         self.logger.info("done")
 
     def submit(self, agents, logger, eval_episodes):
@@ -446,7 +446,7 @@ def main():
     )
     parser.add_argument("--t", default=0.7, type=float)
     parser.add_argument("--top_p", default=1.0, type=float)
-    parser.add_argument("--max_tokens", default=64, type=int)
+    parser.add_argument("--max_tokens", default=512, type=int)
     parser.add_argument("--n", default=1, type=int)
     parser.add_argument("--logprobs", default=1, type=int)
     parser.add_argument(
