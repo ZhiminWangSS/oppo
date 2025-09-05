@@ -9,12 +9,12 @@ import torch
 from tqdm import tqdm
 import logging
 import os
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    LlamaForCausalLM,
-    LlamaTokenizer,
-)
+# from transformers import (
+#     AutoTokenizer,
+#     AutoModelForCausalLM,
+#     LlamaForCausalLM,
+#     LlamaTokenizer,
+# )
 from openai import AzureOpenAI
 from openai import OpenAIError
 from openai import OpenAI
@@ -65,7 +65,6 @@ class LLM_capo:
         self.oppo_pronoun = "she" if agent_id == 1 else "he"  # 对手代词
         
         ##counting
-        self.tokens = 0 #generated-token-counting
         self.api = 0 #api-usage
         
 
@@ -123,13 +122,17 @@ class LLM_capo:
             "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id or source =="openai"
         )  # 是否为聊天模型
         self.OPENAI_KEY = None  # OpenAI API密钥
-        
+        self.completion_tokens = 0
+        self.comm_tokens = 0
+        self.total_tokens = 0
         # 根据不同来源初始化模型
         if self.source == "openai":
             # OpenAI模型初始化
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key="sk-57d87ae693d94216971bc2905b0a2647",
-                base_url="https://api.deepseek.com",
+                api_key=api_key,
+                base_url=base_url,
             )
             if self.chat:
                 self.sampling_params = {
@@ -149,9 +152,11 @@ class LLM_capo:
                 }
         elif self.source == "deepseek":
             # DeepSeek模型初始化
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key="sk-57d87ae693d94216971bc2905b0a2647",
-                base_url="https://api.deepseek.com",
+                api_key=api_key,
+                base_url=base_url,
             )
             if self.chat:
                 self.sampling_params = {
@@ -200,8 +205,8 @@ class LLM_capo:
                             model=self.lm_id, messages=prompt, **sampling_params
                         )
                         self.api += 1
-                        print(self.api)
-                        self.tokens += response.usage.completion_tokens## generated response tokens
+                        self.completion_tokens += response.usage.completion_tokens## generated response tokens
+                        self.total_tokens += response.usage.total_tokens## total tokens
                         if self.debug:
                             with open(f"LLM/chat_raw.json", "a") as f:
                                 f.write(
@@ -214,13 +219,15 @@ class LLM_capo:
                             response.choices[i].message.content
                             for i in range(sampling_params["n"])
                         ]
-                        if "gpt-4" or "gpt4" in self.lm_id:
-                            usage = (
-                                response.usage.prompt_tokens * 0.03 / 1000
-                                + response.usage.completion_tokens * 0.06 / 1000
-                            )
-                        elif "gpt-3.5" in self.lm_id:
-                            usage = response.usage.total_tokens * 0.002 / 1000
+
+                        usage = response.usage.completion_tokens
+                        # if "gpt-4" or "gpt4" in self.lm_id:
+                        #     usage = (
+                        #         response.usage.prompt_tokens * 0.03 / 1000
+                        #         + response.usage.completion_tokens * 0.06 / 1000
+                        #     )
+                        # elif "gpt-3.5" in self.lm_id:
+                        #     usage = response.usage.total_tokens * 0.002 / 1000
                     # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
                     #                   range(sampling_params['n'])]
                     elif "text-" in lm_id:
@@ -844,9 +851,11 @@ class LLM_capo:
         prompt = prompt.replace("$DIALOGUE\_HISTORY$",dialogue_history_desc)
         prompt = prompt.replace("$PROGRESS$",progress_desc)
         prompt = prompt.replace("$OPP\_PROGRESS$",oppo_progress)#how to get opp progress
-        
-        chat_prompt = [{"role": "user", "content": prompt}]
+        system_prompt = "Just output the message content without any additional analysis, quotes or reasons. Just output the message. "
+        chat_prompt = [{"role": "system", "content": system_prompt},
+                               {"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
+        self.comm_tokens += usage
         message = output[0]
         return message
     

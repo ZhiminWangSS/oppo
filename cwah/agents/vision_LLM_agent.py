@@ -73,11 +73,13 @@ class vision_LLM_agent:
 			"bedroom": None,
 			"bathroom": None,
 		}
-		self.record_dir = os.path.join(args.record_dir, 'image', self.agent_names[self.agent_id])
+		self.task_id = 0
+		self.record_dir = os.path.join(args.record_dir, str(self.task_id),'image', self.agent_names[self.agent_id])
 		Path(self.record_dir).mkdir(parents=True, exist_ok=True)
 		self.obs = None
 		self.rotated = 0
-
+		self.comm_chars = 0
+		self.comm_num = 0
 
 	def goexplore(self):
 		target_room_id = int(self.plan.split(' ')[-1][1:-1])
@@ -336,6 +338,7 @@ class vision_LLM_agent:
 				if LM_times > 0:
 					print(info)
 				plan, a_info = self.LLM_plan()
+				self.episode_logger.info(f"{self.agent_names[self.agent_id]} step: {self.steps} plan: {plan}")
 				if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
 					self.room_explored = {
 						"livingroom": False,
@@ -361,10 +364,13 @@ class vision_LLM_agent:
 				action = self.goput()
 			elif self.plan.startswith('[send_message]'):
 				action = self.plan[:]
+				self.comm_chars += len(self.plan) - len('[send_message] ')
+				self.comm_num += 1
 				self.plan = None
+				
 			else:
 				raise ValueError(f"unavailable plan {self.plan}")
-
+			
 		self.steps += 1
 		info.update({"plan": self.plan,
 					 })
@@ -390,7 +396,7 @@ class vision_LLM_agent:
 		return action, info
 
 
-	def reset(self, obs, containers_name, goal_objects_name, rooms_name, goal):
+	def reset(self, obs, containers_name, goal_objects_name, rooms_name, goal, episode_logger, task_id):
 		self.vision_pipeline = vision_pipeline.Vision_Pipeline(self.config, obs)
 		self.steps = 0
 		self.containers_name = containers_name
@@ -429,9 +435,26 @@ class vision_LLM_agent:
 		self.last_location = [0, 0, 0]
 		self.last_action = None
 		self.rotated = 0
+		
+
+		self.comm_chars = 0
+		self.comm_num = 0
+		self.task_id = task_id
 
 		self.current_room = self.vision_pipeline.object_info[obs['current_room']]
 		self.plan = None
 		self.action_history = [f"[goto] <{self.current_room['class_name']}> ({self.current_room['id']})"]
 		self.dialogue_history = []
 		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
+		self.episode_logger = episode_logger
+
+	def get_completion_tokens(self):
+		return self.LLM.completion_tokens
+	def get_total_tokens(self):
+		return self.LLM.total_tokens
+	
+	def get_api_num(self):
+		return self.LLM.api_num
+	
+	def get_comm_tokens(self):
+		return self.LLM.comm_tokens

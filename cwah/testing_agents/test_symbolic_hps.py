@@ -12,7 +12,7 @@ from pathlib import Path
 from envs.unity_environment import UnityEnvironment
 from agents import MCTS_agent
 from arguments import get_args
-from algos.arena_mp2 import ArenaMP
+from cwah.algos.arena_mp2 import ArenaMP
 from utils import utils_goals
 
 if __name__ == '__main__':

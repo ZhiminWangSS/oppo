@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # with open("test_env.json", "w") as f:
     #     json.dump(env_task_set, f, indent=4)
 
-    args.record_dir = f'../test_results/{args.mode}' # set the record_dir right!
+    args.record_dir = f'./test_results/{args.mode}' # set the record_dir right!
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
@@ -59,7 +59,8 @@ if __name__ == '__main__':
                                observation_types=[args.obs_type, args.obs_type],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
-                               base_port=args.base_port)
+                               base_port=args.base_port,
+                               save_image=True)
 
     args_agent1 = {
         'agent_id': 1,
@@ -89,7 +90,26 @@ if __name__ == '__main__':
 
         current_tried = iter_id
 
+
+
+        #COBEL
+        total_0_comm_chars = 0
+        total_1_comm_chars = 0
+        total_0_com = 0
+        total_1_com = 0
+        total_0_api = 0
+        total_1_api = 0
+        total_0_tokens = 0
+        total_1_tokens = 0
+        total_0_total_tokens = 0
+        total_1_total_tokens = 0
+        total_0_comm_tokens = 0
+        total_1_comm_tokens = 0
+
         for episode_id in test_episodes:
+
+            arena.reset(episode_id)
+            
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
@@ -115,6 +135,35 @@ if __name__ == '__main__':
             # try:
             arena.reset(episode_id)
             success, steps, saved_info = arena.run()
+
+
+
+            #COBEL episode count
+            episode_0_comm_chars = arena.agents[0].comm_chars
+            episode_1_comm_chars = arena.agents[1].comm_chars
+            episode_0_com = arena.agents[0].comm_num
+            episode_1_com = arena.agents[1].comm_num
+            episode_0_api = arena.agents[0].get_api_num()
+            episode_1_api = arena.agents[1].get_api_num()
+            episode_0_tokens = arena.agents[0].get_completion_tokens()
+            episode_1_tokens = arena.agents[1].get_completion_tokens()
+            episode_0_total_tokens = arena.agents[0].get_total_tokens()
+            episode_1_total_tokens = arena.agents[1].get_total_tokens()
+            episode_0_comm_tokens = arena.agents[0].get_comm_tokens()
+            episode_1_comm_tokens = arena.agents[1].get_comm_tokens()
+            #total count
+            total_0_comm_chars += episode_0_comm_chars
+            total_1_comm_chars += episode_1_comm_chars
+            total_0_com += episode_0_com
+            total_1_com += episode_1_com
+            total_0_api += episode_0_api
+            total_1_api += episode_1_api
+            total_0_tokens += episode_0_tokens
+            total_1_tokens += episode_1_tokens
+            total_0_total_tokens += episode_0_total_tokens
+            total_1_total_tokens += episode_1_total_tokens
+            total_0_comm_tokens += episode_0_comm_tokens
+            total_1_comm_tokens += episode_1_comm_tokens
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -141,8 +190,21 @@ if __name__ == '__main__':
             L[episode_id].append(steps)
 
             test_results[episode_id] = {'S': S[episode_id],
-                                        'L': L[episode_id]}
-
+                                        'L': L[episode_id],
+                                        'COBEL': {
+                                            'episode_0_comm_chars': episode_0_comm_chars,
+                                            'episode_1_comm_chars': episode_1_comm_chars,
+                                            'episode_0_com': episode_0_com,
+                                            'episode_1_com': episode_1_com,
+                                            'episode_0_api': episode_0_api,
+                                            'episode_1_api': episode_1_api,
+                                            'episode_0_tokens': episode_0_tokens,
+                                            'episode_1_tokens': episode_1_tokens,
+                                            'episode_0_total_tokens': episode_0_total_tokens,
+                                            'episode_1_total_tokens': episode_1_total_tokens,
+                                            'episode_0_comm_tokens': episode_0_comm_tokens,
+                                            'episode_1_comm_tokens': episode_1_comm_tokens,
+                                        }}
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

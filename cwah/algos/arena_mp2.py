@@ -8,6 +8,7 @@ from tqdm import tqdm
 import time
 import json
 import atexit
+import logging
 
 # @ray.remote
 class ArenaMP(object):
@@ -21,11 +22,6 @@ class ArenaMP(object):
         self.task_goal = None
         self.record_dir = record_dir
         self.debug = debug
-        self.character_0 = 0
-        self.character_1 = 0
-        self.comm_0 = 0
-        self.comm_1 = 0
-
         print("Init Env")
         self.env = environment_fn(arena_id)
         for agent_type_fn in agent_fn:
@@ -43,6 +39,28 @@ class ArenaMP(object):
         return self.env.port_number
 
 
+    def init_episode_logs(self,output_dir, episode):##logger
+        """
+        初始化每个episode的日志记录器
+        """
+        episode_dir = os.path.join(output_dir, str(episode))
+        os.makedirs(episode_dir, exist_ok=True)
+        
+        episode_logger = logging.getLogger(f"episode_{episode}")
+        episode_logger.setLevel(logging.DEBUG)
+        
+        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+        fh.setLevel(logging.DEBUG)
+        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        fh.setFormatter(formatter)
+
+        episode_logger.addHandler(fh)
+    
+        return episode_logger
+
     def reset(self, task_id=None):
         self.cnt_duplicate_subgoal = 0
         self.cnt_nouse_subgoal = 0
@@ -56,14 +74,15 @@ class ArenaMP(object):
 
         for it, agent in enumerate(self.agents):
             if 'LLM_vision' in agent.agent_type:
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it])
+                episode_logger = self.init_episode_logs(self.record_dir, task_id)
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id)
             elif 'vision' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, self.env.all_room_name, self.env.all_containers_name, self.env.all_goal_objects_name, seed=agent.seed)
                 'TODO: dwh still work on it now'
             elif 'MCTS' in agent.agent_type or 'Random' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it])
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
             else:
                 agent.reset(self.env.full_graph)
 
@@ -113,7 +132,7 @@ class ArenaMP(object):
                     dict_actions[it], dict_info[it] = agent.get_action(obs[it], self.task_goal, action_space_ids=action_space[it])
 
             elif 'LLM' in agent.agent_type:
-                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)#{'on_pudding_<coffeetable> (268)': [1, True, 2], 'on_juice_<coffeetable> (268)': [1, True, 2], 'on_apple_<coffeetable> (268)': [1, True, 2], 'on_cupcake_<coffeetable> (268)': [2, True, 2]}
+                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)
 
         return dict_actions, dict_info
 
@@ -366,18 +385,17 @@ class ArenaMP(object):
         if self.env.steps == 0:
             pass
             #self.env.changed_graph = True
-        obs = self.env.get_observations()#{0:{"messages":  ,"edges":  ,"nodes": } ,1:  }#TODO:need to change this function
+        obs = self.env.get_observations()
         action_space = self.env.get_action_space()
         dict_actions, dict_info = self.get_actions(obs, action_space, true_graph=true_graph)
-        
         for i in range(len(dict_info)):
-            if len(dict_info) > 1 and 'subgoals' in dict_info[i]:## change here to check subgoal
+            if len(dict_info) > 1 and 'subgoals' in dict_info[i]:
                 dup = self.env.check_subgoal(dict_info[i]['subgoals'])
                 self.cnt_nouse_subgoal += dup
                 if i == 0 and 'subgoals' in dict_info[i + 1].keys() and dict_info[i]['subgoals'] == dict_info[i + 1]['subgoals']:
                     self.cnt_duplicate_subgoal += 1
         try:
-            step_info = self.env.step(dict_actions)# structure
+            step_info = self.env.step(dict_actions)
         except Exception as e:
             print("Exception occurs when performing action: ", dict_actions)
             raise Exception
@@ -417,10 +435,7 @@ class ArenaMP(object):
                     }
         success = False
         while True:
-            #LLM used in every step
             (obs, reward, done, infos, messages), actions, agent_info = self.step()
-            print("character_0:",self.agents[0].get_character(),"character_1:",self.agents[1].get_character())
-            print("comm_0:",self.agents[0].get_comm_num(),"comm_1:",self.agents[1].get_comm_num())
             success = infos['finished']
             # if infos['failed_exec']:
             #     raise ValueError(infos)
@@ -450,11 +465,6 @@ class ArenaMP(object):
                     pickle.dump(saved_info, open(os.path.join(self.record_dir, 'log.pik'), 'wb'))
             if done:
                 break
-        self.character_0 = self.agents[0].get_character()
-        self.character_1 = self.agents[1].get_character()
-        self.comm_0 = self.agents[0].get_comm_num()
-        self.comm_1 = self.agents[1].get_comm_num()
-        
         saved_info['finished'] = success
         if cnt_subgoal_info:
             saved_info['cnt_duplicate_subgoal'] = self.cnt_duplicate_subgoal

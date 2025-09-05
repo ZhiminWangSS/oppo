@@ -251,4 +251,4 @@ class MCTS_vision_agent():
         self.belief.sample_from_belief()
         self.mcts = MCTS(self.sim_env, self.agent_id, self.char_index, self.max_episode_length,
                          self.num_simulation, self.max_rollout_steps,
-                         self.c_init, self.c_base, seed=seed, verbose=self.verbose)
+                         self.c_init, self.c_base, seed=seed, verbose=self.verbose) 
