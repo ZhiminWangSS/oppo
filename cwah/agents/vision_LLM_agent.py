@@ -435,7 +435,7 @@ class vision_LLM_agent:
 		self.last_location = [0, 0, 0]
 		self.last_action = None
 		self.rotated = 0
-
+		
 
 		self.comm_chars = 0
 		self.comm_num = 0
