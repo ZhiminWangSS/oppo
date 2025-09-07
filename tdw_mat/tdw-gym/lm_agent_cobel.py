@@ -33,7 +33,7 @@ class lm_agent_cobel:
     4. 管理智能体记忆和状态
     """
 
-    def __init__(self, agent_id, logger, max_frames, args, output_dir="results",belief_threshold=6):
+    def __init__(self, agent_id, logger, max_frames, args, output_dir="results"):
         """
         初始化大模型智能体
 
@@ -163,15 +163,12 @@ class lm_agent_cobel:
         self.subplan_done = True  # 是否完成子目标
         self.obs_not_updated = True  # 是否更新了观测
         self.max_message_time = 2
+        self.message_time = 0
         self.action_history_max_length = 5
         self.action_history_w_mes = []
-        self.belief_threshold = belief_threshold
         self.my_subplan = None
-        self.oppo_subplan = {self.agent_names[self.opponent_agent_id]: "None"}
-        self.comm_counts = {}
-        # bert_score 记录列表
-        self.bert_scores = []  # 存储每次 belief_awareness 调用返回的 bert_score 数值
-        self.message_time = 0 #记录发送消息的次数
+        self.comm_counts = 0
+        self.comm_chars = 0
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -476,6 +473,7 @@ class lm_agent_cobel:
         self.rotated = None
         self.rooms_explored = {}
         self.last_hold = None
+        self.message_time = 0
         # COBEL detect new exploration extend 
         self.new_room_explored = {} 
         for name in self.rooms_name:
@@ -484,9 +482,13 @@ class lm_agent_cobel:
                     name:'None'
                 }
             )
+        self.message_time
+        self.subplan = None
+
+        self.zero_order_beliefs, self.first_order_beliefs = self.LLM.init_beliefs(self.rooms_name,self.goal_objects)
 
 
-
+        self.my_subplan = None
         self.plan = None
         self.action_history = [f"go to {self.current_room} at initial step"]
         self.dialogue_history = []
@@ -508,14 +510,10 @@ class lm_agent_cobel:
         self.plan_logger = plan_logger
         # print(self.rooms_name)
         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
-        initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
-        self.episode_logger.info(f"initial_first\n{initial_first_beliefs}")
-        self.episode_logger.info(f"initial_zero\n{initial_zero_beliefs}")
-        self.zero_order_beliefs = initial_zero_beliefs
-        self.first_order_beliefs = initial_first_beliefs
         self.my_subplan = None
         self.action_history_w_mes = []
         #COBEL - zhimin end 每个episode初始化一次
+        self.LLM.reset(self.rooms_name, self.goal_objects)
         self.save_img = save_img
         self.episode = episode
         
@@ -703,137 +701,33 @@ class lm_agent_cobel:
 
     #COBEL-zhimin
     def measurement_update(self,visual_observation,message,oppo_obs):
-        #TODO 并行观测
-        """
-        更新观测数据
+        self.zero_order_beliefs, self.first_order_beliefs = self.LLM.update_beliefs(self.zero_order_beliefs,self.first_order_beliefs, visual_observation, message,oppo_obs)
 
-        参数:
-            visual_observation: 视觉观测数据
-            message: 接收到的消息
-            self.belief_rules: 信念更新规则
-            self.zero_order_beliefs: 零阶信念
-            self.first_order_beliefs: 一阶信念
-            oppo_obs: 对手观测数据
-
-        返回:
-            updated_beliefs
-        """
-
+    #COBEL-zhimin
+    def prediction_and_cooradination(self):
         # COBEL logger done
-        self.dialogue_history = [] #一旦接受清空消息历史
-        #没有消息只处理视觉的
-        #TODO 还有I saw的情况没有考虑 后面考虑统一两个步骤
-        if message == "None" and oppo_obs is None:
-            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
+        self.first_order_beliefs, self.opponent_subplans = self.LLM.prediction_first_order(self.first_order_beliefs)
+
+        self.zero_order_beliefs, self.my_subplan = self.LLM.prediction_zero_order(self.zero_order_beliefs)
+
+        answer, reason , message = self.LLM.coordination_aware(self.first_order_beliefs,self.zero_order_beliefs,self.opponent_subplans,self.my_subplan)
         
-        else:
-            # 并行执行零阶和一阶信念更新
-            if oppo_obs is None:
-                oppo_obs = "None"
-            with ThreadPoolExecutor() as executor:
-                future_zero = executor.submit(
-                    self.LLM.update_zero_order_beliefs,
-                    self.zero_order_beliefs, visual_observation, message, self.belief_rules
-                )
-                future_first = executor.submit(
-                    self.LLM.update_first_order_beliefs,
-                    self.first_order_beliefs, oppo_obs, message, self.belief_rules
-                )
-                self.zero_order_beliefs = future_zero.result()
-                self.first_order_beliefs = future_first.result()
-        beliefs = self.zero_order_beliefs + '\n' + self.first_order_beliefs
-        self.episode_logger.info(f"==============at {self.steps}  steps {self.agent_names[self.agent_id]}=============\n ")
-        self.episode_logger.info(f"\nzero order obs:\n{visual_observation}\n{message}")
-        self.episode_logger.info(
-            f"\nzero update\n{self.zero_order_beliefs}"
-        )
-        self.episode_logger.info(f"\nfirst order obs:\n{oppo_obs}\n{message}")
-        self.episode_logger.info(
-            f"\nfirst update\n{self.first_order_beliefs}"
-        )
-
-
-
-    #COBEL-zhimin
-    def prediction(self):
-        """
-        通过TOM reasoning 推理协作者的subplan
-        再通过deliberate planning 确定自己的subplan
-
-
-        """
-        # COBEL logger done
-        opponent_subplan = self.LLM.prediction_first_order(self.first_order_beliefs,self.episode_logger)
-        oppo_subplans_dic = {
-            self.agent_names[1 - self.agent_id]: opponent_subplan
-        }
-        # self.first_order_beliefs = self.update_subplans(self.first_order_beliefs,oppo_subplans_dic)
-        self.zero_order_beliefs = self.update_subplans(self.zero_order_beliefs, oppo_subplans_dic)
-        my_subplan = self.LLM.prediction_zero_order(opponent_subplan, self.zero_order_beliefs,self.episode_logger)
-        agent_subplans_dic = {
-                    self.agent_names[self.agent_id]: my_subplan,
-                    # self.agent_names[1 - self.agent_id]: opponent_subplan,
-                }
-
-        self.zero_order_beliefs = self.update_subplans(self.zero_order_beliefs, agent_subplans_dic)
-        self.episode_logger.info(
-            f"opponent_subplan:{opponent_subplan}\nmy_subplan:{my_subplan}"
-        )
-        print("======opposubplan========",opponent_subplan)
-        print("======mysubplan========",my_subplan)
-        # print(f"=====first-order-after-subplan======\n",self.first_order_beliefs)
-        # print(f"=====zero-order-after-subplan======\n",self.zero_order_beliefs)
-        return opponent_subplan, my_subplan
-
-    #COBEL-zhimin
-    def belief_awareness(self):
-        """
-        信念意识，基于当前信念差异输出阈值
-
-        返回:
-            belief_threshold
-        """
-        difference_score, difference_content, bert_score = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
-        self.episode_logger.info(f"difference_score:{difference_score}\ndifference_content:\n{difference_content}\n")
-        # 记录 bert_score
-        if bert_score is not None:
-            self.bert_scores.append(bert_score)
-        return difference_score, difference_content, bert_score
+        return answer, reason , message
+            
 
     #COBEL-zhimin
     def intuitive_planning(self):
-        """
-        直观规划，基于当前信念和目标生成计划
 
-        返回:
-            plan: 生成的计划 = 论文中的low-level plan
-        """
         self.plan_logger.info(f"\naction_with_message_history:{self.action_history_w_mes}")
         self.plan_logger.info(f"\naction_history:{self.action_history}\nmy_subplan:{self.my_subplan}")
         self.episode_logger.info(f"\naction_with_message_history:{self.action_history_w_mes}")
         self.episode_logger.info(f"\naction_history:{self.action_history}\nmy_subplan:{self.my_subplan}")
-        plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subplan,self.action_history,
-                                           self.current_room,
-                                           self.rooms_explored,
-                                           self.obs["held_objects"],
-                                            self.object_list,
-                                            self.object_per_room,
-                                            self.episode_logger,
-                                            self.plan_logger
-                                            )# and subplan to be added in it 
+        plan = self.LLM.intuitive_planning(self.my_subplan,
+                                           self.action_history,
+                                          self.episode_logger)
+        
         return plan
 
-
-    #COBEL-zhimin
-    def adaptive_communication(self,difference_content):
-        """
-        自适应通信，基于当前信念差异生成通信内容
-
-        返回:
-            communication: 生成的通信内容 应该是一个多人的字典
-        """
-        mes_list = self.LLM.message_generation(difference_content)
-        return mes_list
 
     #COBEL -shaokang
     def observation2text(self,info):
@@ -845,6 +739,28 @@ class lm_agent_cobel:
         oppo_holding = ['','']
         oppo_container = ['','']
         visible_ids = []
+        satisfied = ""
+        if len(info['satisfied']) == 0:
+            if len(self.object_list[2]) == 0:
+                satisfied += "I haven't found the goal position bed. "
+            else:
+                satisfied += ""
+        else:
+            satisfied += f"{'I' if self.single else 'We'}'ve already transported "
+            unique_satisfied = []
+            for x in info['satisfied']:
+                if x not in unique_satisfied:
+                    unique_satisfied.append(x)
+            if len([x for x in unique_satisfied if x["type"] == 0]) == 0:
+                satisfied += "nothing"
+            satisfied += ", ".join(
+                [
+                    f"<{x['name']}> ({x['id']})"
+                    for x in unique_satisfied
+                    if x["type"] == 0
+                ]
+            )
+            satisfied += " to the bed. "
         #自己拿的
         for id ,item in enumerate(info['obs']['held_objects']):
             if item['id'] is not None:
@@ -933,6 +849,7 @@ class lm_agent_cobel:
                 
         explored_extend = explored_extend if explored_extend != 'I have ' else ""
         observation += explored_extend
+        observation += satisfied
         measurement_observation['observation'] = observation
         # measurement_observation['messages'] = self.obs['messages']
         # 先把上次自己发的消息加上
@@ -1175,112 +1092,60 @@ class lm_agent_cobel:
                     print(oppo_obs)
                     print(self.dialogue_history)
                     visual_observation = observation['observation'] #视觉描述
-                    # mes_dic = observation['messages']
-
-                    #消息列表转换为对话形式
-                    #TODO 监测是否有消息
-                    # if not all(item is None for item in mes_list):
-                    #     message = ""
-                    #     for idx, agent_name in enumerate(self.agent_names):
-                    #         if mes_list[idx]:
-                    #             message += f"{agent_name}: {mes_list[idx]}\n"
-                    #     self.episode_logger.info(
-                    #         f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
-                    #     )
-                    # else:
-                    #     message = "None"
                     
-                    # message = mes_dic[self.agent_names[self.agent_id]]
                     message = "" if self.dialogue_history else "None"
                     for mes in self.dialogue_history:
                         message += mes + '\n'
-
+                    if oppo_obs == None:
+                        oppo_obs = "No useful information."
                     #measurement update
-                    self.measurement_update(visual_observation, message, oppo_obs)    
+                    self.measurement_update(visual_observation, message,oppo_obs)
                     self.obs_not_updated = False
-                #COBEL justify the completion of the subplan
+
+
                 #===== 第二步 如果没有subplan或者action history过长 进行预测 =====
                 if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:
                     #TODO:add prediction here
-                    opponent_subplan,my_subplan = self.prediction() #这里就是subplan的文本，内部已经完成了beleifs的subplan更新
-
-                    self.plan_logger.info(
-                        f"\n{self.agent_names[self.agent_id]}: opponent_subplan:{opponent_subplan}\nmy_subplan:{my_subplan}"
-                    )
-
-                    # self.plan_logger.info(
-                    #     f"\ncompleted goals: {self.satisfied}\n all goals:{self.goal_objects}"
-                    # )
-                    self.my_subplan = my_subplan
-                    self.action_history = [] #COBEL clean the action history
-                    continue
-
-                #TODO 刚开始啥也不知道的时候
-                
-                #belief awareness
-                difference_score, difference_content,bert_score = self.belief_awareness()
-                print(f"belief difference score:{difference_score}\ncontent:\n{difference_content}")
-                #TODO difference content不太稳定
-                self.plan_logger.info(
-                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
-                )
-
-                self.episode_logger.info(
-                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\nbert_score:{bert_score}\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
-                )
-                self
-                if int(difference_score) > self.belief_threshold and self.message_time < self.max_message_time: #TODO 这里可以改成adaptive的
-                    mes_to_send = self.adaptive_communication(difference_content) #自适应通信
-
-                    plan =  "send a message: " 
-                    self.message_time += 1
-                    # 统计每个接收者消息的单词数
-                    for recipient, message in mes_to_send.items():
-                        # 统计消息的字符数
-                        char_count = len(message)
-                        # 检查接收者是否存在于统计字典中
-                        if recipient in self.comm_counts:
-                            # 更新已存在接收者的字符数和消息次数
-                            self.comm_counts[recipient]["char_count"] += char_count
-                            self.comm_counts[recipient]["num_count"] += 1
-                        else:
-                            # 为新接收者创建统计记录
-                            self.comm_counts[recipient] = {
-                                "char_count": char_count,
-                                "num_count": 1
-                            }
-                    # for partner in mes_to_send.keys():
-                    #     plan += partner + " : " + mes_to_send[partner] + ". "
-                    plan += str(mes_to_send) #COBEL - zhimin 字典转字符串 然后在接受时转回dic
-                    self.plan_logger.info(
-                        f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
-                    )
+                    answer,reason,message = self.prediction_and_cooradination() #这里就是subplan的文本，内部已经完成了beleifs的subplan更新
                     
+
+                    self.plan_logger.info(
+                        f"\n{self.agent_names[self.agent_id]}: opponent_subplan:{self.opponent_subplans}\nmy_subplan:{self.my_subplan}"
+                    )
+                    self.action_history = [] #COBEL clean the action history
+                    self.action_history_w_mes = []
+                
+                    if answer != "NO MISCOORDINATION":
+                        plan =  "send a message: " + message
+                        self.comm_counts += 1
+                        self.comm_chars += len(message)
+                        self.message_time += 1
+                        self.plan_logger.info(
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
+                    else:
+                        self.plan_logger.info(
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
+
                 else:
                     plan = self.intuitive_planning()#直观规划
                     self.message_time = 0
                     self.plan_logger.info(
                         f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
                     )
-                    if plan == "SUBPLAN DONE": #TODO:have to program a fuzzy match in parse
+                    
+                    if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
                         self.my_subplan = None
                         # self.plan = None #其实不需要
                         continue
                         
                 self.obs_not_updated = True #保证每次plan前都更新一次obs
 
-                #TODO 解析mes_list 通过环境发送
-                #COBEL - zhimin end
-                
-
-
-
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
 
-
-                
                 self.plan = plan
 
                 if not plan.startswith('send a message:'):
@@ -1289,8 +1154,6 @@ class lm_agent_cobel:
                     )
                 self.action_history_w_mes.append(f"{'send a message' if plan.startswith('send a message:') else plan}")
 
-                # a_info.update({"Frames": self.num_frames})
-                # info.update({"LLM": a_info})
 
 
                 lm_times += 1
@@ -1305,8 +1168,6 @@ class lm_agent_cobel:
                 action = self.putin()
             elif self.plan.startswith("transport"):
                 action = self.goput()
-                transported_objs = self.holding_objects_id
-                self.zero_order_beliefs = self.update_belief_completion(transported_objs, self.zero_order_beliefs)
             #    self.with_character = [self.agent_id]
             elif self.plan.startswith("send a message:"):
                 # 发送消息动作
@@ -1335,146 +1196,6 @@ class lm_agent_cobel:
 
     def get_com_counts(self):
         return self.comm_counts
-    
-    def update_subplans(self, text, agent_subplan_dic):
-        """
-        遍历 agent_subplan_dic 中的每个 agent_name，对文本中的 agent 子目标进行更新：
-        - 若文本中不存在该 agent，则添加带有默认信息和 subplan 的模板；
-        - 若存在，则查找其后的第一个 subplan(...) 并替换为字典中对应的新 subplan 内容。
 
-        参数:
-            text (str): 原始文本，包含 agent 的描述信息。
-            agent_subplan_dic (dict): 键为 agent_name，值为对应的 subplan 字符串。
-
-        返回:
-            str: 更新后的文本。
-        """
-        result_text = text
-
-        for agent_name in agent_subplan_dic.keys():
-            # 构造正则匹配 agent(agent_name)
-            agent_pattern = f'agent_state\\({re.escape(agent_name)}\\)'
-            agent_matches = list(re.finditer(agent_pattern, result_text))
-
-            if not agent_matches:
-                # Agent 不存在，添加模板
-                print(f"Agent {agent_name} 不存在，添加模板")
-                template = f'''agent({agent_name})
-    - location(Unknown)
-    - objects_in_hand[Unknown,Unknown] 
-    - subplan("{agent_subplan_dic[agent_name]}")
-    '''
-                result_text += template
-            else:
-                # Agent 存在，替换其后第一个 subplan(...)
-                print(f"Agent {agent_name} 存在，替换 subplan")
-                # 从后往前处理，避免字符串替换后位置偏移影响后续匹配
-                for match in reversed(agent_matches):
-                    agent_end_pos = match.end()
-                    remaining_text = result_text[agent_end_pos:]
-
-                    # 查找 agent 后的第一个 subplan(...)
-                    subplan_match = re.search(r'subplan\([^)]*\)', remaining_text)
-                    if subplan_match:
-                        # 计算 subplan 在原字符串中的绝对位置
-                        subplan_start = agent_end_pos + subplan_match.start()
-                        subplan_end = agent_end_pos + subplan_match.end()
-
-                        # 构建新旧 subplan 内容
-                        old_subplan = subplan_match.group(0)
-                        new_subplan = f'subplan("{agent_subplan_dic[agent_name]}")'
-
-                        # 替换内容
-                        result_text = result_text[:subplan_start] + new_subplan + result_text[subplan_end:]
-                        print(f"  已替换 {old_subplan} -> {new_subplan}")
-                    else:
-                        # 未找到 subplan，跳过替换
-                        print(f"  未找到 agent({agent_name}) 后的 subplan，跳过替换")
-
-        return result_text
-    
-    #COBEL
-    def plot_bert_score_distribution(self, output_path=None):
-        """
-        绘制 bert_score 的分布图并保存到指定路径。
-
-        参数:
-            output_path: 图片保存路径，默认为 output_dir 下 bert_score_dist_agent{agent_id}.png
-        """
-        if len(self.bert_scores) == 0:
-            self.logger.warning("No bert_score recorded to plot.")
-            return
-        if output_path is None:
-            output_path = os.path.join(self.output_dir, f"bert_score_dist_agent{self.agent_id}.png")
-        plt.figure(figsize=(8, 6))
-        sns.histplot(self.bert_scores, kde=True, bins=20, color="skyblue", label="BERTScore")
-        plt.title("Distribution of BERTScore", fontsize=14)
-        plt.xlabel("BERTScore", fontsize=12)
-        plt.ylabel("Frequency", fontsize=12)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(output_path)
-        plt.close()
-        self.plan_logger.info(f"bert_score distribution plot saved to {output_path}")
-
-    def update_belief_completion(self, obj_ids, old_beliefs):
-        """
-        根据物体ID列表更新信念字符串中对应物体的状态
-        
-        Args:
-            obj_ids: 需要更新的物体ID列表
-            old_beliefs: 原始信念字符串,格式如:
-                        - target_obj(id1)
-                        - location
-                        - completion(incompleted)
-                        - target_obj(id2)
-                        - location  
-                        - completion(incompleted)
-        
-        Returns:
-            更新后的信念字符串
-        """
-        # 将信念字符串按行分割
-        belief_lines = old_beliefs.split('\n')
-        updated_lines = []
-        
-        # 遍历每一行
-        i = 0
-        while i < len(belief_lines):
-            line = belief_lines[i]
-            # 检查是否是物体行
-            if line.strip().startswith('- target_obj'):
-                obj_line = line
-                # 获取location行和completion行
-                if i + 2 < len(belief_lines):
-                    location_line = belief_lines[i + 1]
-                    completion_line = belief_lines[i + 2]
-                    # 如果当前物体ID在需要更新的列表中
-                    # 检查当前物体ID是否在需要更新的列表中
-                    matched_obj_id = None
-                    for obj_id in obj_ids:
-                        if str(obj_id) in obj_line:
-                            matched_obj_id = obj_id
-                            break
-                    if matched_obj_id is not None:
-                        # 将incompleted/unknown改为completed
-                        completion_line = completion_line.lower()
-                        if 'incompleted' in completion_line:
-                            completion_line = completion_line.replace('incompleted', 'completed')
-                        elif 'unknown' in completion_line:
-                            completion_line = completion_line.replace('unknown', 'completed')
-                        else:
-                            self.plan_logger.warning(f"物品完成状态提取失败: {completion_line}")
-                        # 剔除已检测到的obj_id
-                        obj_ids.remove(matched_obj_id)
-                    updated_lines.extend([obj_line, location_line, completion_line])
-                    i += 3
-                    continue
-                    
-            updated_lines.append(line)
-            i += 1
-        if not obj_ids:
-            self.plan_logger.warning("有物品id遗漏，未能更新信念完成状态")
-
-        # 将更新后的行重新组合成字符串
-        return '\n'.join(updated_lines)
+    def get_com_chars(self):
+        return self.comm_chars

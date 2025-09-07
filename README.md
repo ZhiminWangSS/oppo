@@ -148,3 +148,18 @@ V1.5.2
   - 重写了logger 更清晰
   - 修改了action history 防止send message占据任务长度
   - debug visible_obj不更新
+
+
+V2
+几种组合
+- 直接用语言更新 VS 提炼规则直接用规则表示（受前序影响大） VS free 提取 但是后面因为没有相应信息所以用不到
+
+- 分开measurement VS 一起measurement（更fancy）VS 只有视觉更新 硬编码
+
+- 分开predict（必须）VS 分开belief predict 和 subplan predict（更丑陋）
+
+- 分开knowledge 和belief（丑陋）
+
+- cooradinator active + passive VS only share information
+  active = yes OR no + reason + mes passive = update 单独模块 | agree OR not agree + reason + mes
+

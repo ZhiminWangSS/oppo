@@ -312,7 +312,7 @@ class LLM:
         return random.choice(available_actions), flags
 
 
-    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,):
+    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,): #TODO 看一下他们的其应敲击
         s = f"I've taken {current_step}/3000 steps. "
 
         sss = {}

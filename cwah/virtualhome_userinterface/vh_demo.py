@@ -5,6 +5,7 @@ import time
 import json
 import sys, os
 import copy
+import logging
 
 sys.path.append('..')
 sys.path.append(os.path.join('..', '..', 'virtualhome', 'simulation'))
@@ -773,21 +774,45 @@ def reset(scene):
 										   char_index=1,
 										   args=args)#sjm args to be completed
 
+	episode_logger = init_episode_logs(graph_save_dir, task_index)##logger
 	if args.extra_agent != 'none':
-		# if 'LLM_vision' in extra_agent.agent_type:
-		# 	extra_agent.reset(ob[1], env.all_containers_name, env.all_goal_objects_name, env.all_room_name, env.goal_spec[1])
-		# elif 'vision' in extra_agent.agent_type:
-		# 	extra_agent.reset(ob[1], env.full_graph, env.task_goal, env.all_room_name, env.all_containers_name, env.all_goal_objects_name, seed=extra_agent.seed)
-		if 'MCTS' in extra_agent.agent_type:
+		if 'LLM_vision' in extra_agent.agent_type:
+			extra_agent.reset(ob[1], env.all_containers_name, env.all_goal_objects_name, env.all_room_name, env.goal_spec[1],episode_logger,task_index)
+		elif 'vision' in extra_agent.agent_type:
+			extra_agent.reset(ob[1], env.full_graph, env.task_goal, env.all_room_name, env.all_containers_name, env.all_goal_objects_name, seed=extra_agent.seed)
+		elif 'MCTS' in extra_agent.agent_type:
 			extra_agent.reset(ob[1], env.full_graph, env.task_goal, seed=extra_agent.seed)
 		elif 'LLM' in extra_agent.agent_type:
-			extra_agent.reset(ob[1], env.all_containers_name, env.all_goal_objects_name, env.all_room_name, env.room_info, env.goal_spec[1])
+			extra_agent.reset(ob[1], env.all_containers_name, env.all_goal_objects_name, env.all_room_name, env.room_info, env.goal_spec[1],episode_logger,task_index)
 		else:
 			raise ValueError(f"Not available agent type {extra_agent.agent_type}")
 
 
 	time_start = time.time()
 	return {'image_top': get_top_image(), 'all_done': all_done}
+
+def init_episode_logs(output_dir, episode):##logger
+	"""
+	初始化每个episode的日志记录器
+	"""
+	episode_dir = os.path.join(output_dir, str(episode))
+	os.makedirs(episode_dir, exist_ok=True)
+	
+	episode_logger = logging.getLogger(f"episode_{episode}")
+	episode_logger.setLevel(logging.DEBUG)
+	
+	fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+	fh.setLevel(logging.DEBUG)
+	
+	formatter = logging.Formatter(
+		"%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+	)
+	fh.setFormatter(formatter)
+
+	episode_logger.addHandler(fh)
+
+	return episode_logger
+
 
 
 def get_helper_action(goal_spec, previous_main_action, num_steps):
