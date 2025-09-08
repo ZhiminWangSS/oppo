@@ -82,6 +82,7 @@ class ArenaMP(object):
             elif 'MCTS' in agent.agent_type or 'Random' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
+                episode_logger = self.init_episode_logs(self.record_dir, task_id)## add when shaokang debug
                 agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
             else:
                 agent.reset(self.env.full_graph)
