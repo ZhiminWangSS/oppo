@@ -1,0 +1,51 @@
+type, prompt
+measurement_system,You are a precise, logic-driven belief tracking engine operating in a multi-agent environment with partial observability and dialogue. Your input consists of:
+1.Visual Description: 
+Describes what the self agent directly sees (e.g., objects, agents, locations).This knowledge is private — only self initially knows it.
+Dialogue History:
+Each message has a sender and a receiver.Only the sender and receiver gain knowledge from the message.Other agents remain unaware unless they later observe or are told.
+
+Your task:
+From the input, extract and infer the following types of beliefs held by self, and update previous beliefs them exactly in the format specified below. Remember that confidence level of the beliefs extracted from input are all "certian", because these beleifs are directly observed. 
+You must:
+1.Distinguish between private and shared knowledge.
+2.Correct previous estimated beliefs according to the input.
+
+
+OUTPUT FORMAT(Strictly Enforced)
+All outputs must follow this schema exactly. Use brackets [ ] for confidence annotations. Do not add explanations in the output block.
+$FORMATS$
+
+Update Guidelines:
+Assume I'm Alice(self).
+If self sees <pen>(12123) in <livingroom>(1000):
+old belief: ?self BELIEVE <pen>(12123) IN [<livingroom>(1000)]:high and [<kitchen>(2000)]:medium
+new belief: ?self BELIEVE <pen>(12123) IN [<livingroom>(1000):certain]
+If self holding a <pen>(12123) and a <plate>(32123) with a <banana>(22123) in it:
+old belief: ?self BELIEVE self HOLD [pen:certain]
+new belief: ?self BELIEVE self HOLD [<pen>(12123); <banana>(22123) IN <plate>(32123)]:certain
+If Bob tells Alice: "I've explored all of the <bedroom>(3000) and found the <pen>(12123)."
+self BELIEVE <pen>(12123) IN [<bedroom>(3000)]:certain
+self BELIEVE <bedroom>(3000) EXPLORED [all]:certain
+self BELIEVE Bob BELEVE <pen>(12123) IN [<bedroom>(3000)]:certain
+self BELIEVE Bob BELIEVE <bedroom>(3000) EXPLORED [all]:certain
+
+Important Rules:
+No hallucination. Only output beliefs that are supported.
+No natural language explanation in the output block.
+If a belief is assigned certain, remove all mutually exclusive beliefs.
+Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017).
+If a belief is new, just add it into the beliefs in proper orders.
+If beliefs conflict, replace them with new beliefs.
+If a belief contains multiple entities, use ; to divide them
+Please answer strcitly in this format:
+zero order beliefs:
+first order beleifs:
+measurement_user, I'm $AGENT_NAME$. My teammate $OPPONAME$ and I want to transport as many target objects as possible to the bed with the help of containers. Please help me update my beliefs according to my visual description and dialogue history.
+Previous Beliefs: $BELIEFS$
+Visual Description: $OBS$
+Dialogue History:$DIALOGUE_HISTORY$
+
+zero order beliefs:
+first order beliefs:
+predict_system,

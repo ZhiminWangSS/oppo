@@ -1,0 +1,34 @@
+{
+
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tdw-gym.challenge_capo",
+            "console": "integratedTerminal",
+            "args": [
+                "--output_dir","results_capo_debug",
+                "--lm_id","deepseek-v3",
+                "--experiment_name","LMs-$lm_id",
+                "--run_id","capo1",
+                "--port","10004",
+                "--agents","lm_agent_capo","lm_agent_capo",
+                "--communication",
+                "--prompt_template_path","LLM/capo_prompt.csv",
+                "--max_tokens","1024",
+                "--data_prefix","dataset/dataset_test/",
+                "--eval_episodes","9","10","11",
+                "--screen_size","256",
+
+            ],
+            "cwd":"${workspaceFolder}/tdw_mat",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}"
+                    }
+            
+        }
+    ]
+}
