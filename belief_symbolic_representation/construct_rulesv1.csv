@@ -7,8 +7,8 @@ example:
 ```
 Challenge_description:
 In this domain, two agents must cooperate to deliver keys to locked doors in order to unlock them, achieving a shared goal. Each door corresponds to a task, which is completed only when its matching key is delivered and used. Agents can plan subgoals.
-Keys, doors, and agents all have a location attribute. Initially, keys are placed in various rooms, and each door is fixed in a specific room. A key can only be used on its matching door, and agents must carry the key to the doorâ€™s location to unlock it. Each agent can hold up to two items at a time, which may be keys or tools (e.g., a tool required for certain doors), but cannot perform unlocking unless both the correct key and any required tool are in hand.
-The domain consists of multiple rooms, and agents operate within this space, moving freely and exploring. Each roomâ€™s exploration state is None (unexplored), Part (partially explored), or All (fully explored). Since agents do not initially know the locations of keys or doors, they must explore, share information, and coordinate efficiently to complete all tasks as quickly as possible.
+Keys, doors, and agents all have a location attribute. Initially, keys are placed in various rooms, and each door is fixed in a specific room. A key can only be used on its matching door, and agents must carry the key to the door¡¯s location to unlock it. Each agent can hold up to two items at a time, which may be keys or tools (e.g., a tool required for certain doors), but cannot perform unlocking unless both the correct key and any required tool are in hand.
+The domain consists of multiple rooms, and agents operate within this space, moving freely and exploring. Each room¡¯s exploration state is None (unexplored), Part (partially explored), or All (fully explored). Since agents do not initially know the locations of keys or doors, they must explore, share information, and coordinate efficiently to complete all tasks as quickly as possible.
 
 task:extract entities and reason about the attribution of the entities and their restrained content if there is any described in the domain.
 
