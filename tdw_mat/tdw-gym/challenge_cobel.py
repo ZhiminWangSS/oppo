@@ -166,6 +166,7 @@ class Challenge:
             )
 
             # 重置每个智能体
+            init_challenge_descs = []
             for id, agent in enumerate(agents):
                 if type(env_api) == list:
                     curr_api = env_api[id]
@@ -206,7 +207,7 @@ class Challenge:
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
                             episode_logger=episode_logger,
-                            plan_logger = plan_logger
+                            plan_logger=plan_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -219,6 +220,13 @@ class Challenge:
             done = False
             step_num = 0
             local_reward = 0.0
+
+            init_challenge_descs = []
+            for agent_id, agent in enumerate(agents):
+                init_challenge_desc = agent.act_init(state[str(agent_id)]) #COBEL - zhimin 这里是act_init
+                init_challenge_descs.append(init_challenge_desc)
+            for agent_id, agent in enumerate(agents):
+                agent.init_challenge_descs = init_challenge_descs
             while not done:
                 step_num += 1
                 actions = {}

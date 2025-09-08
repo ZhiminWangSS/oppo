@@ -1,7 +1,7 @@
 type,prompt
 measurement_first_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
-Please help me extract and infer the zero order and first order beliefs held by myself, and update previous beliefs them exactly in the Belief Symbolic Language below. Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed. 
+Please help me extract the first order beliefs held by myself, and update previous beliefs them exactly in the Belief Symbolic Language Format below. The Belief Rules define the beliefs types in this task, you can choose several types to update the beliefs. ONLY beliefs explicitly supported by Visual Description or Dialogue History may be included. Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed. 
 
 Notice:
 1.Distinguish between private and shared knowledge.
@@ -25,7 +25,7 @@ updated beliefs:
 "
 measurement_zero_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
-Please help me extract and infer the zero order and first order beliefs held by myself, and update previous beliefs them exactly in the Belief Symbolic Language below. Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed. 
+Please help me extract the zero order beliefs held by myself, and update previous beliefs them exactly in the Belief Symbolic Language Format below. The Belief Rules define the beliefs types in this task, you can choose several types to update the beliefs. ONLY beliefs explicitly supported by Visual Description or Dialogue History may be included. Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed.  
 
 Notice:
 1.Distinguish between private and shared knowledge.
@@ -174,14 +174,16 @@ Just answer the next best action without any analysis and reasoning progress:
 Answer: "
 init_beliefs,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
-Please help me initial zero order and first order beliefs based on the goals and environment settings. The beliefs should meet in the belief symbolic language format below. You should init the beleifs using the belief rules below. Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal obejects' id, use <1> <2> <3> to represent multiple same objects. 
-Since you know nothing about the environment, all beliefs should be with low confidence level and all state or position of objects should be unknown.
+Please help me initialize zero order beliefs based on my progress and goal and initialize first order beliefs based on $OPPO_NAME$'s progress and goal. The beliefs should meet in the belief symbolic language format below. You should init the beliefs ONLY using the belief rules below. Represent objects, container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal objects' id, use <1> <2> <3> to represent multiple same objects. 
+Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed. 
 
 
 Following are provided information for you:
 Goal: $GOAL$
 
-Environment Settings: $ENV_SETTING$
+My progress: $MY_PROGRESS$
+
+$OPPO_NAME$'s progress: $OPPO_PROGRESS$
 
 Belief Symbolic Language: $LANGUAGE$
 
