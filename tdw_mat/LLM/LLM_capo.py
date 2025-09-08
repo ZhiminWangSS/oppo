@@ -131,8 +131,8 @@ class LLM_capo:
             api_key=os.environ.get("CHATANYWHERE_API_KEY")
             base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key=api_key,
-                base_url=base_url,
+                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
+                base_url="https://api.agicto.cn/v1",
             )
             if self.chat:
                 self.sampling_params = {
@@ -155,8 +155,8 @@ class LLM_capo:
             api_key=os.environ.get("CHATANYWHERE_API_KEY")
             base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key=api_key,
-                base_url=base_url,
+                api_key="sk-35b637f8264b43ecbbfc01ee55b3539f",
+                base_url="https://api.deepseek.com",
             )
             if self.chat:
                 self.sampling_params = {

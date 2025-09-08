@@ -443,8 +443,18 @@ class UnityEnvironment_capo(BaseUnityEnvironment):
 				if talking == 1:
 					self.turns += 1
 				else:
-					if self.round < 2:#TODO:satisfied or not check
+					if self.round < 2:
 						match = re.search(r"Satisfaction\s+level:\s*(\w+)", saying[i])
+						if match:
+							satisfaction_level = match.group(1)
+							if satisfaction_level == "No" or satisfaction_level == "NO":
+								self.round += 1
+								self.turns = 1
+							else:
+								self.turns = None
+								self.round = None
+								self.disscussion = 0
+						match = re.search(r'"Satisfaction\s+level"\s*:\s*"([^"]+)"', saying[i], re.IGNORECASE) 
 						if match:
 							satisfaction_level = match.group(1)
 							if satisfaction_level == "No" or satisfaction_level == "NO":
@@ -527,7 +537,7 @@ class UnityEnvironment_capo(BaseUnityEnvironment):
 						self.changed_graph = True
 		for action in actions:#TODO:check the step updating policy
 			if action == "send_message2":
-				self.step += 1
+				self.steps += 1#one round for one step
 		if self.disscusion_status[0] == 1 and self.disscusion_status[1] == 1:
 			self.disscusion_status = [0,0]
 			self.disscussion = 1

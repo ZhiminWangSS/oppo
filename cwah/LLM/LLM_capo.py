@@ -33,9 +33,8 @@ class LLM_capo(LLM):
         df = pd.read_csv(self.prompt_template_path)
         self.host = 2-self.agent_id
 
-        #communication counting:
-        self.tokens = 0
-        self.api = 0
+        #metric
+        
 
 
         if self.host:
@@ -53,8 +52,8 @@ class LLM_capo(LLM):
 
         if self.source == 'openai':
             client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1"
+                api_key="sk-dd98729d7f9e4004a6ec69a743e85bdd",
+                base_url="https://api.deepseek.com"
             )
             print(f"loading openai model =============={lm_id}")
             if self.chat:
@@ -120,8 +119,10 @@ class LLM_capo(LLM):
                             response = client.chat.completions.create(
                                 model=lm_id, messages=prompt, **sampling_params
                             )
-                            self.tokens += response.usage.completion_tokens
-                            self.api += 1
+                            self.completion_tokens += response.usage.completion_tokens
+                            self.api_num += 1
+                            self.total_tokens += response.usage.total_tokens
+                            usage = response.usage.completion_tokens#for comm counting
                             if self.debug:
                                 with open(f"LLM/chat_raw.json", 'a') as f:
                                     f.write(json.dumps(response.to_dict(), indent=4))
@@ -212,7 +213,7 @@ class LLM_capo(LLM):
         output,usage = self.generator(chat_prompt,self.sampling_params)
         meta_plan = output[0]
     
-        return meta_plan
+        return meta_plan,usage
     def disscuss_refine(self,refine,meta_plan,oppo_progress,current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)
         action_history_desc = ", ".join(action_history[-10:] if len(action_history) > 10 else action_history)
@@ -231,7 +232,7 @@ class LLM_capo(LLM):
         prompt = prompt.replace("$OPP\_PROGRESS$",oppo_progress)
         chat_prompt = [{"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
-        message = output[0]
+        message = output[0],usage
         return message
     def parsing(self, meta_plan,current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)

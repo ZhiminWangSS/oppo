@@ -139,7 +139,7 @@ class lm_agent:
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
         self.visible_obj = {}
-        self.new_visible_obj = {}
+       
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
