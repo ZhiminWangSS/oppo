@@ -11,14 +11,17 @@ Notice:
 5.No natural language explanation in the beliefs.
 6.All entitiess are denoted as <name> (id), such as <table> (712) except the agents.
 
-Following are provided information for you:
+
+Belief Symbolic Language: $LANGUAGE$
+
+Based on the following information, please update the old beliefs.
+
 Old beliefs: $BELIEFS$
 
 Visual Description: $VISUAL_OBSERVATION$
 
 Dialogue History: $MESSAGE$
 
-Belief Symbolic Language: $LANGUAGE$
 
 Answer strictly in this format:
 updated beliefs:
@@ -35,29 +38,35 @@ Notice:
 5.No natural language explanation in the beliefs.
 6.All entitiess are denoted as <name> (id), such as <table> (712) except the agents.
 
-Following are provided information for you:
+Belief Symbolic Language: $LANGUAGE$
+
+Based on the following information, please update the old beliefs.
+
 Old beliefs: $BELIEFS$
 
 Visual Description: $VISUAL_OBSERVATION$
 
 Dialogue History: $MESSAGE$
 
-Belief Symbolic Language: $LANGUAGE$
-
 Answer strictly in this format:
 updated beliefs:
 "
-prediction_first_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+prediction_first_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 
-First, please help me predict the likely states of uncertain beliefs(beliefs without certain confidence) based on my first order beliefs. Update the beliefs with the predicted states and assign a belief level(high/medium/low) to each updated belief. DO NOT predict for objects already known to be held or seen (certain state).
-The Updated beliefs should meet in the belief symbolic language format like old beliefs.
+First, please help me predict the likely position of target objects according to the room exploration states. Output the beliefs about objects with the predicted states and assign a belief level(high/medium/low). If an object's location is certain, don't predict its location. such as <apple>(12123) IN [kitchen:certain].
 
-Second, please predict the possible next subplans the $OPPO_NAME$ will take based on the updated beliefs after the first predicion step.
+If object may be in multiple rooms, use ?object IN [room1:certain, room2:high] to represent, such as
+?<apple>(12123) IN [<kitchen>(2000):high, <livingroom>(1000):medium, <livingroom>(3000):low].
+The possible locations should be described in the belief symbolic language format like old beliefs.
+
+
+Second, please predict the possible next subplans the $OPPO_NAME$ will take based on the predicted locations of objects after the first prediction step. The subplan should help me achieve the goal as soon as possible.
+
 The generated subplan must meet following requirements:
-1.There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore’: explore a room for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+1.There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
 Here are some examples for you:
 Go to <living>(room) and explore it.
-Go grasp <banana>(12123) and put it into the <basket>(22123).
+Explore current and grasp the objects here).
 Go grasp <banana>(12123) and <apple>(32123) and transport them to the bed.
 Explore current room.
 
@@ -65,45 +74,43 @@ You need to reason three most possible subplans,use ""subplan1: subplan2: subpla
 
 Notice:
 No natural language explanation in the beliefs.
-Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal obejects' id, use <1> <2> <3> to represent multiple same objects. 
-Do not delete any beliefs in previous beliefs, you are allow to add a new belief in the belief symbolic language format.
+Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If the goal objects' ids are not provided such as 3 apple, use <apple>(1) <apple>(2) <apple>(3) to represent multiple same objects.
+
 
 Following are provided information for you:
 Goal: $GOAL$
 
-Belief Symbolic Language: $LANGUAGE$
-
 First order beliefs: $FIRST_ORDER_BELIEFS$
 
-Dialogue History: $DIALOGUE_HISTORY$
-
-
-
 Answer strictly in this format:
-1. Updated Beliefs:
 
-2. $OPPO_NAME$'s Subplans: 
+possible locations:
+
+subplans: 
 subplan1: 
 subplan2: 
 subplan3:"
-prediction_zero_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+prediction_zero_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 
-First, please help me predict the likely states of uncertain beliefs(beliefs without certain confidence) based on my zero order beliefs. Update the beliefs with the predicted states and assign a belief level(high/medium/low) to each updated belief. DO NOT predict for objects already known to be held or seen (certain state).
-The Updated beliefs should meet in the belief symbolic language format like old beliefs.
+First, please help me predict the likely position of target objects according to the room exploration states. Output the beliefs about objects with the predicted states and assign a belief level(high/medium/low). If an object's location is certain, don't predict its location. such as <apple>(12123) IN [kitchen:certain].
 
-Second, please predict the possible next subplans the I will take based on the updated beliefs after the first predicion step.
+If object may be in multiple rooms, use ?object IN [room1:certain, room2:high] to represent, such as
+?<apple>(12123) IN [<kitchen>(2000):high, <livingroom>(1000):medium, <livingroom>(3000):low].
+The possible locations should be described in the belief symbolic language format like old beliefs.
+Second, please predict the possible next subplan the I will take based on the predicted locations of objects after the first prediction step. The subplan should help me achieve the goal as soon as possible.
+
 The generated subplan must meet following requirements:
-1.There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore’: explore a room for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+1.There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
 Here are some examples for you:
 Go to <living>(room) and explore it.
-Go grasp <banana>(12123) and put it into the <basket>(22123).
+Explore current and grasp the objects here.
 Go grasp <banana>(12123) and <apple>(32123) and transport them to the bed.
-You need to answer one best subplan.
+Explore current room.
 
 Notice:
 No natural language explanation in the beliefs.
-Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal obejects' id, use <1> <2> <3> to represent multiple same objects. 
-Do not delete any beliefs in previous beliefs, you are allow to add a new belief in the belief symbolic language format.
+Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If the goal objects' ids are not provided such as 3 apple, use <apple>(1) <apple>(2) <apple>(3) to represent multiple same objects.
+
 
 Following are provided information for you:
 Goal: $GOAL$
@@ -113,9 +120,9 @@ Belief Symbolic Language: $LANGUAGE$
 Zero order beliefs: $ZERO_ORDER_BELIEFS$
 
 Answer strictly in this format:
-1. Updated Beliefs:
-2. My Subplans:"
-coordination_aware,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+possible locations:
+subplan:"
+coordination_aware,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 
 Please help me identify the potential miscoordination between my own subplan and $OPPO_NAME$'s subplan based on the following information:
 1.zero order beliefs: $ZERO_ORDER_BELIEFS$
@@ -153,7 +160,7 @@ Reason:
 Answer:
 
 "
-intuitive_planning,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. 
+intuitive_planning,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 
 Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please help me choose the best available action to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All
 objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
@@ -174,9 +181,9 @@ Just answer the next best action without any analysis and reasoning progress:
 Answer: "
 init_beliefs,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
-Please help me initialize zero order beliefs based on my progress and goal and initialize first order beliefs based on $OPPO_NAME$'s progress and goal. The beliefs should meet in the belief symbolic language format below. You should init the beliefs ONLY using the belief rules below. Represent objects, container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal objects' id, use <1> <2> <3> to represent multiple same objects. 
-Remember that confidence level of the beliefs extracted from input are all ""certian"", because these beliefs are directly observed. 
+Please help me initialize zero order beliefs based on my progress and goal and initialize first order beliefs based on $OPPO_NAME$'s progress and goal. The beliefs should meet in the belief symbolic language format below. You should init the beliefs ONLY using the belief rules below and replace entities with ? prefix with actual names like Alice, Bob, apple<12123>.  Since the location of objects are unknown, you can only init the location of objects to be ?obeject IN unknown room.
 
+NOTICE:MUST Represent objects, container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If the goal objects' ids are not provided such as 3 apple, use <apple>(1) <apple>(2) <apple>(3) to represent multiple same objects.
 
 Following are provided information for you:
 Goal: $GOAL$

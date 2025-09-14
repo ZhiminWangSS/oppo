@@ -56,6 +56,10 @@ class LLM_agent:
 		self.comm_chars = 0
 		self.comm_num = 0
 
+		#Cobel:
+		#container
+		#room
+
 
 	@property
 	def all_relative_name(self) -> list:
@@ -180,7 +184,7 @@ class LLM_agent:
 	
 		return new_graph
 	
-	def get_action(self, observation, goal):
+	def get_action_cobel(self, observation, goal):
 		"""
 		:param observation: {"edges":[{'from_id', 'to_id', 'relation_type'}],
 		"nodes":[{'id', 'category', 'class_name', 'prefab_name', 'obj_transform':{'position', 'rotation', 'scale'}, 'bounding_box':{'center','size'}, 'properties', 'states'}],
@@ -189,6 +193,8 @@ class LLM_agent:
 		:param goal:{predicate:[count, True, 2]}
 		:return:
 		"""
+
+		
 		if self.communication:
 			for i in range(len(observation["messages"])):
 				if observation["messages"][i] is not None:
@@ -359,13 +365,13 @@ class LLM_agent:
 		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
 		self.episode_logger = episode_logger
 		
-
+	def get_completion_tokens(self):
+		return self.LLM.completion_tokens
+	def get_total_tokens(self):
+		return self.LLM.total_tokens
+	
 	def get_api_num(self):
 		return self.LLM.api_num
-
-
+	
 	def get_comm_tokens(self):
 		return self.LLM.comm_tokens
-	
-	def get_token_stats(self):
-		return self.LLM.token_stats

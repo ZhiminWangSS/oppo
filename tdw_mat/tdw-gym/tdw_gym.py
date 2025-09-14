@@ -208,7 +208,8 @@ class TDW(Env):
             self.controller.communicate({"$type": "terminate"})
             self.controller.socket.close()
         # download_asset_bundles()
-        self.controller = might_fail_launch(partial(TransportChallenge, port=self.port, check_version=True, launch_build=self.launch_build, screen_width=self.screen_size,screen_height=self.screen_size, image_frequency= ImageFrequency.always, png=True, image_passes=None, enable_collision_detection = self.enable_collision_detection, logger_dir = output_dir), port = self.port)
+        self.controller = might_fail_launch(partial(TransportChallenge, port=self.port, check_version=False, launch_build=self.launch_build, screen_width=self.screen_size,screen_height=self.screen_size, image_frequency= ImageFrequency.always, png=True, image_passes=None, enable_collision_detection = self.enable_collision_detection, logger_dir = output_dir), port = self.port)
+        #COBEL
         print("Controller connected")
         self.success = False
         self.messages = [None for _ in range(self.number_of_agents)]
