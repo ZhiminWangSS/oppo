@@ -2,6 +2,7 @@ import sys
 import os
 curr_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(f'{curr_dir}/..')
+import ipdb
 import pickle
 import json
 import random
@@ -9,94 +10,10 @@ import numpy as np
 from pathlib import Path
 
 from envs.unity_environment import UnityEnvironment
-from envs.unity_environment_capo import UnityEnvironment_capo##TODO:change the env engine
-from agents import LLM_agent
-from agents.LLM_capo_agent import capo_agent
+from agents import vision_LLM_agent
 from arguments import get_args
 from algos.arena_mp2 import ArenaMP
-import logging
-from datetime import datetime
-import subprocess
 
-#logger for metaplan, message and subplan
-def setup_logger(name=__name__, log_file='app.log', level=logging.INFO, encoding='utf-8'):
-    """
-    创建并配置一个 logger 实例，支持同时输出到文件和控制台。
-
-    参数：
-        name (str): logger 的名称（通常用模块名）
-        log_file (str): 日志文件路径，默认为 'app.log'
-        level (int): 日志级别，如 logging.INFO
-        encoding (str): 日志文件编码，推荐 utf-8 支持中文
-
-    返回：
-        logging.Logger: 配置好的 logger 实例
-    """
-    # 创建一个 logger 对象
-    logger = logging.getLogger(name)
-    
-    # 避免重复添加 handler（防止日志重复输出）
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # 设置日志等级
-    logger.setLevel(level)
-
-    # 定义日志格式
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-
-    # 确保日志目录存在
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    # 文件处理器：写入日志文件
-    file_handler = logging.FileHandler(log_file, encoding=encoding)
-    file_handler.setLevel(level)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    # 控制台处理器：输出到终端
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    return logger
-# kill the process
-def kill_process_on_port(port):
-    try:
-        # 执行 lsof 命令获取占用指定端口的进程 PID
-        result = subprocess.run(
-            ['lsof', '-t', '-i', f':{port}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        if result.returncode != 0:
-            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
-            return
-        
-        pids = result.stdout.strip().split('\n')
-        pids = [pid for pid in pids if pid]  # 过滤空行
-
-        if not pids:
-            print(f"没有找到占用端口 {port} 的进程。")
-            return
-
-        print(f"找到占用端口 {port} 的进程 PID: {pids}")
-
-        # 使用 kill -9 终止每个进程
-        for pid in pids:
-            subprocess.run(['kill', '-9', pid])
-            print(f"已终止 PID {pid} 的进程。")
-
-    except Exception as e:
-        print(f"发生错误: {e}")
 
 if __name__ == '__main__':
     args = get_args()
@@ -104,7 +21,7 @@ if __name__ == '__main__':
     # with open("test_env.json", "w") as f:
     #     json.dump(env_task_set, f, indent=4)
 
-    args.record_dir = f'../test_results/{args.mode}' # set the record_dir right!
+    args.record_dir = f'./test_results/{args.mode}' # set the record_dir right!
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
@@ -134,7 +51,7 @@ if __name__ == '__main__':
 
 
     def env_fn(env_id):
-        return UnityEnvironment_capo(num_agents=2,
+        return UnityEnvironment(num_agents=2,
                                max_episode_length=args.max_episode_length,
                                port_id=env_id,
                                env_task_set=env_task_set,
@@ -142,7 +59,8 @@ if __name__ == '__main__':
                                observation_types=[args.obs_type, args.obs_type],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
-                               base_port=args.base_port)
+                               base_port=args.base_port,
+                               save_image=True)
 
     args_agent1 = {
         'agent_id': 1,
@@ -155,75 +73,48 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    
+    agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
+    arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
     if args.num_per_task != 10:
-        test_episodes = args.test_task#set tesk id
+        test_episodes = args.test_task
     else:
         test_episodes = episode_ids
     for iter_id in range(num_tries):
-        kill_process_on_port(6315)
         steps_list, failed_tasks = [], []
-        os.makedirs(f"./{iter_id}",exist_ok=True)
-        #record the results
         if not os.path.isfile(args.record_dir + '/results.pik'):
             test_results = {}
         else:
             test_results = pickle.load(open(args.record_dir + '/results.pik', 'rb'))
 
         current_tried = iter_id
-        #countting for every iter
-        total_character_0 = 0
-        total_character_1 = 0
-        total_comm_0 = 0
-        total_comm_1 = 0
-        total_whole_tokens_0 = 0
-        total_whole_tokens_1 = 0
-        total_api_0 = 0
-        total_api_1 = 0
-        total_complete_tokens_0 = 0
-        total_complete_tokens_1 = 0
-        total_comm_tokens_0 = 0
-        total_comm_tokens_1 = 0 
+
+
+
+        #COBEL
+        total_0_comm_chars = 0
+        total_1_comm_chars = 0
+        total_0_com = 0
+        total_1_com = 0
+        total_0_api = 0
+        total_1_api = 0
+        total_0_tokens = 0
+        total_1_tokens = 0
+        total_0_total_tokens = 0
+        total_1_total_tokens = 0
+        total_0_comm_tokens = 0
+        total_1_comm_tokens = 0
 
         for episode_id in test_episodes:
-            kill_process_on_port(6315)
-            kill_process_on_port(6315)
-            curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(#env_task_set is the whole task set
+
+            arena.reset(episode_id)
+            
+            curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
                 iter_id)
-            logger = setup_logger("llm-message",f"./{iter_id}/{episode_id}.log")
 
-            #add_logger
-            args_agent1.update(
-                {
-                    "logger":logger
-                }
-            )
-            args_agent2.update(
-                {
-                    "logger":logger
-                }
-            )
-            agents = [lambda x, y: capo_agent(**args_agent1), lambda x, y: capo_agent(**args_agent2)]
-            arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
-            #count for episode
-            episode_character_0 = 0
-            episode_character_1 = 0
-            episode_comm_num_0 = 0
-            episode_comm_num_1 = 0
-            episode_api_0 = 0
-            episode_api_1 = 0
-            episode_whole_tokens_0 = 0
-            episode_whole_tokens_1 = 0
-            episode_complete_tokens_0 = 0
-            episode_complete_tokens_1 = 0
-            episode_comm_tokens_0 = 0
-            episode_comm_tokens_1 = 0
-
-            #log somehow
             if os.path.isfile(curr_log_file_name):
                 with open(curr_log_file_name, 'rb') as fd:
                     file_data = pickle.load(fd)
@@ -242,8 +133,11 @@ if __name__ == '__main__':
             is_finished = 0
             steps = 250
             # try:
-            arena.reset(episode_id)#go to specific task 
+            arena.reset(episode_id)
             success, steps, saved_info = arena.run()
+
+
+
             #COBEL episode count
             episode_0_comm_chars = arena.agents[0].comm_chars
             episode_1_comm_chars = arena.agents[1].comm_chars
@@ -251,9 +145,25 @@ if __name__ == '__main__':
             episode_1_com = arena.agents[1].comm_num
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
-            episode_0_token_stats = arena.agents[0].get_token_stats()
-            episode_1_token_stats = arena.agents[1].get_token_stats()
-            
+            episode_0_tokens = arena.agents[0].get_completion_tokens()
+            episode_1_tokens = arena.agents[1].get_completion_tokens()
+            episode_0_total_tokens = arena.agents[0].get_total_tokens()
+            episode_1_total_tokens = arena.agents[1].get_total_tokens()
+            episode_0_comm_tokens = arena.agents[0].get_comm_tokens()
+            episode_1_comm_tokens = arena.agents[1].get_comm_tokens()
+            #total count
+            total_0_comm_chars += episode_0_comm_chars
+            total_1_comm_chars += episode_1_comm_chars
+            total_0_com += episode_0_com
+            total_1_com += episode_1_com
+            total_0_api += episode_0_api
+            total_1_api += episode_1_api
+            total_0_tokens += episode_0_tokens
+            total_1_tokens += episode_1_tokens
+            total_0_total_tokens += episode_0_total_tokens
+            total_1_total_tokens += episode_1_total_tokens
+            total_0_comm_tokens += episode_0_comm_tokens
+            total_1_comm_tokens += episode_1_comm_tokens
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -279,7 +189,7 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
-            result_dic = {'S': S[episode_id],
+            test_results[episode_id] = {'S': S[episode_id],
                                         'L': L[episode_id],
                                         'COBEL': {
                                             'episode_0_comm_chars': episode_0_comm_chars,
@@ -288,15 +198,13 @@ if __name__ == '__main__':
                                             'episode_1_com': episode_1_com,
                                             'episode_0_api': episode_0_api,
                                             'episode_1_api': episode_1_api,
-                                            'episode_0_tokens': episode_0_token_stats,
-                                            'episode_1_tokens': episode_1_token_stats,
+                                            'episode_0_tokens': episode_0_tokens,
+                                            'episode_1_tokens': episode_1_tokens,
+                                            'episode_0_total_tokens': episode_0_total_tokens,
+                                            'episode_1_total_tokens': episode_1_total_tokens,
+                                            'episode_0_comm_tokens': episode_0_comm_tokens,
+                                            'episode_1_comm_tokens': episode_1_comm_tokens,
                                         }}
-            test_results[episode_id] = result_dic
-            # 保存为json
-            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
-            with open(json_path, "w") as f_json:
-                json.dump(result_dic, f_json, indent=4)
-
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

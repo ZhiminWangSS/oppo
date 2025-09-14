@@ -144,3 +144,6 @@ LLM/chat_raw.json
 detection_pipeline/*.pth
 
 .vscode/
+
+qw/
+gpt4o/

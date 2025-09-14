@@ -574,3 +574,12 @@ Motivation
 解决的问题：LLM没有主动协调智能体协作的能力。 结果导致不一致或者冗余的规划
 
 相比proagent 他无法在
+
+
+
+
+
+Here is the prediction rules:
+1. If a room's exploration state is none, the objects in this room's confidence level is high;
+2. If a room's exploration state is part, the objects in this room's confidence level is medium;
+3. If a room's exploration state is all, the objects in this room's confidence level is low;

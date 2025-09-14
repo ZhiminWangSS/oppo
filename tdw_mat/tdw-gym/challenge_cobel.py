@@ -222,11 +222,19 @@ class Challenge:
             local_reward = 0.0
 
             init_challenge_descs = []
+            # for agent_id, agent in enumerate(agents):
+            #     init_challenge_desc = agent.act_init(state[str(agent_id)]) #COBEL - zhimin 这里是act_init
+            #     init_challenge_desc = "I haven't know any goal objects' location yet." + init_challenge_desc
+            #     init_challenge_descs.append(init_challenge_desc)
+            # for agent_id, agent in enumerate(agents):
+            #     agent.init_challenge_descs = init_challenge_descs
+            agent_current_room = []
             for agent_id, agent in enumerate(agents):
-                init_challenge_desc = agent.act_init(state[str(agent_id)]) #COBEL - zhimin 这里是act_init
-                init_challenge_descs.append(init_challenge_desc)
+                agent_current_room.append(agent.current_room)
             for agent_id, agent in enumerate(agents):
-                agent.init_challenge_descs = init_challenge_descs
+                agent.oppo_current_room_first = agent_current_room[1-agent_id]
+                agent.oppo_current_room_zero = agent_current_room[1-agent_id]
+                agent.my_current_room_first = agent_current_room[agent_id]
             while not done:
                 step_num += 1
                 actions = {}
@@ -236,9 +244,11 @@ class Challenge:
                         os.path.join(self.output_dir, str(episode), "Images")
                     )
                 for agent_id, agent in enumerate(agents):
-                    
-                    # print(f"agent状态：{state[str(agent_id)]}")
                     actions[str(agent_id)] = agent.act_cobel(state[str(agent_id)])
+                    #组内通信 - COBEL
+                    if actions[str(agent_id)]['type'] == 6:
+                        state[str(1-agent_id)]['messages'][agent_id] = actions[str(agent_id)]['message']
+
                 state, reward, done, info = self.env.step(actions)
                 local_reward += reward
                 local_finish = self.env.check_goal()
@@ -251,16 +261,12 @@ class Challenge:
             #COBEL episode count
             episode_0_comm_chars = agents[0].comm_chars
             episode_1_comm_chars = agents[1].comm_chars
-            episode_0_com = agents[0].comm_num
-            episode_1_com = agents[1].comm_num
+            episode_0_com = agents[0].get_com_counts()
+            episode_1_com = agents[1].get_com_counts()
             episode_0_api = agents[0].get_api_num()
             episode_1_api = agents[1].get_api_num()
             episode_0_tokens = agents[0].get_tokens()
             episode_1_tokens = agents[1].get_tokens()
-            episode_0_total_tokens = agents[0].get_total_tokens()
-            episode_1_total_tokens = agents[1].get_total_tokens()
-            episode_0_comm_tokens = agents[0].get_comm_tokens()
-            episode_1_comm_tokens = agents[1].get_comm_tokens()
             # 记录结果
             #COBEL - TODO
             total_finish += local_finish[0] / local_finish[1]
@@ -276,12 +282,8 @@ class Challenge:
                 "episode_total_time": episode_total_time,
                 "api_0":episode_0_api,
                 "api_1":episode_1_api,
-                "completion_tokens_0":episode_0_tokens,
-                "completion_tokens_1":episode_1_tokens,
-                "total_tokens_0":episode_0_total_tokens,
-                "total_tokens_1":episode_1_total_tokens,
-                "comm_tokens_0": episode_0_comm_tokens,
-                "comm_tokens_1": episode_1_comm_tokens
+                "tokens_0":episode_0_tokens,
+                "tokens_1":episode_1_tokens,
             }
 
             with open(
@@ -411,7 +413,7 @@ def main():
     parser.add_argument(
         "--source",
         default="openai",
-        choices=["hf", "openai", "deepseek"],
+        choices=["hf", "openai", "deepseek",'aliyun'],
         help="openai API or load huggingface models",
     )
     parser.add_argument(
@@ -424,7 +426,7 @@ def main():
         default="LLM/prompt_single.csv",
         help="path to prompt template file",
     )
-    parser.add_argument("--t", default=0.7, type=float)
+    parser.add_argument("--t", default=0.1, type=float)
     parser.add_argument("--top_p", default=1.0, type=float)
     parser.add_argument("--max_tokens", default=64, type=int)
     parser.add_argument("--n", default=1, type=int)

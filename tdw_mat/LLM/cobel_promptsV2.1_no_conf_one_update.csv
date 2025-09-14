@@ -1,0 +1,278 @@
+type,prompt
+update_in_one,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+
+You are an expert skilled at extracting and analyzing the distinct information known by different individuals, drawn separately from multi-party dialogues and personal self-descriptions. You must precisely differentiate the information accessible to each participant and present it in a Theory of Mind Reasoning, clearly delineating each person’s cognitive boundaries, sources of information, and their respective reasoning pathways. Please help me update zero order beliefs ONLY based on my($AGENT_NAME$) visual description and dialogue history initialize first order beliefs based on $OPPO_NAME$'s progress and the goal. 
+
+First answer the question:
+1. What does $AGENT_NAME$ know?
+2. What does $OPPO_NAME$ know?
+
+Use a description to answer the two questions.
+
+Second, construct the zero order beliefs based on what $AGENT_NAME$ knows and construct the first order beliefs based on what $OPPO_NAME$ knows The beliefs should meet in the belief rules below. You should init the beliefs ONLY using the belief rules below, and replace placeholder symbols prefixed with “?”; these placeholders represent the specific types of entities that should appear here.
+
+Belief Rules: $RULE$
+
+Notice:
+1.Distinguish between private and shared knowledge.
+2.Maintain the beliefs in the format of Belief Rules.
+3.DO NOT generate information not be mentioned both in Visual Description and Dialogue History.
+4.No natural language explanation in the beliefs.
+5.All entitiess are denoted as <name> (id), such as <table> (712) except the agents.
+
+Following are provided information for you:
+
+Old beliefs: $BELIEFS$
+
+Visual Description: $VISUAL_OBSERVATION$
+
+Dialogue History: $MESSAGE$
+
+
+
+Answer strictly in this format:
+$AGENT_NAME$ knows:
+$OPPO_NAME$ knows:
+updated zero order beliefs:
+updated first order beliefs:
+"
+measurement_zero_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+
+Assume you are a expert good at analyze and extract information from description or dialogues, please help me update old beliefs based on the visual description and dialogue history. 
+
+First answer the question:
+What does $AGENT_NAME$ know?
+Use a description to answer the questions.
+
+Second, update the beliefs based on what $AGENT_NAME$ knows. The beliefs should meet in the belief rules below. You should init the beliefs ONLY using the belief rules below, and replace placeholder symbols prefixed with “?”; these placeholders represent the specific types of entities that should appear here.
+
+Belief Rules: $RULE$
+
+Notice:
+1.Distinguish between private and shared knowledge.
+2.Maintain the beliefs in the format of Belief Rules.
+3.DO NOT generate information not be mentioned both in Visual Description and Dialogue History.
+4.No natural language explanation in the beliefs.
+5.All entitiess are denoted as <name> (id), such as <table> (712) except the agents.
+
+Following are provided information for you:
+Old beliefs: $BELIEFS$
+
+Visual Description: $VISUAL_OBSERVATION$
+
+Dialogue History: $MESSAGE$
+
+
+Answer strictly in this format:
+$AGENT_NAME$ knows:
+updated beliefs:
+"
+prediction_first_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+First, please reason over the first order beliefs to predict the possible locations of goal objects based on the room exploration state and $OPPO_NAME$'s state including holding objects and location based on the subplan history. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons.
+
+Second, based on your reasoning, please generate the best subplans the $OPPO_NAME$ will take to transport goal objects as soon as possible. The subplans should be diverse.
+The generated subplan must meet following requirements:
+- This subplan can be broken down into 1 to 3 actions. 
+- There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to <living>(room) and explore it.
+Explore current and grasp the objects here).
+Go grasp <banana>(12123) and <apple>(32123) and transport them to the bed.
+Explore current room.
+
+You need to output three most possible subplans,use ""subplan1: subplan2: subplan3:"" to represent.
+
+Notice:
+Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal objects' id, use <1> <2> <3> to represent multiple same objects. 
+
+Following are provided information for you:
+
+Goal: $GOAL$
+
+First order beliefs: $FIRST_ORDER_BELIEFS$
+
+Subplan History: $SUBPLAN_HISTORY$
+
+Answer strictly in this format:
+reasoning:
+
+subplans: 
+subplan1: 
+subplan2: 
+subplan3:"
+prediction_zero_order,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+First, please reason over the zero order beliefs to predict the possible locations of goal objects based on the room exploration state. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons.
+
+
+Second, based on the reasoning progress, please help me generate ONLY one best subplan to transport goal objects as soon as possible..
+
+The generated subplan must meet following requirements:
+- This subplan can be broken down into 1 to 3 actions. 
+- There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to <living>(room) and explore it.
+Explore current and grasp the objects here).
+Go grasp <banana>(12123) and <apple>(32123) and transport them to the bed.
+Explore current room.
+
+Notice:
+Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). If you don't know goal objects' id, use <1> <2> <3> to represent multiple same objects. 
+
+Following are provided information for you:
+
+Goal: $GOAL$
+
+Zero order beliefs: $ZERO_ORDER_BELIEFS$
+
+Answer strictly in this format:
+reasoning:
+subplan:"
+coordination_aware,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+Please answer the following questions:
+1. Is there any potential miscoordination between my subplan and $OPPO_NAME$'s potential subplans or between zero_order_beliefs and first_order_beliefs? Please analyze the miscoordination in two aspects:
+(1) conflicting subplans: where my subplan and $OPPO_NAME$'s subplans may conflict in actions or locations.
+Such as my subplan is go to livingroom and explore it, while $OPPO_NAME$'s subplans include go to livingroom and grasp the target object there. This is a conflict because we may explore in the same room at the same time which leads to a waste of time.
+(2) misaligned beliefs: where my zero order beliefs and first order beliefs may conflict in the state or location of entities.
+Such as I believe kitchen<2000> EXPLORED all, but $OPPO_NAME$ believes kitchen<2000> EXPLORED none. So he may go to kitchen<2000> to explore it, which is a waste of time. Give your analysis in at most three reasons.
+
+2. If there exists miscoordination, please answer Yes; Otherwise, answer No.
+
+3. If yes, then please find the different beliefs between zero order beliefs and first order beliefs, such as Alice BELIEVE <Livingroom>(1000) EXPLORED all, but Alice BELIEVE Bob BELIEVE <Livingroom>(1000) EXPLORED none. This means Alice know livingroom is fully explored, but Bob still believe it is not been explored. So you should output: Alice BELIEVE <Livingroom>(1000) EXPLORED all; Remember just output the zero order beliefs in the different pairs because only zero order belief is fully true.
+
+4. If no miscoordination, just answer NO.
+
+Following are provided information for you:
+
+Zero order beliefs: $ZERO_ORDER_BELIEFS$
+
+First order beliefs: $FIRST_ORDER_BELIEFS$
+
+My subplan: $MY_SUBPLAN$
+
+$OPPO_NAME$'s potential subplans: $OPPO_SUBPLAN$
+
+Answer in this format:
+reasons:
+answer:
+different beliefs:
+"
+active_comm,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+Please help me generate a concise and clear message to inform $OPPO_NAME$ of the beliefs i know but he don't know and my subplan to and align the knowledge to achieve our shared goal collaboratively. The message should meet following requirements:
+
+1.The message has to be concise, reliable, and helpful for assisting $OPPO_NAME$ and me to make an efficient and consistent action plan, and transport as many objects to the bed as possible.
+Don't generate repetitive messages.
+2.The message must strictly contain two parts of contents : 1. beliefs i know and 2. my subplan
+
+Here is an example of generated massage for you:
+Example:
+Message:Hi $OPPO_NAME$, I' ve explored all of the <kitchen>(2000) and found <apple>(12123) there. I'm holding <banana>(12234). 
+My subplan is to grasp <apple>(12123) and transport holding things to the bed.}
+
+Following are provided information for you:
+
+Beliefs: $DIFFERENCE$
+
+My subplan:  $MY_SUBPLAN$
+
+Answer in following format:
+message:
+"
+passive_coordination,"
+I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+Please help me analyze the message from $OPPO_NAME$ and answer the following question:
+
+1. Based on the new information provided by $OPPO_NAME$'s message, is there any potential miscoordination in my subplan and $OPPO_NAME$'s subplan? 
+
+Please analyze the miscoordination in two aspects:
+(1) conflicting subplans: where my subplan and $OPPO_NAME$'s subplans may conflict in actions or locations.
+Such as my subplan is go to livingroom and explore it, while $OPPO_NAME$'s subplans include go to livingroom and grasp the target object there. This is a conflict because we may explore in the same room at the same time which leads to a waste of time.
+(2) new key information that may leads to a better subplan to trasnport goal objects as soon as possible. 
+Such as I believe <kitchen>(2000) EXPLORED none, but $OPPO_NAME$ tells that <kitchen>(2000) EXPLORED all. So i don't need to go to <kitchen>(2000) and explore it. And $OPPO_NAME$ tells me that a container <plate>(12123) in the <livingroom>(3000) which i  can use it to transport more objects.
+Give your analysis in at most three reasons.
+
+2. If there exists miscoordination, please answer Yes; Otherwise, answer No.
+3. If yes, then please provide me with ONLY one better subplan that can transport the target objects as soon as possible, without conflicting with $OPPO_NAME$'s subplan.
+
+- This subplan can be broken down into 1 to 3 actions. 
+- There are 5 allowed actions you can use to construct the subplan. 1) ‘go to’: move to a specified room. 2) ’explore current room’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to <living>(room) and explore it.
+Explore current and grasp the objects here).
+Go grasp <banana>(12123) and <apple>(32123) and transport them to the bed.
+Explore current room.
+
+4. If no miscoordination, just answer NO.
+
+Following are provided information for you:
+
+Message: $MESSAGE$
+
+My beliefs: $ZERO_ORDER_BELIEFS$
+
+My subplan: $SUBPLAN$
+
+
+Answer in following format:
+answer:
+reasons:
+new subplan:
+"
+intuitive_planning,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please help me choose the best available action to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All
+objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
+If you think the subplan has been completed, just answer SUBPLAN DONE.
+
+Goal: $GOAL$
+
+My subplan: $MY_SUBPLAN$
+
+Previous action: $PREVIOUS_ACTIONS$
+
+Progress: $PROGRESS$
+
+Action list: $ACTION_LIST$
+
+Just answer the next best action without any analysis and reasoning progress:
+Answer: "
+init_beliefs,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. The room can be explored none/part/all.
+
+Assume you are a expert good at analyze and extract information from description or dialogues, please help me initialize zero order beliefs ONLY based on my progress and the goal and initialize first order beliefs based on $OPPO_NAME$'s progress and the goal. 
+
+First answer the question:
+1. What does $AGENT_NAME$ know?
+2. What does $OPPO_NAME$ know?
+
+Use a description to answer the two questions.
+
+Second, construct the zero order beliefs based on what $AGENT_NAME$ knows and construct the first order beliefs based on what $OPPO_NAME$ knows The beliefs should meet in the belief rules below. You should init the beliefs ONLY using the belief rules below, and replace placeholder symbols prefixed with “?”; these placeholders represent the specific types of entities that should appear here.
+
+Belief Rules: $BELIEF_RULES$
+
+NOTICE:
+1. MUST Represent objects, container and room strictly in the format <name>(id) like <livingroom>(1000). If the goal objects' ids are not provided such as 3 apple, use <apple>(1) <apple>(2) <apple>(3) to represent multiple same objects. 
+2. Do not output beliefs NOT mentioned in the progress and the goal. If you lack some information to construct a belief, just use unknown to represent, such as goal objects location not be mentioned, you can use: <apple>(1) IN Unkown.
+
+Following are provided information for you:
+
+
+My progress: $MY_PROGRESS$
+
+$OPPO_NAME$'s progress: $OPPO_PROGRESS$
+
+Goal: $GOAL$
+
+
+
+Answer strictly in this format:
+$AGENT_NAME$ knows:
+$OPPO_NAME$ knows:
+zero order beliefs
+first order beliefs:
+"

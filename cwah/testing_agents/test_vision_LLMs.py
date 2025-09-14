@@ -145,25 +145,8 @@ if __name__ == '__main__':
             episode_1_com = arena.agents[1].comm_num
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
-            episode_0_tokens = arena.agents[0].get_completion_tokens()
-            episode_1_tokens = arena.agents[1].get_completion_tokens()
-            episode_0_total_tokens = arena.agents[0].get_total_tokens()
-            episode_1_total_tokens = arena.agents[1].get_total_tokens()
-            episode_0_comm_tokens = arena.agents[0].get_comm_tokens()
-            episode_1_comm_tokens = arena.agents[1].get_comm_tokens()
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-            total_0_comm_tokens += episode_0_comm_tokens
-            total_1_comm_tokens += episode_1_comm_tokens
+            episode_0_token_stats = arena.agents[0].get_token_stats()
+            episode_1_token_stats = arena.agents[1].get_token_stats()
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -189,7 +172,7 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
-            test_results[episode_id] = {'S': S[episode_id],
+            result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
                                         'COBEL': {
                                             'episode_0_comm_chars': episode_0_comm_chars,
@@ -198,13 +181,14 @@ if __name__ == '__main__':
                                             'episode_1_com': episode_1_com,
                                             'episode_0_api': episode_0_api,
                                             'episode_1_api': episode_1_api,
-                                            'episode_0_tokens': episode_0_tokens,
-                                            'episode_1_tokens': episode_1_tokens,
-                                            'episode_0_total_tokens': episode_0_total_tokens,
-                                            'episode_1_total_tokens': episode_1_total_tokens,
-                                            'episode_0_comm_tokens': episode_0_comm_tokens,
-                                            'episode_1_comm_tokens': episode_1_comm_tokens,
+                                            'episode_0_tokens': episode_0_token_stats,
+                                            'episode_1_tokens': episode_1_token_stats,
                                         }}
+            test_results[episode_id] = result_dic
+            # 保存为json
+            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
+            with open(json_path, "w") as f_json:
+                json.dump(result_dic, f_json, indent=4)
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

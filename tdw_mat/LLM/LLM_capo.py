@@ -131,8 +131,8 @@ class LLM_capo:
             api_key=os.environ.get("CHATANYWHERE_API_KEY")
             base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1",
+                api_key=api_key,
+                base_url=base_url,
             )
             if self.chat:
                 self.sampling_params = {
@@ -150,16 +150,19 @@ class LLM_capo:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
-        elif self.source == "deepseek":
+
+        
+        elif self.source == "aliyun":
             # DeepSeek模型初始化
-            api_key=os.environ.get("CHATANYWHERE_API_KEY")
-            base_url=os.environ.get("CHATANYWHERE_URL")
+            api_key=os.environ.get("ALIYUN_API_KEY")
+            base_url=os.environ.get("ALIYUN_URL")
             client = OpenAI(
-                api_key="sk-35b637f8264b43ecbbfc01ee55b3539f",
-                base_url="https://api.deepseek.com",
+                api_key=api_key,
+                base_url=base_url,
             )
             if self.chat:
                 self.sampling_params = {
+                    "enable_thinking": False,
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -198,7 +201,7 @@ class LLM_capo:
 
             @backoff.on_exception(backoff.expo, OpenAIError)
             def openai_generate(prompt, sampling_params):
-                usage = 0
+                usage = [0,0]
                 try:
                     if self.chat:
                         response = client.chat.completions.create(
@@ -220,7 +223,7 @@ class LLM_capo:
                             for i in range(sampling_params["n"])
                         ]
 
-                        usage = response.usage.completion_tokens
+                        usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
                         # if "gpt-4" or "gpt4" in self.lm_id:
                         #     usage = (
                         #         response.usage.prompt_tokens * 0.03 / 1000
@@ -250,8 +253,16 @@ class LLM_capo:
                 except OpenAIError as e:
                     print(e)
                     raise e
+                
+                method_name = "total"
+                # 使用usage.prompt_tokens和usage.completion_tokens
+                prompt_tokens = usage[0]
+                completion_tokens = usage[1]
+                self.token_stats[method_name]["prompt"] += prompt_tokens
+                self.token_stats[method_name]["completion"] += completion_tokens
+                self.token_stats[method_name]["call_counts"] += 1
                 return generated_samples, usage
-
+            
             def tokenize_dialog(dialog):
                 B_INST, E_INST = "[INST]", "[/INST]"
                 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
@@ -325,7 +336,7 @@ class LLM_capo:
 
             def _generate(prompt, sampling_params):
                 usage = 0
-                if source == "deepseek" or source =="openai":
+                if source == "aliyun" or source =="openai":
                     return openai_generate(prompt, sampling_params)
                 elif self.source == "hf":
                     return hf_generate(prompt, sampling_params)
@@ -342,6 +353,14 @@ class LLM_capo:
         self.holding_objects = None
         self.obj_per_room = None
 
+        self.token_stats = {}
+        for call_name in ["total","communication","meta-plan","parsing"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
+
     def reset(self, rooms_name, goal_objects):
         """
         重置模型状态
@@ -354,6 +373,13 @@ class LLM_capo:
         self.goal_desc = self.goal2description(goal_objects)
         self.tokens = 0
         self.api = 0
+        self.token_stats = {}
+        for call_name in ["total","communication","meta-plan","parsing"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
         
     def goal2description(self, goals):  # {predicate: count}
         """
@@ -807,7 +833,13 @@ class LLM_capo:
         chat_prompt = [{"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
         meta_plan = output[0]
-    
+        method_name = "meta-plan"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
         return meta_plan
     
     def disscuss_refine(self,
@@ -855,7 +887,14 @@ class LLM_capo:
         chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
-        self.comm_tokens += usage
+        method_name = "communication"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
+        self.comm_tokens += usage[1]
         message = output[0]
         return message
     
@@ -905,6 +944,15 @@ class LLM_capo:
                 output,usage = self.generator(chat_prompt,self.sampling_params)
                 output = output[0]
                 plan, flags = self.parse_answer(available_plans_list, output)
+
+
+                method_name = "parsing"
+                # 使用usage.prompt_tokens和usage.completion_tokens
+                prompt_tokens = usage[0]
+                completion_tokens = usage[1]
+                self.token_stats[method_name]["prompt"] += prompt_tokens
+                self.token_stats[method_name]["completion"] += completion_tokens
+                self.token_stats[method_name]["call_counts"] += 1
                 return plan
 
     def progress_sending(self,
@@ -1005,7 +1053,7 @@ class LLM_capo:
                 outputs, usage = self.generator(
                     chat_prompt if self.chat else gen_prompt, self.sampling_params
                 ) # usage token cost
-                self.total_cost += usage
+                self.total_cost += usage[1]
                 message = outputs[0]
                 if len(message) > 0 and message[0] != '"':
                     message = re.search(r'"([^"]+)"', message)
@@ -1013,7 +1061,7 @@ class LLM_capo:
                         message = '"' + message.group(1) + '"'
                 info["prompt_comm"] = gen_prompt
                 info["output_comm"] = outputs
-                info["usage_comm"] = usage
+                info["usage_comm"] = usage[1]
                 if self.debug:
                     print(f"prompt_comm:\n{gen_prompt}")
                     print(f"output_comm:\n{message}")
@@ -1042,7 +1090,7 @@ class LLM_capo:
                 output = output[: last_index + 1]
             else:
                 output += "."
-            self.total_cost += usage
+            self.total_cost += usage[1]
             # info['outputs_cot'] = outputs
             # info['usage_plan_stage_1'] = usage
             if self.debug:
@@ -1065,7 +1113,7 @@ class LLM_capo:
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            self.total_cost += usage
+            self.total_cost += usage[1]
             # info['usage_plan_stage_2'] = usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
@@ -1080,7 +1128,7 @@ class LLM_capo:
             )
             output = outputs[0]
             
-            self.total_cost += usage
+            self.total_cost += usage[1]
             # info['usage_step_1'] = usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")

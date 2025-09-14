@@ -58,7 +58,6 @@ class LLM_cobel:
         """
         # 智能体基本信息
         self.rooms_explored = None  # 已探索的房间
-        self.my_rooms_explored = None
         self.goal_desc = None  # 目标描述
         self.agent_id = agent_id  # 智能体ID
         self.agent_name = "Alice" if agent_id == 0 else "Bob"  # 智能体名称
@@ -71,17 +70,17 @@ class LLM_cobel:
         
         # 调试和配置
         self.debug = sampling_parameters.debug  # 调试模式
-        self.belief_debug = False
+        self.belief_debug = True
         self.rooms = []  # 房间列表
 
         # 提示词模板相关
         self.prompt_template_path = prompt_template_path
         self.single = "single" in self.prompt_template_path
-        df = pd.read_csv(self.prompt_template_path, quotechar='"', quoting=1)
+        df = pd.read_csv(self.prompt_template_path)
 
         
         #COBEL - zhimin
-        with open("./LLM/belief_symbolic_language_no_conf.txt", "r", encoding="utf-8") as f:
+        with open("./LLM/belief_symbolic_language.txt", "r", encoding="utf-8") as f:
             self.belief_symbolic_language = f.read()
         self.cobel_prompts_df = pd.read_csv(self.prompt_template_path)
         self.total_tokens = 0
@@ -90,11 +89,11 @@ class LLM_cobel:
         self.api = 0
         self.comm_chars = 0
         self.comm_counts = 0
-        with open("./LLM/rules_tdw_no_conf.txt", "r", encoding="utf-8") as f:
+        with open("./LLM/rules_tdw.txt", "r", encoding="utf-8") as f:
             self.belief_rules = f.read()
         # 添加token统计字典
         self.token_stats = {}
-        for call_name in ['small_model',"large_model","init_beliefs","update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware","communication"]:
+        for call_name in ['small_model',"large_model","init_beliefs","update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware"]:
             self.token_stats[call_name] = {
                 "prompt": 0,
                 "completion": 0,
@@ -155,15 +154,14 @@ class LLM_cobel:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
-        elif self.source == "aliyun":
+        elif self.source == "deepseek":
             # DeepSeek模型初始化
             client = OpenAI(
-                api_key=os.environ.get("ALIYUN_API_KEY"),
-                base_url=os.environ.get("ALIYUN_URL"),
+                api_key=os.environ.get("CHATANYWHERE_API_KEY"),
+                base_url=os.environ.get("CHATANYWHERE_URL"),
             )
             if self.chat:
                 self.sampling_params = {
-                    "enable_thinking": False,
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -171,7 +169,6 @@ class LLM_cobel:
                 }
             else:
                 self.sampling_params = {
-                    "enable_thinking": False,
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -203,6 +200,8 @@ class LLM_cobel:
 
             @backoff.on_exception(backoff.expo, OpenAIError)
             def openai_generate(prompt, sampling_params, model_size="large"):
+                usage = 0
+                # 初始化token计数器（如果不存在）
                 
                 
                 try:
@@ -293,7 +292,6 @@ class LLM_cobel:
                     raise e
                 return generated_samples, usage
 
-            
             def tokenize_dialog(dialog):
                 B_INST, E_INST = "[INST]", "[/INST]"
                 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
@@ -367,7 +365,7 @@ class LLM_cobel:
 
             def _generate(prompt, sampling_params, model_size="large"):
                 usage = 0
-                if source == "openai" or source == 'aliyun':
+                if source == "openai":
                     return openai_generate(prompt, sampling_params, model_size)
                 elif self.source == "hf":
                     return hf_generate(prompt, sampling_params)
@@ -406,7 +404,7 @@ class LLM_cobel:
         self.total_cost = 0
         # 重置token统计字典
         self.token_stats = {}
-        for call_name in ['small_model',"large_model","init_beliefs","update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware","communication"]:
+        for call_name in ['small_model',"large_model","init_beliefs","update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware"]:
             self.token_stats[call_name] = {
                 "prompt": 0,
                 "completion": 0,
@@ -552,11 +550,10 @@ class LLM_cobel:
         返回:
             进度描述文本
         """
-
-        s = f"I've taken {current_step}/3000 steps. "
+        s = ""
 
         sss = {}
-        for room, obj_list in self.my_objects_per_room.items():
+        for room, obj_list in self.obj_per_room.items():
             sr = ""
             s_obj = ""
             s_con = ""
@@ -566,17 +563,17 @@ class LLM_cobel:
             if len(objs) > 0:
                 if len(objs) == 1:
                     x = objs[0]
-                    s_obj += f"a target object {x}"
+                    s_obj += f"a target object <{x['name']}> ({x['id']})"
                 else:
-                    ss = ", ".join([f"{x}" for x in objs])
+                    ss = ", ".join([f"<{x['name']}> ({x['id']})" for x in objs])
                     s_obj += f"target objects " + ss
 
             if len(cons) > 0:
                 if len(cons) == 1:
                     x = cons[0]
-                    s_con = f"a container {x}"
+                    s_con = f"a container <{x['name']}> ({x['id']})"
                 else:
-                    ss = ", ".join([f"{x}" for x in cons])
+                    ss = ", ".join([f"<{x['name']}> ({x['id']})" for x in cons])
                     s_con = f"containers " + ss
             if len(obj_list[2]) > 0:
                 s_bed = "the goal position bed"
@@ -649,10 +646,10 @@ class LLM_cobel:
             s += f"I'm holding {s_hold[0]}{s_hold[1]}"
 
         # print(self.current_room, self.obj_per_room)
-        if self.current_room not in self.my_rooms_explored:
+        if self.current_room not in self.rooms_explored:
             pred_room = "none"
         else:
-            pred_room = self.my_rooms_explored[self.current_room]
+            pred_room = self.rooms_explored[self.current_room]
         if pred_room != "all" and sss[self.current_room] == "nothing":
             s += f"I'm in the {self.current_room}, where I've explored {pred_room} of it. "
         else:
@@ -690,21 +687,21 @@ class LLM_cobel:
             else:
                 ss = f"{s_hold[0]}{s_hold[1]}"
 
-            if opponent_last_room is None:
-                s += f"I don't know where {self.oppo_name} is. "
-            elif opponent_last_room == self.current_room:
-                s += f"I also see {self.oppo_name} here in the {self.current_room}, {self.oppo_pronoun} is holding {ss}"
-            else:
-                s += f"Last time I saw {self.oppo_name} was in the {opponent_last_room}, {self.oppo_pronoun} was holding {ss}"
+            # if opponent_last_room is None:
+            #     s += f"I don't know where {self.oppo_name} is. "
+            # elif opponent_last_room == self.current_room:
+            #     s += f"I also see {self.oppo_name} here in the {self.current_room}, {self.oppo_pronoun} is holding {ss}"
+            # else:
+            #     s += f"Last time I saw {self.oppo_name} was in the {opponent_last_room}, {self.oppo_pronoun} was holding {ss}"
 
         for room in self.rooms:
             if room == self.current_room:
                 continue
-            # s += f"I've explored {self.my_rooms_explored[room] if room in self.my_rooms_explored else 'None'} of the {room}, and I found {sss[room]} there. "
-            if room not in self.my_rooms_explored:
+            # s += f"I've explored {self.rooms_explored[room] if room in self.rooms_explored else 'None'} of the {room}, and I found {sss[room]} there. "
+            if room not in self.rooms_explored:
                 pred_room = "none"
             else:
-                pred_room = self.my_rooms_explored[room]
+                pred_room = self.rooms_explored[room]
             if pred_room != "all" and sss[room] == "nothing":
                 s += f"I've explored {pred_room} of the {room}. "
             else:
@@ -867,8 +864,58 @@ class LLM_cobel:
 
         return plans, len(available_plans), available_plans
 
+    def init_beliefs(self, init_challenge_descs, goal_objects):
+        #TASK DESCRIPTION
+        #PROGRESS
+        #OPPO PROGRESS
+        #BELIEF SYMBOLIC LANGUAGE
+        #GOAL
+        # room_des = ""
+        # for room in rooms:
+        #     room_des += f"{room} is explored None. "
+
+        self.goal_desc = self.goal2description(goal_objects)
+        prompt = (
+            self.cobel_prompts_df["prompt"][7]
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$GOAL$", self.goal_desc)
+            .replace("$MY_PROGRESS$", init_challenge_descs[self.agent_id])
+            .replace("$OPPO_PROGRESS$", init_challenge_descs[1- self.agent_id])
+            .replace("$BELIEF_RULES$", self.belief_rules)
+            .replace("$LANGUAGE$", self.belief_symbolic_language)
+        )
+        system_prompt = "You MUST follow the output format strictly.Format: zero order beliefs: GENERATE CONTENT first order beliefs:GENERATE CONTENT"
+        chat_prompt = [{"role":"system", "content":system_prompt},{"role": "user", "content": prompt}]
+        output, usage = self.generator(
+                    chat_prompt, self.sampling_params
+                ) # usage token cost
+        
+        # 记录token消耗
+        method_name = "init_beliefs"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
+        
+        pattern_zero = r'zero.*?:\s*(.*?)(?=first.*?:|$)'
+        pattern_first = r'first.*?:\s*(.*)'
+        zero_match = re.search(pattern_zero, output[0], re.IGNORECASE | re.DOTALL)
+        first_match = re.search(pattern_first, output[0], re.IGNORECASE | re.DOTALL)
+        if not zero_match or not first_match:
+            raise ValueError("Failed to extract beliefs from output.")
+        init_zero_order_beliefs = zero_match.group(1).strip()
+        init_first_order_beliefs = first_match.group(1).strip()
+
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========init_beliefs=============: \nzero:{init_zero_order_beliefs}\nfirst:{init_first_order_beliefs}")
+        return init_zero_order_beliefs, init_first_order_beliefs
+
     #COBEL-zhimin
-    def update_beliefs(self, received_messages, dialogues):
+    def update_beliefs(self, old_zero_order_beliefs,old_first_order_beliefs,visual_observation, message, oppo_obs):
         """
         更新信念状态
 
@@ -880,33 +927,35 @@ class LLM_cobel:
         返回:
             更新后的信念状态
         """
-        print("======更新信念======")
-        updated_zero_order_beliefs = None
-        updated_first_order_beliefs = None
-        pattern_zero = r"zero order belief rules:\s*(.*?)\s*(?=first order belief rules:)"
-        match_zero = re.search(pattern_zero, self.belief_rules, re.IGNORECASE | re.DOTALL)
-        if not match_zero:
-            raise ValueError("Failed to extract updated beliefs from output.")
-        zero_order_belief_rules = match_zero.group(1).strip()
 
-        pattern_first = r"first order belief rules:\s*(.*)"
-        match_first = re.search(pattern_first, self.belief_rules, re.IGNORECASE | re.DOTALL)
-        if not match_first:
-            raise ValueError("Failed to extract updated beliefs from output.")
-        first_order_belief_rules = match_first.group(1).strip()
         
-        #first
-        if dialogues != "None":
+        
+        prompt = (
+            self.cobel_prompts_df["prompt"][0]
+            .replace("$AGENT_NAME$", self.agent_name)
+            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$BELIEFS$", old_zero_order_beliefs)
+            .replace("$MESSAGE$", message)
+            .replace("$VISUAL_OBSERVATION$", visual_observation)
+            .replace("$LANGUAGE$", self.belief_symbolic_language)
+        )
+
+        if not (message == "None" and oppo_obs is None):
+            if message == "None":
+                message = "No message received."
+            if oppo_obs is None:
+                oppo_obs = "No new observation."
+            #first
             prompt = (
                 self.cobel_prompts_df["prompt"][0]
                 .replace("$AGENT_NAME$", self.agent_name)
                 .replace("$OPPO_NAME$", self.oppo_name)
-                .replace("$MESSAGE$", dialogues)
-                .replace("$RULE$", first_order_belief_rules)
+                .replace("$BELIEFS$", old_first_order_beliefs)
+                .replace("$MESSAGE$", message)
+                .replace("$VISUAL_OBSERVATION$", oppo_obs)
+                .replace("$LANGUAGE$", self.belief_symbolic_language)
             )
-            system_prompt = "You MUST answer strictly in this format:\n$OPPO_NAME$ knows:\nfirst order beliefs\n$OPPO_NAME$'s plan:".replace("$OPPO_NAME$", self.oppo_name)
-            chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
-            # chat_prompt = [{"role": "user", "content": prompt}]
+            chat_prompt = [{"role": "user", "content": prompt}]
             first_output, usage = self.generator(
                         chat_prompt, self.sampling_params
                     ) # usage token cost
@@ -919,93 +968,63 @@ class LLM_cobel:
             self.token_stats[method_name]["completion"] += completion_tokens
             self.token_stats[method_name]["call_counts"] += 1
 
-
-
-            if self.belief_debug:
-                print(f"=========prompt===========: \n{prompt}")
-                print(f"=========updated_first_beliefs=============: \nfirst:{first_output[0]}")
-
-            pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
+            pattern_first = r'updated beliefs:\s*(.*)'
             first_match = re.search(pattern_first, first_output[0], re.IGNORECASE | re.DOTALL)
             if not first_match:
-                updated_first_order_beliefs = None
-            else:
-                updated_first_order_beliefs = first_match.group(1).strip()
-            
+                raise ValueError("Failed to extract beliefs from output.")
+            first_order_beliefs = first_match.group(1).strip()
         else:
-            updated_first_order_beliefs = None
-            if self.belief_debug:
-                print(f"=========no first update==========: \n")
-            
-        if received_messages != "None":
-            prompt = (
-                self.cobel_prompts_df["prompt"][1]
-                .replace("$AGENT_NAME$", self.agent_name)
-                .replace("$OPPO_NAME$", self.oppo_name)
-                .replace("$MESSAGE$", received_messages)
-                .replace("$RULE$", zero_order_belief_rules)
-            )
-            #zero
-            system_prompt = "You MUST answer strictly in this format:\n$AGENT_NAME$ knows:\nzero order beliefs:\n$OPPO_NAME$'s plan:".replace("$AGENT_NAME$", self.agent_name).replace("$OPPO_NAME$", self.oppo_name)
-            chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
+            first_order_beliefs = old_first_order_beliefs
 
-            zero_output, usage = self.generator(
-                        chat_prompt, self.sampling_params 
-                    ) # usage token cost
-            
-            # 记录token消耗
-            method_name = "update_beliefs"
-            # 使用usage.prompt_tokens和usage.completion_tokens
-            prompt_tokens = usage[0]
-            completion_tokens = usage[1]
-            self.token_stats[method_name]["prompt"] += prompt_tokens
-            self.token_stats[method_name]["completion"] += completion_tokens
-            self.token_stats[method_name]["call_counts"] += 1
-            # pattern_zero = r'zero.*?:\s*(.*?)(?=first.*?:|$)'
-            
-            pattern_zero = rf"zero order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
-            zero_match = re.search(pattern_zero, zero_output[0], re.IGNORECASE | re.DOTALL)
-
-
-
-            pattern_plan = rf"{re.escape(self.oppo_name)}'s plan:\s*(.*)"
-            plan_match = re.search(pattern_plan, zero_output[0], re.IGNORECASE | re.DOTALL)
-
-            
-            
             if self.belief_debug:
                 print(f"=========prompt===========: \n{prompt}")
-                print(f"=========updated_zero_beliefs=============: \nzero:{zero_output[0]}")
-            
-            if not zero_match or not plan_match:
-                updated_zero_order_beliefs = None
-                oppo_subplan = None
-            else:
-                updated_zero_order_beliefs = zero_match.group(1).strip()
-                oppo_subplan = plan_match.group(1).strip()
-        else:
-            updated_zero_order_beliefs = None
-            oppo_subplan = None
-            if self.belief_debug:
-                print(f"=========no zero update==========: \n")
+                print(f"=========updated_beliefs=============: \nfirst:{first_order_beliefs}")
+
+
+        #zero
+        chat_prompt = [{"role": "user", "content": prompt}]
+        zero_output, usage = self.generator(
+                    chat_prompt, self.sampling_params 
+                ) # usage token cost
+        
+        # 记录token消耗
+        method_name = "update_beliefs"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
+        # pattern_zero = r'zero.*?:\s*(.*?)(?=first.*?:|$)'
+        pattern_zero = r'updated beliefs:\s*(.*)'
+        
+        zero_match = re.search(pattern_zero, zero_output[0], re.IGNORECASE | re.DOTALL)
+        
+        if not zero_match:
+            raise ValueError("Failed to extract beliefs from output.")
+        zero_order_beliefs = zero_match.group(1).strip()
         
 
-        
+        if self.belief_debug:
+            print(f"=========prompt===========: \n{prompt}")
+            print(f"=========updated_beliefs=============: \nzero:{zero_order_beliefs}")
+        return zero_order_beliefs, first_order_beliefs
 
         
-        return updated_zero_order_beliefs, updated_first_order_beliefs , oppo_subplan
 
     #COBEL-zhimin
-    def prediction_first_order(self, oppo_progress):
-
+    def prediction_first_order(self, first_order_beliefs):
+        if first_order_beliefs == "None":
+            first_order_beliefs = "Know nothing about opponent's belief."
         prompt = (
             self.cobel_prompts_df["prompt"][2]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$OPPO_PROGRESS$", oppo_progress)
+            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
             .replace("$GOAL$", self.goal_desc)
+            .replace("$LANGUAGE$", self.belief_symbolic_language)
         )
-        system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplans: \nsubplan1: \nsubplan2: \nsubplan3:"
+        system_prompt = "You MUST follow the output format strictly.Format: 1. Updated Beliefs: GENERATE CONTENT 2. $OPPO_NAME$'s Subplans:GENERATE CONTENT"
         chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
         output, usage = self.generator(
                     chat_prompt, self.sampling_params
@@ -1021,11 +1040,11 @@ class LLM_cobel:
 
         # 使用正则表达式提取 $OPPO_NAME$'s Subplans
         # 使用正则表达式提取 Updated Beliefs
-        pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape(f"subplans:") + r'|$)'
+        pattern_beliefs = r'updated first order beliefs:\s*(.*?)(?=' + re.escape(f"subplans:") + r'|$)'
         match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
         if not match_beliefs:
             raise ValueError("Failed to extract updated beliefs from output.")
-        reason = match_beliefs.group(1).strip()
+        first_order_beliefs = match_beliefs.group(1).strip()
 
         # 使用正则表达式提取 $OPPO_NAME$'s Subplans
         pattern_subplan = rf"subplans:\s*(.*)"
@@ -1035,22 +1054,24 @@ class LLM_cobel:
         opponent_subplans = match_subplan.group(1).strip()
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
-            print(f"=========predict_first=============: \n{output[0]}")
-
-
-        return reason, opponent_subplans
+            print(f"=========predict_first=============: \nfirst:{first_order_beliefs}\noppo_subplans:{opponent_subplans}")
+        
+        # episode_logger.info(
+        #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
+        # )
+        return first_order_beliefs, opponent_subplans
     
-    def prediction_zero_order(self, my_progress):
+    def prediction_zero_order(self, zero_order_beliefs):
         prompt = (
             self.cobel_prompts_df["prompt"][3]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$MY_PROGRESS$", my_progress)
+            .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
             .replace("$GOAL$", self.goal_desc)
+            .replace("$LANGUAGE$", self.belief_symbolic_language)
         )
-        system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplan:"
-        chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
-        # chat_prompt = [{"role": "user", "content": prompt}]
+
+        chat_prompt = [{"role": "user", "content": prompt}]
         output, usage = self.generator(
                     chat_prompt, self.sampling_params
                 ) # usage token cost
@@ -1066,11 +1087,11 @@ class LLM_cobel:
         # 使用正则表达式提取 $OPPO_NAME$'s SubPlans
         # 使用正则表达式提取 Updated Beliefs
         # pattern_beliefs = r'updated zero order beliefs:\s*(.*?)(?=' + re.escape("reasons:") + r'|$)'
-        pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
+        pattern_beliefs = r'updated zero order beliefs:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
         match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
         if not match_beliefs:
             raise ValueError("Failed to extract updated beliefs from output.")
-        reason = match_beliefs.group(1).strip()
+        first_order_beliefs = match_beliefs.group(1).strip()
 
         # 使用正则表达式提取 $OPPO_NAME$'s Subplans
         # pattern_subplan = r'reasons:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
@@ -1081,64 +1102,17 @@ class LLM_cobel:
         my_subplan = match_subplan.group(1).strip()
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
-            print(f"=========predict_zero=============: \n{output[0]}")
+            print(f"=========predict_zero=============: \nzero:{zero_order_beliefs}\nmy_subplan:{my_subplan}")
 
         # episode_logger.info(
         #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
         # )
-        return reason, my_subplan
+        return zero_order_beliefs, my_subplan
 
-    def passive_prediction_zero_order(self, my_progress, oppo_subplan):
-        prompt = (
-            self.cobel_prompts_df["prompt"][4]
-            .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$MY_PROGRESS$", my_progress)
-            .replace("$OPPO_SUBPLAN$", oppo_subplan)
-            .replace("$GOAL$", self.goal_desc)
-        )
-        system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplan:"
-        chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
-        # chat_prompt = [{"role": "user", "content": prompt}]
-        output, usage = self.generator(
-                    chat_prompt, self.sampling_params
-                ) # usage token cost
-        
-        # 记录token消耗
-        method_name = "prediction_zero_order"
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-
-        # 使用正则表达式提取 $OPPO_NAME$'s SubPlans
-        # 使用正则表达式提取 Updated Beliefs
-        # pattern_beliefs = r'updated zero order beliefs:\s*(.*?)(?=' + re.escape("reasons:") + r'|$)'
-        pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
-        match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_beliefs:
-            raise ValueError("Failed to extract updated beliefs from output.")
-        reason = match_beliefs.group(1).strip()
-
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        # pattern_subplan = r'reasons:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
-        pattern_subplan = rf"subplan:\s*(.*)"
-        match_subplan = re.search(pattern_subplan, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_subplan:
-            raise ValueError("Failed to extract subplan from output.")
-        my_subplan = match_subplan.group(1).strip()
-        if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
-            print(f"=========predict_zero=============: \n{output[0]}")
-
-        # episode_logger.info(
-        #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
-        # )
-        return reason, my_subplan
+    
     
     #COBEL - zhimin
-    def coordination_aware(self, my_progress, oppo_progress, my_subplan, opponent_subplans):
+    def coordination_aware(self, first_order_beliefs, zero_order_beliefs, my_subplan, opponent_subplans):
         """
         信念意识
 
@@ -1151,16 +1125,16 @@ class LLM_cobel:
             信念差异文本
         """
         prompt = (
-            self.cobel_prompts_df["prompt"][5]
+            self.cobel_prompts_df["prompt"][4]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$MY_PROPGRESS$", my_progress)
-            .replace("$OPPO_PROGRESS$", oppo_progress)
+            .replace("$FIRST_ORDER_BELIEFS$", first_order_beliefs)
+            .replace("$ZERO_ORDER_BELIEFS$", zero_order_beliefs)
             .replace("$MY_SUBPLAN$", my_subplan)
             .replace("$OPPO_SUBPLAN$", opponent_subplans)
         )
-        system_prompt = "You MUST follow the output format strictly.Format: reasons:\nanswer:\nmisaligned information:\n"
-        chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
+
+        chat_prompt = [{"role": "user", "content": prompt}]
         output, usage = self.generator(
                     chat_prompt, self.sampling_params
                 )   
@@ -1174,106 +1148,55 @@ class LLM_cobel:
         self.token_stats[method_name]["completion"] += completion_tokens
         self.token_stats[method_name]["call_counts"] += 1
         
-
-        if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
-            print(f"=========coordination_aware=============: \n{output[0]}")
-
-        pattern_reason = r'reasons:\s*(.*?)(?=' + re.escape("answer:") + r'|$)'
-        match_reason = re.search(pattern_reason, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_reason:
-            raise ValueError("Failed to extract reason from output.")
-        reason = match_reason.group(1).strip()
-
-
-        pattern_answer = r'answer:\s*(.*?)(?=' + re.escape("misaligned information:") + r'|$)'
+        pattern_answer = r'1. Answer:\s*(.*?)(?=' + re.escape("2. Reason:") + r'|$)'
         match_answer = re.search(pattern_answer, output[0], re.IGNORECASE | re.DOTALL)
         if not match_answer:
             raise ValueError("Failed to extract answer from output.")
         answer = match_answer.group(1).strip()
+        if "NO MISCOORDINATION" not in answer.upper():
 
-        if "NO" not in answer.upper():
+            pattern_reason = r'2. Reason:\s*(.*?)(?=' + re.escape("3. Message:") + r'|$)'
+            match_reason = re.search(pattern_reason, output[0], re.IGNORECASE | re.DOTALL)
+            if not match_reason:
+                raise ValueError("Failed to extract reason from output.")
+            reason = match_reason.group(1).strip()
 
-            
-            pattern_difference = rf"misaligned information:\s*(.*)"
-            match_difference = re.search(pattern_difference, output[0], re.IGNORECASE | re.DOTALL)
-            if not match_difference:
-                raise ValueError("Failed to extract difference from output.")
-            difference = match_difference.group(1).strip()
+            pattern_message = rf"3. Message:\s*(.*)"
+            match_message = re.search(pattern_message, output[0], re.IGNORECASE | re.DOTALL)
+            if not match_message:
+                raise ValueError("Failed to extract opponent message from output.")
+            message = match_message.group(1).strip()
         else:
             answer = "NO MISCOORDINATION"
             reason = "None"
-            difference = "None"
+            message = "None"
 
-        
-        return answer, reason, difference
-
-    #COBEL  -shaokang - zhimin update 因为原本是通过run规划，所以会在run传入很多信息来更新状态来提供available action
-
-
-    def comm(self, difference, my_subplan):
-        prompt = (
-            self.cobel_prompts_df["prompt"][6]
-            .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$MISALIGNED INFORMATION$", difference)
-            .replace("$MY_SUBPLAN$", my_subplan)
-        )
-
-        system_prompt = "Just output the message content without any additional analysis, quotes or reasons. Just output the message. "
-        chat_prompt = [{"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}]
-        output, usage = self.generator(
-                    chat_prompt, self.sampling_params
-                )
-        
-        # 记录token消耗
-        method_name = "communication"
-        # 使用usage.prompt_tokens和usage.completion_tokens
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-        
-        # pattern_message = rf"message:\s*(.*)"
-        # match_message = re.search(pattern_message, output[0], re.IGNORECASE | re.DOTALL)
-        # if not match_message:
-        #     raise ValueError("Failed to extract message from output.")
-        # message = match_message.group(1).strip()
-        message = output[0]
         if self.belief_debug:
             print(f"=========prompt===========: \n{prompt}")
-            print(f"=========message=============: \n{output[0]}")
-        return message
-    
+            print(f"=========coordination_aware=============: \n{output[0]}")
+        return answer, reason, message
 
-
+    #COBEL  -shaokang - zhimin update 因为原本是通过run规划，所以会在run传入很多信息来更新状态来提供available action
 
 
     def intuitive_planning(self,
                            my_subplan,
                            action_history,
-                           progress_desc,
-                           episode_logger = None, 
+                           episode_logger = None,
                            ):
 
         
-        available_plans, num, available_plans_list = self.get_available_plans_cobel()
+        action_list = self.get_available_plans_cobel()
         prompt = (
-            self.cobel_prompts_df["prompt"][7]
+            self.cobel_prompts_df["prompt"][6]
             .replace('$AGENT_NAME$',self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$GOAL$", self.goal_desc)
             .replace('$MY_SUBPLAN$',my_subplan)
             .replace('$PREVIOUS_ACTIONS$',action_history)
-            .replace('$PROGRESS$',progress_desc)
-            .replace('$ACTION_LIST$',available_plans)
+            .replace('$ACTION_LIST$',action_list)
         )
-
-        system_prompt = "You MUST follow the output format strictly.Format: answer:\nreasons:\nanswer:"
-        chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
-        # chat_prompt = [{'role':'user','content':prompt}]
+        chat_prompt = [{'role':'user','content':prompt}]
         output,usage = self.generator(
             chat_prompt,self.sampling_params
         )
@@ -1291,20 +1214,12 @@ class LLM_cobel:
         if self.belief_debug:
             print(f"=========plan_prompt===========: \n{prompt}")
             print(f"=========intuitive_planning=============: \n{output[0]}")
-            episode_logger.info(f"{self.agent_name}: 选动作 {output[0]}")
         
         episode_logger.info(
             f"\n{self.agent_name}intuitive_planning:\n{output[0]}"
         )
-
-        pattern_answer = rf"answer:\s*(.*)"
-        match_answer = re.search(pattern_answer, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_answer:
-            raise ValueError("Failed to extract opponent answers from output.")
-        answer = match_answer.group(1).strip()
-
         #TODO: COBEL parse checking the efficiency
-        plan, flags = self.parse_answer(available_plans_list, answer)
+        plan, flags = self.parse_answer(action_list, output[0])
         return plan
 
     def get_progress_description(
@@ -1320,28 +1235,15 @@ class LLM_cobel:
         dialogue_history,
         opponent_grabbed_objects=None,
         opponent_last_room=None,
-        episode_logger = None,
-        oppo_holding_objects_zero = None,
-        oppo_current_room_zero = None,
-        my_rooms_explored = None,
-        my_objects_per_room = None,
+        episode_logger = None
     ):
         info = {}
         print("current_step", current_step)
         self.current_room = current_room
-        self.rooms_explored = rooms_explored #COBEL这里用全局的 但是动作要用局部的
-        self.my_rooms_explored = my_rooms_explored
+        self.rooms_explored = rooms_explored
         self.holding_objects = holding_objects
         self.object_list = object_list
         self.obj_per_room = obj_per_room
-        self.my_objects_per_room = my_objects_per_room
-
-        #优先还是用看到的信息
-        #如果没看到 就用消息维护的
-        if not opponent_grabbed_objects:
-            opponent_grabbed_objects = oppo_holding_objects_zero #check
-        if not opponent_last_room:
-            opponent_last_room = oppo_current_room_zero
 
         #COBEL - zhimin 这里会涉及初始化
         progress_desc = self.progress2text(
@@ -1350,3 +1252,21 @@ class LLM_cobel:
 
         return progress_desc
     
+
+    
+
+    #COBEL-zhimin
+    def extract_subplan_content(self, text):
+        """
+        提取最后一个 subplan: 之后的内容（不区分大小写）
+        """
+        # 匹配 subplan: 后面的内容直到行尾，不区分大小写
+        pattern = r'subplan:\s*(.*?)(?:\n|$)'
+        matches = re.findall(pattern, text, flags=re.IGNORECASE)
+        
+        # 返回最后一个匹配的内容，清理空白字符
+        if matches:
+            return matches[-1].strip()
+        else:
+            self.plan_logger.warning("Failed to extract subplan content from text.")
+            return None
