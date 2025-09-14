@@ -244,49 +244,15 @@ if __name__ == '__main__':
             # try:
             arena.reset(episode_id)#go to specific task 
             success, steps, saved_info = arena.run()
-            #episode characters 
-            episode_character_0 = arena.agents[0].characters
-            episode_character_1 = arena.agents[1].characters
-            episode_comm_num_0 = arena.agents[0].comm_num
-            episode_comm_num_1 = arena.agents[1].comm_num
-            episode_api_0 = arena.agents[0].get_api()
-            episode_api_1 = arena.agents[1].get_api()
-            episode_whole_tokens_0 = arena.agents[0].get_total_tokens()
-            episode_whole_tokens_1 = arena.agents[1].get_total_tokens()
-            episode_complete_tokens_0 = arena.agents[0].get_completion_tokens()
-            episode_complete_tokens_1 = arena.agents[1].get_completion_tokens()
-            episode_comm_tokens_0 = arena.agents[0].get_comm_tokens()
-            episode_comm_tokens_1 = arena.agents[1].get_comm_tokens()
-            #whole
-            total_character_0 += episode_character_0
-            total_character_1 += episode_character_1
-            total_comm_0 += episode_comm_num_0
-            total_comm_1 += episode_comm_num_1
-            total_api_0 += episode_api_0
-            total_api_1 += episode_api_1
-            total_whole_tokens_0 += episode_whole_tokens_0
-            total_whole_tokens_1 += episode_whole_tokens_1
-            total_complete_tokens_0 += episode_complete_tokens_0
-            total_complete_tokens_1 += episode_complete_tokens_1
-            total_comm_tokens_0 += episode_comm_tokens_0
-            total_comm_tokens_1 += episode_comm_tokens_1
-            os.makedirs("./results_capo",exist_ok=True)
-            with open(f"./results_capo/episode_{episode_id}.txt","w") as f:
-                f.write(f"character_0:{episode_character_0}\n")
-                f.write(f"character_1:{episode_character_1}\n")
-                f.write(f"total_character:{episode_character_0+episode_character_1}\n")
-                f.write(f"comm_0:{episode_comm_num_0}\n")
-                f.write(f"comm_1:{episode_comm_num_1}\n")
-                f.write(f"api_0:{episode_api_0}\n")
-                f.write(f"api_1:{episode_api_1}\n")
-                f.write(f"whole_tokens_0:{episode_whole_tokens_0}\n")
-                f.write(f"whole_tokens_1:{episode_whole_tokens_1}\n")
-                f.write(f"completion_tokens_0:{episode_complete_tokens_0}\n")
-                f.write(f"completion_tokens_1:{episode_complete_tokens_1}\n")
-                f.write(f"comm_tokens_0:{episode_comm_tokens_0}\n")
-                f.write(f"comm_tokens_1:{episode_comm_tokens_1}\n")
-                f.write(f"success: {success}")
-                f.write(f"steps: {steps}")
+            #COBEL episode count
+            episode_0_comm_chars = arena.agents[0].comm_chars
+            episode_1_comm_chars = arena.agents[1].comm_chars
+            episode_0_com = arena.agents[0].comm_num
+            episode_1_com = arena.agents[1].comm_num
+            episode_0_api = arena.agents[0].get_api_num()
+            episode_1_api = arena.agents[1].get_api_num()
+            episode_0_token_stats = arena.agents[0].get_token_stats()
+            episode_1_token_stats = arena.agents[1].get_token_stats()
             
             print('-------------------------------------')
             print('success' if success else 'failure')
@@ -313,28 +279,23 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
-            test_results[episode_id] = {'S': S[episode_id],
-                                        'L': L[episode_id]}
-        os.makedirs("./iter_count_results_capo",exist_ok=True)
-        with open(f"./iter_count_results_capo/{time.time()}{iter_id}.txt","w") as f:
-            f.write(f"total_character_0:{total_character_0}\n")
-            f.write(f"total_character_1:{total_character_1}\n")
-            f.write(f"total_character:{total_character_0+total_character_1}\n")
-            f.write(f"total_comm_0:{total_comm_0}\n")
-            f.write(f"total_comm_1:{total_comm_1}\n")
-            f.write(f"character_per_episode_0:{total_character_0/len(episode_ids)}\n")
-            f.write(f"character_per_episode_1:{total_character_1/len(episode_ids)}\n")
-            f.write(f"comm_per_episode_0:{total_comm_0/len(episode_ids)}\n")
-            f.write(f"comm_per_episode_1:{total_comm_1/len(episode_ids)}\n")
-            f.write(f"total_api_0:{total_api_0}\n")
-            f.write(f"total_api_1:{total_api_1}\n")
-            f.write(f"total_api_per:{(total_api_0+total_api_1)/len(episode_ids)}\n")
-            f.write(f"total_whole_tokens_0:{total_whole_tokens_0}\n")
-            f.write(f"total_whole_tokens_1:{total_whole_tokens_1}\n")
-            f.write(f"total_complete_tokens_0:{total_complete_tokens_0}\n")
-            f.write(f"total_complete_tokens_1:{total_complete_tokens_1}\n")
-            f.write(f"total_comm_tokens_0:{total_comm_tokens_0}\n")            
-            f.write(f"total_comm_tokens_1:{total_comm_tokens_1}\n")
+            result_dic = {'S': S[episode_id],
+                                        'L': L[episode_id],
+                                        'COBEL': {
+                                            'episode_0_comm_chars': episode_0_comm_chars,
+                                            'episode_1_comm_chars': episode_1_comm_chars,
+                                            'episode_0_com': episode_0_com,
+                                            'episode_1_com': episode_1_com,
+                                            'episode_0_api': episode_0_api,
+                                            'episode_1_api': episode_1_api,
+                                            'episode_0_tokens': episode_0_token_stats,
+                                            'episode_1_tokens': episode_1_token_stats,
+                                        }}
+            test_results[episode_id] = result_dic
+            # 保存为json
+            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
+            with open(json_path, "w") as f_json:
+                json.dump(result_dic, f_json, indent=4)
 
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)

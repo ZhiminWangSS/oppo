@@ -1,95 +1,49 @@
 type,prompt
-init,"You are Alice, you and Bob are constructing structured rules to denote the belief of the world. You should extract entity classes in a specific domain given a challenge description below, you should contruct first and send to bob for disscussion. 
-The entity classes should include the instances that interact within the domain like target objects, place to wander around and the agent interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity.
-After you have extracted the entity classes, you are required to reason about the attributions of the entity class and their parameters with quantity restriction demand if there is any described in the domain, you can use a annotation to describe the quantative demand and other important explaination. 
-The parameters can be arbitary amount of entities according to the restriction. 
+init,"You are Alice, you and Bob are constructing beliefs rules to denote the zero and first order belief of the world. You should first extract entity types and predicates in a specific domain given a task description and the belief symbolic language below. After that you should use the belief symbolic language to describe the possible belief types in this task domain and send to bob for discussion.
 
-Here is an example to help to understand the demand above. 
-example:
-```
-- key_state(?key)
-  - location(?room or ?hand or ?container)
-- locked_door_state(?locked_door)
-  - location(?room)
-  - comletion(?know or ?unknow)
-- container_state(?container)
-  - location(?room or ?hand)
-  - contents[?object,?object]#at most two; ?object can only be target object
-- agent_state(?agent)
-  - location(?room)
-  - subgoal(a short description about what ?agent plans to do)
-  - object_in_hand[?item,?item]#at most two;item denote target object or container
-- room_state(?room)
-  - exploration_state(?Part or ?None or ?All)
-```
-here is the task:
-challenge_des:$Challenge_des$
-you should ouptut in the format of the following structure:
-reason:
-construction:
-"
-disscuss,"You are bob, you and Alice are constructing structured rules to denote the belief of the world. You are required to check the reasoning process and the construction made by Alice given the challenge description below, then send your advice to Alice with the your satisfactory literally Satisfied or Unsatisfied. If you are satisfied, the advice can be None
-The entity classes should include the instances that interact within the domain like target objects, places to wander around and the agents interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity. Check if there is any missing eneity classes or the construction violates the format. 
-Check the attributions of the entity classes and their parameters with quantity restriction demand if there is any of that described in the domain, check the annotation if it perfectly describe the demand. 
-The parameters can be arbitary amount of entities according to the restriction.
+Belief symbolic language:$Belief_language$
 
+Task decription:$Task_description$
 
+DO NOT generate beliefs that go beyond the information specified in the task description.
+Consider ONLY zeroth-order and first-order beliefs.
 
-Here is an example to help to understand the demand above:
-example:
-```
-- key_state(?key)
-  - location(?room or ?hand or ?container)
-- locked_door_state(?locked_door)
-  - location(?room)
-  - comletion(?know or ?unknow)
-- agent_state(?agent)
-  - location(?room)
-  - subgoal(a short description about what ?agent plans to do)
-  - object_in_hand[?item,?item]#at most two;item denote target object or container
-- container_state(?container)
-  - location(?room or ?hand)
-  - contents[?object,?object]#at most two; ?object can only be target object
-- room_state(?room)
-  - exploration_state(?Part or ?None or ?All)
-```
-Challenge_des:$Challenge_des$
+The belief rules should be in syntax format with entity represented with a ? prefix, and without any additional comment and analysis and explanation:
+You should output strictly in the format of the following structure:
+entity and predicate reasoning:
+zero order belief rules:
+first order belief rules:"
+discuss,"You are bob, you and Alice are constructing belief rules to denote the zero and first order belief of the world. You are required to check the belief rules made by Alice given the challenge description below. Give your reasoning progress in the reasoning:. And then give your comments: Satisfied or Unsatisfied. If Unsatisfied, you should give your suggestions to Alice on how to refine the construction.
+
+These suggestions may include:
+Missing logical relationships among key beliefs, such as omitting the agent's belief about its position.
+Formatting errors, failing to comply with the prescribed format of the belief language.
+
+Belief symbolic language:$Belief_language$
+Task decription:$Task_description$
 Alice content:$Alice_content$
 Check if alice' construction satisfy the need.
 
-you should output in the format of the following structure:
-reason:
-advice:
-satisfied:(yes or no)
-"
-refine,"You are Alice, you and Bob are are constructing structured rules to denote the belief of the world. You are required to refine the construction according your previous output and advice from bob given some important information.
-Entity classes is the base element you need to construct in the output . The entity classes should include the instances that interact within the domain like target objects, places to wander around and the agents interacting in the environment. Use <entity_class>(?entity) as the class format, ?entity as the entity_class's paramater denotes a specific entity. 
-The attributions of the entity classes and their parameters may have quantity restriction demand if there is any of that described in the domain, you can add annotation to describe the demand. 
-The parameters can be arbitary amount of entities according to the restriction.
-Here is an example to help to understand the demand above:
-example:
-```
-- key_state(?key)
-  - location(?room or ?hand or ?container)
-- locked_door_state(?locked_door)
-  - location(?room)
-  - comletion(?know or ?unknow)
-- agent_state(?agent)
-  - location(?room)
-  - subgoal(a short description about what ?agent plans to do)
-  - object_in_hand[?item,?item]#at most two;item denote target object or container
-- container_state(?container)
-  - location(?room or ?hand)
-  - contents[?object,?object]#at most two; ?object can only be target object
-- room_state(?room)
-  - exploration_state(?Part or ?None or ?All)
-```
-Challenge_des:$Challenge_des$
-previous content:$previous_content$
-Bob's advice:$advice$
-now try to refine your previous output according to Bob's advice.
-you should output in the format of the following structure:
-reason:
-construction:
+DO NOT provide suggestions that go beyond the information specified in the task description.
+Consider ONLY zeroth-order and first-order beliefs.
 
-"
+You should output strictly in the format of the following structure:
+Reasoning:
+Suggestions:
+Satisfied:(yes or no)"
+refine,"You are Alice, you and Bob are constructing beliefs rules to denote the zero and first order belief of the world. Given a task description and the belief symbolic language below, you should refine the belief rules according to Bob's suggestionss.
+
+Belief symbolic language:$Belief_language$
+Task decription:$Task_description$
+previous content:$previous_content$
+Bob's suggestions:$suggestions$
+
+DO NOT generate beliefs that go beyond the information specified in the task description.
+Consider ONLY zeroth-order and first-order beliefs.
+
+Now try to refine your previous output according to Bob's suggestions.
+The belief rules should be in syntax formatwith entity represented with a ? prefix, and without any additional comment and analysis and explanation:
+You should output strictly in the format of the following structure:
+reasoning: 
+zero order belief rules:
+first order belief rules:"

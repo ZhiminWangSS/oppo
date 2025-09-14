@@ -107,33 +107,16 @@ class Challenge:
                 if done:
                     break
             #COBEL episode count
+            episode_total_time = time.time() - start_time
+            #COBEL episode count
             episode_0_comm_chars = agents[0].comm_chars
             episode_1_comm_chars = agents[1].comm_chars
-            episode_0_com = agents[0].comm_num
-            episode_1_com = agents[1].comm_num
-            episode_0_api = agents[0].get_api_num()
-            episode_1_api = agents[1].get_api_num()
+            episode_0_com = agents[0].get_com_counts()
+            episode_1_com = agents[1].get_com_counts()
             episode_0_tokens = agents[0].get_tokens()
             episode_1_tokens = agents[1].get_tokens()
-            episode_0_total_tokens = agents[0].get_total_tokens()
-            episode_1_total_tokens = agents[1].get_total_tokens()
-            episode_0_comm_tokens = agents[0].get_comm_tokens()
-            episode_1_comm_tokens = agents[1].get_comm_tokens()
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-            total_0_comm_tokens += episode_0_comm_tokens
-            total_1_comm_tokens += episode_1_comm_tokens
-
-            episode_total_time = time.time() - episode_start_time
+            # 记录结果
+            #COBEL - TODO
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
@@ -145,14 +128,8 @@ class Challenge:
                 "comm_chars_0":episode_0_comm_chars,
                 "comm_chars_1":episode_1_comm_chars,
                 "episode_total_time": episode_total_time,
-                "api_0":episode_0_api,
-                "api_1":episode_1_api,
-                "completion_tokens_0":episode_0_tokens,
-                "completion_tokens_1":episode_1_tokens,
-                "total_tokens_0":episode_0_total_tokens,
-                "total_tokens_1":episode_1_total_tokens,
-                "comm_tokens_0": episode_0_comm_tokens,
-                "comm_tokens_1": episode_1_comm_tokens
+                "tokens_0":episode_0_tokens,
+                "tokens_1":episode_1_tokens,
             }
             with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
                 json.dump(result, f)
@@ -226,7 +203,7 @@ def main():
     parser.add_argument("--no_gt_mask", action='store_true')
     # LLM parameters
     parser.add_argument('--source', default='openai',
-        choices=['hf', 'openai'],
+        choices=['hf', 'openai','aliyun'],
         help='openai API or load huggingface models')
     parser.add_argument('--lm_id', default='gpt-3.5-turbo',
                         help='name for openai engine or huggingface model name/path')

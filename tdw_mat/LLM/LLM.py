@@ -30,8 +30,9 @@ class LLM:
         self.oppo_pronoun = "she" if agent_id == 1 else "he"
         self.completion_tokens = 0
         self.api = 0
-        self.total_tokens = 0
+        self.total_completion = 0
         self.comm_tokens = 0
+        self.total_comm_tokens = 0
         self.debug = sampling_parameters.debug
         self.rooms = []
         self.prompt_template_path = prompt_template_path
@@ -76,6 +77,32 @@ class LLM:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
+
+
+        elif self.source == "aliyun":
+            api_key=os.environ.get("ALIYUN_API_KEY")
+            base_url=os.environ.get("ALIYUN_URL")
+            client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+            )
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
         elif self.source == 'hf':
             self.tokenizer = LlamaTokenizer.from_pretrained(self.lm_id, use_fast=True)
             self.model = LlamaForCausalLM.from_pretrained(self.lm_id, device_map='auto', load_in_4bit=True)
@@ -97,7 +124,7 @@ class LLM:
 
             @backoff.on_exception(backoff.expo, OpenAIError)
             def openai_generate(prompt, sampling_params):
-                usage = 0
+                usage = [0,0]
                 try:
                     if self.chat:
                         response = client.chat.completions.create(model=self.lm_id, messages=prompt, **sampling_params)
@@ -111,7 +138,8 @@ class LLM:
                         generated_samples = [response.choices[i].message.content for i in
                                              range(sampling_params['n'])]
                         
-                        usage = response.usage.completion_tokens
+                        self.api += 1
+                        usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
                         # if 'gpt-4' or 'gpt4' in self.lm_id:
                         #     usage = response.usage.prompt_tokens * 0.03 / 1000 + response.usage.completion_tokens * 0.06 / 1000
                         # elif 'gpt-3.5' in self.lm_id:
@@ -133,8 +161,17 @@ class LLM:
                 except OpenAIError as e:
                     print(e)
                     raise e
+                
+                method_name = "total"
+                # 使用usage.prompt_tokens和usage.completion_tokens
+                prompt_tokens = usage[0]
+                completion_tokens = usage[1]
+                self.token_stats[method_name]["prompt"] += prompt_tokens
+                self.token_stats[method_name]["completion"] += completion_tokens
+                self.token_stats[method_name]["call_counts"] += 1
                 return generated_samples, usage
 
+            
             def tokenize_dialog(dialog):
                 B_INST, E_INST = "[INST]", "[/INST]"
                 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
@@ -194,7 +231,7 @@ class LLM:
 
             def _generate(prompt, sampling_params):
                 usage = 0
-                if source == 'openai':
+                if source == 'openai' or source == 'aliyun':
                     return openai_generate(prompt, sampling_params)
                 elif self.source == 'hf':
                     return hf_generate(prompt, sampling_params)
@@ -210,6 +247,14 @@ class LLM:
         self.holding_objects = None
         self.obj_per_room = None
 
+        self.token_stats = {}
+        for call_name in ["total","communication","planning"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
+
 
     def reset(self, rooms_name, goal_objects):
         self.rooms = rooms_name
@@ -217,7 +262,13 @@ class LLM:
         self.completion_tokens = 0
         self.comm_tokens = 0
         self.total_tokens = 0
-
+        self.token_stats = {}
+        for call_name in ["total","communication","planning"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
 
     def goal2description(self, goals):  # {predicate: count}
         s = "Transport "
@@ -312,7 +363,7 @@ class LLM:
         return random.choice(available_actions), flags
 
 
-    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,):
+    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,): #TODO 看一下他们的其应敲击
         s = f"I've taken {current_step}/3000 steps. "
 
         sss = {}
@@ -520,8 +571,14 @@ class LLM:
                 chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": gen_prompt}]
                 outputs, usage = self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)
-                self.total_cost += usage
-                self.comm_tokens += usage
+                # 记录token消耗
+                method_name = "communication"
+                # 使用usage.prompt_tokens和usage.completion_tokens
+                prompt_tokens = usage[0]
+                completion_tokens = usage[1]
+                self.token_stats[method_name]["prompt"] += prompt_tokens
+                self.token_stats[method_name]["completion"] += completion_tokens
+                self.token_stats[method_name]["call_counts"] += 1
                 message = outputs[0]
                 if len(message) > 0 and message[0] != '"':
                     message = re.search(r'"([^"]+)"', message)
@@ -584,6 +641,14 @@ class LLM:
                 print(f"base_prompt:\n{prompt}")
             outputs, usage = self.generator(chat_prompt if self.chat else normal_prompt, self.sampling_params)
             output = outputs[0]
+
+            method_name = "planning"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
             # info['usage_step_1'] = usage
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")

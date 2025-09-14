@@ -1,0 +1,15 @@
+Syntax:
+?belief = ?entity PREDICATE [?entity:?confidence]
+?entity — a placeholder for any agent, object, or location in the environment (e.g., agentA, apple, room3)
+PREDICATE — a relational verb or state descriptor (e.g., IN, HOLD, BELIEVE, AT, INSIDE)
+?confidence — one of: certain, high, medium, low
+
+Zero-order belief format:
+?agent BELIEVE ?belief
+Example: 
+agentA BELIEVE apple IN [kitchen:high]
+agentA BELIEVE livingroom EXPLORED [part:high]
+
+First-order belief format:
+?agentA BELIEVE ?agentB BELIEVE ?belief
+Example: agentA BELIEVE agentB BELIEVE banana IN [pantry:medium]

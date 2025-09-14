@@ -1,0 +1,17 @@
+zero order belief rules:
+?agent BELIEVE ?object IN [?room:?confidence]  
+?agent BELIEVE ?object IN [?container:?confidence]  
+?agent BELIEVE ?object AT [?bed:?confidence]  
+?agent BELIEVE ?agent HOLD [?object:?confidence]  
+?agent BELIEVE ?agent HOLD [?container:?confidence]  
+?agent BELIEVE ?room EXPLORATION_STATE [?state:?confidence]  
+?agent BELIEVE ?agent AT [?room:?confidence]  
+
+first order belief rules:
+?agentA BELIEVE ?agentB BELIEVE ?object IN [?room:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?object IN [?container:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?object AT [?bed:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?agent HOLD [?object:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?agent HOLD [?container:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?room EXPLORATION_STATE [?state:?confidence]  
+?agentA BELIEVE ?agentB BELIEVE ?agent AT [?room:?confidence]

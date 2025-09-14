@@ -15,7 +15,7 @@ class capo_agent(LLM_agent):
         self.node_memory = []
         #counting 
         self.comm_num = 0
-        self.characters = 0
+        self.comm_chars = 0
         self.logger = logger# metaplan, message, subplan
 
     def goexplore(self):
@@ -96,7 +96,7 @@ class capo_agent(LLM_agent):
 
     def LLM_metaplan_init(self):
         output,usage = self.LLM.meta_plan_init()
-        self.characters += len(output.strip())
+        self.comm_chars += len(output.strip())
         self.LLM.comm_tokens += usage
         self.comm_num += 1
         self.logger.info(
@@ -119,7 +119,7 @@ class capo_agent(LLM_agent):
                                           self.opponent_grabbed_objects,
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
-        self.characters += len(output.strip())
+        self.comm_chars += len(output.strip())
         self.LLM.comm_tokens += usage
         self.comm_num += 1
         self.logger.info(
@@ -139,7 +139,7 @@ class capo_agent(LLM_agent):
                                   self.opponent_grabbed_objects,
                                   self.id_inside_room[self.opponent_agent_id]
                                   )
-        #self.characters += len(output.strip()) not communication characters
+        #self.comm_chars += len(output.strip()) not communication comm_chars
         return output
     
     def LLM_progress_sending(self):
@@ -406,17 +406,20 @@ class capo_agent(LLM_agent):
         self.metaplan = None
         self.node_memory = []
         self.comm_num = 0
-        self.characters = 0
+        self.comm_chars = 0
         self.LLM.api = 0
         self.LLM.tokens = 0
-    def get_api(self):
-        return self.LLM.api_num
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens
-    def get_completion_tokens(self):
-        return super().get_completion_tokens()
-    def get_total_tokens(self):
-        return super().get_total_tokens()
+    def get_tokens(self):
+        return self.LLM.token_stats
+
+    def get_com_counts(self):
+        return self.comm_counts
+
+    def get_com_chars(self):
+        return self.comm_chars
+
+    def get_api_num(self):
+        return self.LLM.api
 
     def filter_graph(self, obs):
         relative_id = [node['id'] for node in obs['nodes'] if node['class_name'] in self.all_relative_name]

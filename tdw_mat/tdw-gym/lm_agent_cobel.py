@@ -33,7 +33,7 @@ class lm_agent_cobel:
     4. 管理智能体记忆和状态
     """
 
-    def __init__(self, agent_id, logger, max_frames, args, output_dir="results",belief_threshold=6):
+    def __init__(self, agent_id, logger, max_frames, args, output_dir="results"):
         """
         初始化大模型智能体
 
@@ -58,9 +58,9 @@ class lm_agent_cobel:
         self.gt_mask = None  # 是否使用真实掩码
         self.episode = None
 
+        self.one_update = False
 
-
-        
+        self.single = False
         
 
         # 物体信息存储
@@ -69,8 +69,10 @@ class lm_agent_cobel:
         )  # 物体详细信息 {id: {id: xx, type: 0/1/2, name: sss, position: x,y,z}}
         self.object_per_room = (
             {}
-        )  # 每个房间的物体 {room_name: {0/1/2: [{id: xx, type: 0/1/2, name: sss, position: x,y,z}]}}
-
+        )
+        self.my_object_per_room = None
+          # 每个房间的物体 {room_name: {0/1/2: [{id: xx, type: 0/1/2, name: sss, position: x,y,z}]}}
+        self.oppo_object_per_room = None
         # 地图相关
         self.id_map = None  # ID地图
         self.object_map = None  # 物体地图
@@ -132,7 +134,7 @@ class lm_agent_cobel:
         )
         self.action_history = []  # 动作历史
         self.dialogue_history = []  # 对话历史
-        
+        self.dialogue = []
         self.plan = None  # 当前计划
         self.visible_obj = {}
         self.last_hold = None
@@ -140,6 +142,8 @@ class lm_agent_cobel:
         # 房间和位置相关
         self.rooms_name = None  # 房间名称
         self.rooms_explored = {}  # 已探索的房间
+        self.my_rooms_explored = {}
+        self.oppo_rooms_explored = {}
         self.new_room_explored = {}
         self.position = None  # 当前位置
         self.forward = None  # 朝向
@@ -163,15 +167,30 @@ class lm_agent_cobel:
         self.subplan_done = True  # 是否完成子目标
         self.obs_not_updated = True  # 是否更新了观测
         self.max_message_time = 2
-        self.action_history_max_length = 5
+        self.message_time = 0
+        self.action_history_max_length = 3
         self.action_history_w_mes = []
-        self.belief_threshold = belief_threshold
         self.my_subplan = None
-        self.oppo_subplan = {self.agent_names[self.opponent_agent_id]: "None"}
-        self.comm_counts = {}
-        # bert_score 记录列表
-        self.bert_scores = []  # 存储每次 belief_awareness 调用返回的 bert_score 数值
-        self.message_time = 0 #记录发送消息的次数
+        self.comm_counts = 0
+        self.comm_chars = 0
+        self.message_received = []
+        self.oppo_holding_objects_first = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_holding_objects_zero = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_current_room_first = None
+        self.oppo_current_room_zero = None
+        self.my_current_room_first = None
+        self.my_holding_first = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_last_room_mes = None
+        self.init_challenge_descs = None
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -256,6 +275,7 @@ class lm_agent_cobel:
     def get_object_list(self):
         object_list = {0: [], 1: [], 2: []}
         self.object_per_room = {room: {0: [], 1: [], 2: []} for room in self.rooms_name}
+        
         for object_type in [0, 1, 2]:
             obj_map_indices = np.where(self.object_map == object_type + 1)##object_map update from getting new object
             if obj_map_indices[0].shape[0] == 0:
@@ -271,6 +291,8 @@ class lm_agent_cobel:
                 ):
                     continue
                 object_list[object_type].append(self.object_info[id])
+                
+                #id:{'id': int,'type': int, 'name':'str', 'position'"array"}
                 room = self.env_api["belongs_to_which_room"](
                     self.object_info[id]["position"]#check5 object_info where the position comes from?   A:from getting new object
                 )
@@ -279,6 +301,8 @@ class lm_agent_cobel:
                     # raise Exception(f"obj not in any room")
                     continue
                 self.object_per_room[room][object_type].append(self.object_info[id])
+                if f"<{self.object_info[id]['name']}>({self.object_info[id]['id']})" not in self.my_object_per_room[room][object_type]:
+                    self.my_object_per_room[room][object_type].append(f"<{self.object_info[id]['name']}>({self.object_info[id]['id']})")
         self.object_list = object_list #TODO
     #act刚开始更新
     def get_new_object_list(self):## key function
@@ -300,6 +324,7 @@ class lm_agent_cobel:
                 continue
             object_id = o_dict["id"]
             new_obj = False
+
             if object_id not in self.object_info:#can know that the object_info is personlize
                 self.object_info[object_id] = {}
                 new_obj = True
@@ -320,6 +345,8 @@ class lm_agent_cobel:
                         oppo_last_room = self.env_api["belongs_to_which_room"](position)
                         if oppo_last_room is not None:
                             self.oppo_last_room = oppo_last_room
+                            self.oppo_current_room_zero = oppo_last_room #Cobel
+                            self.oppo_current_room_first = oppo_last_room
                             self.visible_obj[object_id]["id"] = object_id
                             self.visible_obj[object_id]["type"] = o_dict["type"]
                             self.visible_obj[object_id]["name"] = o_dict["name"]
@@ -475,9 +502,16 @@ class lm_agent_cobel:
         self.current_room = self.env_api["belongs_to_which_room"](self.position)
         self.rotated = None
         self.rooms_explored = {}
+        self.my_rooms_explored = {}
+        self.oppo_rooms_explored = {}
         self.last_hold = None
+        self.message_time = 0
         # COBEL detect new exploration extend 
         self.new_room_explored = {} 
+
+
+        self.oppo_object_per_room = {room: {0: [], 1: [], 2: []} for room in self.rooms_name}
+        self.my_object_per_room = {room: {0: [], 1: [], 2: []} for room in self.rooms_name}
         for name in self.rooms_name:
             self.new_room_explored.update(
                 {
@@ -487,9 +521,14 @@ class lm_agent_cobel:
 
 
 
+        # self.zero_order_beliefs, self.first_order_beliefs = self.LLM.init_beliefs(self.rooms_name,self.goal_objects)
+
+
+        self.my_subplan = None
         self.plan = None
         self.action_history = [f"go to {self.current_room} at initial step"]
         self.dialogue_history = []
+        self.dialogue = []
         self.gt_mask = gt_mask
         if self.gt_mask == True:##check6 what is gt_mask?
             self.detection_threshold = 5
@@ -508,17 +547,31 @@ class lm_agent_cobel:
         self.plan_logger = plan_logger
         # print(self.rooms_name)
         #COBEL - zhimin begin 修改了reset的返回 改为了初始化的信念模版
-        initial_zero_beliefs, initial_first_beliefs = self.LLM.reset(self.rooms_name, self.goal_objects)
-        self.episode_logger.info(f"initial_first\n{initial_first_beliefs}")
-        self.episode_logger.info(f"initial_zero\n{initial_zero_beliefs}")
-        self.zero_order_beliefs = initial_zero_beliefs
-        self.first_order_beliefs = initial_first_beliefs
         self.my_subplan = None
         self.action_history_w_mes = []
+        self.init_challenge_descs = None
+        self.oppo_holding_objects_first = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_holding_objects_zero = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_current_room_first = None
+        self.oppo_current_room_zero = None
+        self.my_current_room_first = None
+        self.my_holding_first = [
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]},
+            {'type': None, 'id': None, 'name': None, 'contained':[None,None,None],'contained_name':[None,None,None]}
+        ]
+        self.oppo_last_room_mes = None
         #COBEL - zhimin end 每个episode初始化一次
+        self.LLM.reset(self.rooms_name, self.goal_objects)
         self.save_img = save_img
         self.episode = episode
-        
+        self.message_received = []
+
         self.visible_obj = {}
 
     def move(self, target_pos):
@@ -564,6 +617,7 @@ class lm_agent_cobel:
         if self.rotated == 16:
             self.roatated = 0
             self.rooms_explored[target_room] = "all"#every direction going through
+            self.my_rooms_explored[target_room] = "all"
             self.plan = None
             return None
         self.rotated += 1
@@ -671,169 +725,57 @@ class lm_agent_cobel:
         ) + curr_with_seg * np.expand_dims(curr_seg_flag, axis=-1)
         return obj_infos, curr_seg_mask
 
-    def LLM_plan(self):
-        """
-        使用大模型进行规划，包括通信决策
+    def get_progress_description(self):
+        
 
-        返回:
-            plan: 规划结果，可能包含通信动作
-            a_info: 规划信息
-        """
-        # # 可视化并保存当前obs的rgb为jpg图片
-        # if "rgb" in self.obs and self.obs["rgb"] is not None:
-        #     img = Image.fromarray(self.obs["rgb"].astype(np.uint8))
-        #     os.makedirs(self.output_dir, exist_ok=True)
-        #     img.save(os.path.join(self.output_dir,f"obs_rgb_{self.num_frames}.jpg"))
-        # # 将对话历史作为上下文输入传递给大模型
-        # # 这样大模型可以根据历史对话内容做出更合理的决策
-        return self.LLM.run(
+        return self.LLM.get_progress_description(
             self.num_frames,
-            self.current_room,
-            self.rooms_explored,
+            self.current_room, #current room
+            self.rooms_explored, #room CHECK
             self.obs["held_objects"],
             [self.object_info[x] for x in self.satisfied if x in self.object_info],
             self.object_list,
-            self.object_per_room,
+            self.object_per_room, #check
             self.action_history,
-            self.dialogue_history,  # 对话历史作为上下文输入
-            self.obs["oppo_held_objects"],# including history holding
+            self.dialogue_history,
+            self.obs["oppo_held_objects"],
             self.oppo_last_room,
-            self.logger #add logger to record llm input and output
-        )
-
-    #COBEL-zhimin
-    def measurement_update(self,visual_observation,message,oppo_obs):
-        #TODO 并行观测
-        """
-        更新观测数据
-
-        参数:
-            visual_observation: 视觉观测数据
-            message: 接收到的消息
-            self.belief_rules: 信念更新规则
-            self.zero_order_beliefs: 零阶信念
-            self.first_order_beliefs: 一阶信念
-            oppo_obs: 对手观测数据
-
-        返回:
-            updated_beliefs
-        """
-
-        # COBEL logger done
-        self.dialogue_history = [] #一旦接受清空消息历史
-        #没有消息只处理视觉的
-        #TODO 还有I saw的情况没有考虑 后面考虑统一两个步骤
-        if message == "None" and oppo_obs is None:
-            self.zero_order_beliefs = self.LLM.update_zero_order_beliefs(self.zero_order_beliefs, visual_observation, message, self.belief_rules)
-        
-        else:
-            # 并行执行零阶和一阶信念更新
-            if oppo_obs is None:
-                oppo_obs = "None"
-            with ThreadPoolExecutor() as executor:
-                future_zero = executor.submit(
-                    self.LLM.update_zero_order_beliefs,
-                    self.zero_order_beliefs, visual_observation, message, self.belief_rules
-                )
-                future_first = executor.submit(
-                    self.LLM.update_first_order_beliefs,
-                    self.first_order_beliefs, oppo_obs, message, self.belief_rules
-                )
-                self.zero_order_beliefs = future_zero.result()
-                self.first_order_beliefs = future_first.result()
-        beliefs = self.zero_order_beliefs + '\n' + self.first_order_beliefs
-        self.episode_logger.info(f"==============at {self.steps}  steps {self.agent_names[self.agent_id]}=============\n ")
-        self.episode_logger.info(f"\nzero order obs:\n{visual_observation}\n{message}")
-        self.episode_logger.info(
-            f"\nzero update\n{self.zero_order_beliefs}"
-        )
-        self.episode_logger.info(f"\nfirst order obs:\n{oppo_obs}\n{message}")
-        self.episode_logger.info(
-            f"\nfirst update\n{self.first_order_beliefs}"
+            self.logger,
+            self.oppo_holding_objects_zero,
+            self.oppo_current_room_zero,
+            self.my_rooms_explored,
+            self.my_object_per_room
         )
 
 
 
-    #COBEL-zhimin
-    def prediction(self):
-        """
-        通过TOM reasoning 推理协作者的subplan
-        再通过deliberate planning 确定自己的subplan
+    #COBEL - zhimin
+    def init_beliefs(self):
+        self.zero_order_beliefs, self.first_order_beliefs = self.LLM.init_beliefs(self.init_challenge_descs,self.goal_objects)
 
 
-        """
-        # COBEL logger done
-        opponent_subplan = self.LLM.prediction_first_order(self.first_order_beliefs,self.episode_logger)
-        oppo_subplans_dic = {
-            self.agent_names[1 - self.agent_id]: opponent_subplan
-        }
-        # self.first_order_beliefs = self.update_subplans(self.first_order_beliefs,oppo_subplans_dic)
-        self.zero_order_beliefs = self.update_subplans(self.zero_order_beliefs, oppo_subplans_dic)
-        my_subplan = self.LLM.prediction_zero_order(opponent_subplan, self.zero_order_beliefs,self.episode_logger)
-        agent_subplans_dic = {
-                    self.agent_names[self.agent_id]: my_subplan,
-                    # self.agent_names[1 - self.agent_id]: opponent_subplan,
-                }
+            
+    def comm(self, difference, my_subplan):
+        message = self.LLM.comm(difference, my_subplan)
 
-        self.zero_order_beliefs = self.update_subplans(self.zero_order_beliefs, agent_subplans_dic)
-        self.episode_logger.info(
-            f"opponent_subplan:{opponent_subplan}\nmy_subplan:{my_subplan}"
-        )
-        print("======opposubplan========",opponent_subplan)
-        print("======mysubplan========",my_subplan)
-        # print(f"=====first-order-after-subplan======\n",self.first_order_beliefs)
-        # print(f"=====zero-order-after-subplan======\n",self.zero_order_beliefs)
-        return opponent_subplan, my_subplan
-
-    #COBEL-zhimin
-    def belief_awareness(self):
-        """
-        信念意识，基于当前信念差异输出阈值
-
-        返回:
-            belief_threshold
-        """
-        difference_score, difference_content, bert_score = self.LLM.belief_awareness(self.first_order_beliefs, self.zero_order_beliefs)
-        self.episode_logger.info(f"difference_score:{difference_score}\ndifference_content:\n{difference_content}\n")
-        # 记录 bert_score
-        if bert_score is not None:
-            self.bert_scores.append(bert_score)
-        return difference_score, difference_content, bert_score
-
+        return message
     #COBEL-zhimin
     def intuitive_planning(self):
-        """
-        直观规划，基于当前信念和目标生成计划
 
-        返回:
-            plan: 生成的计划 = 论文中的low-level plan
-        """
-        self.plan_logger.info(f"\naction_with_message_history:{self.action_history_w_mes}")
-        self.plan_logger.info(f"\naction_history:{self.action_history}\nmy_subplan:{self.my_subplan}")
-        self.episode_logger.info(f"\naction_with_message_history:{self.action_history_w_mes}")
-        self.episode_logger.info(f"\naction_history:{self.action_history}\nmy_subplan:{self.my_subplan}")
-        plan = self.LLM.intuitive_planning(self.zero_order_beliefs,self.my_subplan,self.action_history,
-                                           self.current_room,
-                                           self.rooms_explored,
-                                           self.obs["held_objects"],
-                                            self.object_list,
-                                            self.object_per_room,
-                                            self.episode_logger,
-                                            self.plan_logger
-                                            )# and subplan to be added in it 
+        progress_desc = self.get_progress_description()
+
+        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} action_with_message_history:{self.action_history_w_mes}")
+        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} action_history:{self.action_history}\nmy_subplan:{self.my_subplan}")
+        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} action_with_message_history:{self.action_history_w_mes}")
+        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} action_history:{self.action_history}")
+        action_history_desc = ", ".join(self.action_history)
+        plan = self.LLM.intuitive_planning(self.my_subplan,
+                                           action_history_desc,
+                                           progress_desc,
+                                          self.episode_logger)
+        
         return plan
 
-
-    #COBEL-zhimin
-    def adaptive_communication(self,difference_content):
-        """
-        自适应通信，基于当前信念差异生成通信内容
-
-        返回:
-            communication: 生成的通信内容 应该是一个多人的字典
-        """
-        mes_list = self.LLM.message_generation(difference_content)
-        return mes_list
 
     #COBEL -shaokang
     def observation2text(self,info):
@@ -845,6 +787,29 @@ class lm_agent_cobel:
         oppo_holding = ['','']
         oppo_container = ['','']
         visible_ids = []
+        satisfied = ""
+        satisfied_list = [self.object_info[x] for x in self.satisfied if x in self.object_info]
+        if len(satisfied_list) == 0:
+            if len(self.object_list[2]) == 0:
+                satisfied += "I haven't found the goal position bed. "
+            else:
+                satisfied += ""
+        else:
+            satisfied += f"{'I' if self.single else 'We'}'ve already transported "
+            unique_satisfied = []
+            for x in satisfied_list:
+                if x not in unique_satisfied:
+                    unique_satisfied.append(x)
+            if len([x for x in unique_satisfied if x["type"] == 0]) == 0:
+                satisfied += "nothing"
+            satisfied += ", ".join(
+                [
+                    f"<{x['name']}> ({x['id']})"
+                    for x in unique_satisfied
+                    if x["type"] == 0
+                ]
+            )
+            satisfied += " to the bed. "
         #自己拿的
         for id ,item in enumerate(info['obs']['held_objects']):
             if item['id'] is not None:
@@ -933,6 +898,7 @@ class lm_agent_cobel:
                 
         explored_extend = explored_extend if explored_extend != 'I have ' else ""
         observation += explored_extend
+        observation += satisfied
         measurement_observation['observation'] = observation
         # measurement_observation['messages'] = self.obs['messages']
         # 先把上次自己发的消息加上
@@ -945,27 +911,29 @@ class lm_agent_cobel:
             else:
                 measurement_observation['messages'][receiver_name] = ""
         # 再把收到的消息加上
-        for idx, sender_name in enumerate(self.agent_names):
-            if self.obs['messages'][idx] is not None:
-                mes_dic = ast.literal_eval(self.obs['messages'][idx])
-                for receiver_name in self.agent_names:
-                    for key,value in mes_dic.items():
-                        if receiver_name in key:
-                            measurement_observation['messages'][receiver_name] += f"{sender_name}:" #str
-                            measurement_observation['messages'][receiver_name] += value #str
-                            measurement_observation['messages'][receiver_name] += '\n'
+        # for idx, sender_name in enumerate(self.agent_names):
+        #     if self.obs['messages'][idx] is not None:
+        #         measurement_observation["messages"] += self.obs['messages'][idx]
+                # mes_dic = ast.literal_eval(self.obs['messages'][idx])
+                # for receiver_name in self.agent_names:
+                #     for key,value in mes_dic.items():
+                #         if receiver_name in key:
+                #             measurement_observation['messages'][receiver_name] += f"{sender_name}:" #str
+                #             measurement_observation['messages'][receiver_name] += value #str
+                #             measurement_observation['messages'][receiver_name] += '\n'
 
-        for idx, receiver_name in enumerate(self.agent_names):
-            if measurement_observation['messages'][receiver_name] == "":
-                measurement_observation['messages'][receiver_name] = "None"
+        # for idx, receiver_name in enumerate(self.agent_names):
+        #     if measurement_observation['messages'][receiver_name] == "":
+        #         measurement_observation['messages'][receiver_name] = "None"
 
 
         #Done send to specific agent
-        self.plan_logger.info(
-                        f"\nAt {self.steps} steps, {self.agent_names[self.agent_id]}:\nvisual_obs:\n{measurement_observation['observation']}\nMessages:\n{self.dialogue_history}"
-                    )
+        # self.plan_logger.info(
+        #                 f"\nAt {self.steps} steps, {self.agent_names[self.agent_id]}:\nvisual_obs:\n{measurement_observation['observation']}\nMessages:\n{self.dialogue}"
+        #             )
 
         return measurement_observation,oppo_obs
+
 
     #COBEL - zhimin 这里用来以后当作自己的act 我会先copy一个 coela的 act用                 
     def act_cobel(self, obs):
@@ -978,7 +946,12 @@ class lm_agent_cobel:
         返回:
             action: 要执行的动作 / 发送消息
         """
+        # if self.zero_order_beliefs == 'None' and self.first_order_beliefs == 'None':
+        #     self.init_beliefs()
+        # if "EXPLORED" not in self.zero_order_beliefs or "EXPLORED" not in self.first_order_beliefs:
+        #     raise ValueError("Failed to init beliefs.")
         
+        # self.logger.info(f"zero:\n{self.zero_order_beliefs}\nfirst:\n{self.first_order_beliefs}")
         self.obs = obs.copy()
         self.obs["rgb"] = self.obs["rgb"].transpose(1, 2, 0)
         self.num_frames = obs["current_frames"]
@@ -1006,7 +979,13 @@ class lm_agent_cobel:
                     self.dialogue_history.append(
                         f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
                     )
-        #dialogue_history = message
+                    self.dialogue.append(
+                        f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
+                    )
+                    if i != self.agent_id:
+                        self.message_received.append(
+                            f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
+                        )
 
         self.position = self.obs["agent"][:3]
         self.forward = self.obs["agent"][3:]
@@ -1019,6 +998,13 @@ class lm_agent_cobel:
             or self.rooms_explored[self.current_room] != "all"
         ):
             self.rooms_explored[self.current_room] = "part"
+
+        if (
+            self.current_room not in self.my_rooms_explored
+            or self.my_rooms_explored[self.current_room] != "all"
+        ):
+            self.my_rooms_explored[self.current_room] = "part"
+        
         if self.agent_id not in self.with_character:
             self.with_character.append(
                 self.agent_id
@@ -1026,7 +1012,11 @@ class lm_agent_cobel:
         self.holding_objects_id = []
         self.with_oppo = []
         self.oppo_holding_objects_id = []
+        hand = 0
         for x in self.obs["held_objects"]:
+            if x['type'] != None:
+                self.my_holding_first[hand] = x
+                hand += 1
             if x["type"] == 0:
                 self.holding_objects_id.append(x["id"])
                 if x["id"] not in self.with_character:
@@ -1049,9 +1039,16 @@ class lm_agent_cobel:
                     # self.with_character.append(y)
         oppo_name = {}
         oppo_type = {}
+        oppo_hand = 0
         for x in self.obs["oppo_held_objects"]:
+            if x['type'] != None:
+                self.oppo_holding_objects_first[oppo_hand] = x
+                self.oppo_holding_objects_zero[oppo_hand] = x
+                oppo_hand += 1
             if x["type"] == 0:
                 self.oppo_holding_objects_id.append(x["id"])
+                self.oppo_holding_objects_first
+                self.oppo_holding_objects_zero
                 self.with_oppo.append(x["id"])
                 oppo_name[x["id"]] = x["name"]
                 oppo_type[x["id"]] = x["type"]
@@ -1119,6 +1116,11 @@ class lm_agent_cobel:
         ignore_ids += self.satisfied
         ignore_obstacles += self.satisfied
 
+        satisfied_obj_info = [self.object_info[x] for x in self.satisfied if x in self.object_info]
+
+         
+
+        
         self.agent_memory.update(
             obs,
             ignore_ids=ignore_ids,
@@ -1133,6 +1135,9 @@ class lm_agent_cobel:
         # print(self.new_object_list)
         self.get_object_list()
 
+
+
+        
         info = {
             "satisfied": self.satisfied,
             #"object_list": self.object_list,
@@ -1155,7 +1160,128 @@ class lm_agent_cobel:
         lm_times = 0
         
         while action is None: #SUBPLAN DONE
-            if self.plan is None: #COBEL 这里的plan是low-level  需要处理一种情况 当subplan done之后其实是不需要在observation update一次的 所以直接跳过就好
+            
+            # if self.plan is None:
+            if self.plan is None or self.message_received != []: #cobel
+                
+                # ==================================================================================
+                        # 处理 oppo_holding_objects_zero
+                for idx, obj in enumerate(self.oppo_holding_objects_zero):
+                    # 从房间中移除该物品
+                    for room in self.rooms_name:
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.my_object_per_room[room][0]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        # 倒序删除，避免索引错乱
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.my_object_per_room[room][0].pop(idx2)
+
+
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.my_object_per_room[room][1]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        # 倒序删除，避免索引错乱
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.my_object_per_room[room][1].pop(idx2)
+
+                    # 清空逻辑：物品本身或包含物满足条件则清空
+                    
+                    if obj['id'] in self.satisfied or any(cid in self.satisfied for cid in obj['contained']):
+                        self.oppo_holding_objects_zero[idx] = {
+                            'type': None, 'id': None, 'name': None,
+                            'contained': [None, None, None],
+                            'contained_name': [None, None, None]
+                        }
+
+
+                # 处理 holding_objects_id（注意：这里是 ID 列表）
+                for idx, hand_id in enumerate(self.with_character):
+                    for room in self.rooms_name:
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.my_object_per_room[room][0]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj_id == hand_id:  # 对比 ID
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.my_object_per_room[room][0].pop(idx2)
+
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.my_object_per_room[room][1]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj_id == hand_id:  # 对比 ID
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.my_object_per_room[room][1].pop(idx2)
+
+
+
+                # 处理 my_holding_first
+                for idx, obj in enumerate(self.my_holding_first):
+                    # 从对手房间中移除
+                    for room in self.rooms_name:
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.oppo_object_per_room[room][0]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.oppo_object_per_room[room][0].pop(idx2)
+
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.oppo_object_per_room[room][1]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.oppo_object_per_room[room][1].pop(idx2)
+
+                    # 清空逻辑
+                    if obj['id'] in self.satisfied or any(cid in self.satisfied for cid in obj['contained']):
+                        self.my_holding_first[idx] = {
+                            'type': None, 'id': None, 'name': None,
+                            'contained': [None, None, None],
+                            'contained_name': [None, None, None]
+                        }
+
+
+                # 处理 oppo_holding_objects_first
+                for idx, obj in enumerate(self.oppo_holding_objects_first):
+                    # 从对手房间中移除
+                    for room in self.rooms_name:
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.oppo_object_per_room[room][0]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.oppo_object_per_room[room][0].pop(idx2)
+                        to_remove = []
+                        for idx2, obj_str in enumerate(self.oppo_object_per_room[room][1]):
+                            obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                            if obj['id'] == obj_id:
+                                to_remove.append(idx2)
+                        for idx2 in sorted(to_remove, reverse=True):
+                            self.oppo_object_per_room[room][1].pop(idx2)
+
+                    # 清空逻辑
+                    if obj['id'] in self.satisfied or any(cid in self.satisfied for cid in obj['contained']):
+                        self.oppo_holding_objects_first[idx] = {
+                            'type': None, 'id': None, 'name': None,
+                            'contained': [None, None, None],
+                            'contained_name': [None, None, None]
+                        }
+
+
+                print("===========清理手中check===========")
+                print(self.satisfied)
+                print(self.oppo_holding_objects_first[0])
+                #==============================更ixn===================================
+
+                
                 self.target_pos = None
                 if lm_times > 0:
                     #print(info)
@@ -1165,134 +1291,143 @@ class lm_agent_cobel:
                 
                 #COBEL - zhimin begin 从这里开始维护belief
                 
-                if self.obs_not_updated:
 
-                    # ===== 第一步 观测更新 subplan done跳过 =====
-                    observation,oppo_obs = self.observation2text(info)
-                    self.visible_obj = {}
-                    print("========visual and message=======\n")
-                    print(observation['observation'])
-                    print(oppo_obs)
-                    print(self.dialogue_history)
-                    visual_observation = observation['observation'] #视觉描述
-                    # mes_dic = observation['messages']
+                # ===== 第一步 观测更新 subplan done跳过 =====
+                # observation,oppo_obs = self.observation2text(info)
+                # self.visible_obj = {}
+                # print("========visual and message=======\n")
+                # print(observation['observation'])
+                # print(oppo_obs)
+                print(self.dialogue)
+                # visual_observation = observation['observation'] #视觉描述
+                
+                dialogues = "" if self.dialogue != [] else "None"
+                for mes in self.dialogue:
+                    dialogues += mes + '\n'
 
-                    #消息列表转换为对话形式
-                    #TODO 监测是否有消息
-                    # if not all(item is None for item in mes_list):
-                    #     message = ""
-                    #     for idx, agent_name in enumerate(self.agent_names):
-                    #         if mes_list[idx]:
-                    #             message += f"{agent_name}: {mes_list[idx]}\n"
-                    #     self.episode_logger.info(
-                    #         f"\nvisual_obs:{visual_observation}\nmes:\n{message}"
-                    #     )
-                    # else:
-                    #     message = "None"
-                    
-                    # message = mes_dic[self.agent_names[self.agent_id]]
-                    message = "" if self.dialogue_history else "None"
-                    for mes in self.dialogue_history:
-                        message += mes + '\n'
+                messages_received = "" if self.message_received != [] else "None"
+                for mes in self.message_received:
+                    messages_received += mes + '\n'
 
-                    #measurement update
-                    self.measurement_update(visual_observation, message, oppo_obs)    
-                    self.obs_not_updated = False
-                #COBEL justify the completion of the subplan
-                #===== 第二步 如果没有subplan或者action history过长 进行预测 =====
+                #measurement update
+                updated_zero_order_beliefs,updated_first_order_beliefs,self.opponent_subplans = self.LLM.update_beliefs(messages_received,dialogues)
+                print("=========updated_first_beleifs==========")
+                print(updated_first_order_beliefs)
+                print("=========updated_zero_beleifs==========")
+                print(updated_zero_order_beliefs)
+                if updated_first_order_beliefs:
+                    self.parse_belief_line('first',updated_first_order_beliefs)
+                if updated_zero_order_beliefs:
+                    self.parse_belief_line('zero',updated_zero_order_beliefs)
+                
+                print(self.goal_objects)
+
+                self.dialogue = [] #处理完就清空
+                self.message_received = []
+
+                self.episode_logger.info(f"\nzero update:{updated_zero_order_beliefs}\nfirst update{updated_first_order_beliefs}")
+
+                plan = None
+
+
+                if self.opponent_subplans is not None: #说明消息发送了计划
+                    my_progress = self.get_progress_description()
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
+                    print(my_progress)
+                    zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+                    self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+                    print("=========被动更新==========")
+                    self.plan_logger.info("=========被动更新==========")
+                    print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
+                    print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                    self.action_history = []
+                    self.action_history_w_mes = []
+                    self.opponent_subplans = None
+
+                #===== 只在更新计划的时候走 =====
                 if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:
-                    #TODO:add prediction here
-                    opponent_subplan,my_subplan = self.prediction() #这里就是subplan的文本，内部已经完成了beleifs的subplan更新
+                    print("=============\n", self.LLM.token_stats)
+                    oppo_progress = self.get_oppo_progress()
+                    my_progress = self.get_progress_description()
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_progress:{oppo_progress}")
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
+                    print(my_progress)
+                    print("\n")
+                    print(oppo_progress)
+                    #这个基本不可能到这
 
-                    self.plan_logger.info(
-                        f"\n{self.agent_names[self.agent_id]}: opponent_subplan:{opponent_subplan}\nmy_subplan:{my_subplan}"
-                    )
 
-                    # self.plan_logger.info(
-                    #     f"\ncompleted goals: {self.satisfied}\n all goals:{self.goal_objects}"
-                    # )
-                    self.my_subplan = my_subplan
+                    if self.opponent_subplans is not None: #说明消息发送了计划
+                        zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+
+
+                    else: #就主动
+                        zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress)
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+
+
+
+                        first_reason, self.opponent_subplans = self.LLM.prediction_first_order(oppo_progress)
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_first:{first_reason}")
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_subplan:{self.opponent_subplans}")
+                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_subplan:{self.opponent_subplans}")
+
+
+                        print("=========主动更新==========")
+                        self.plan_logger.info("=========主动更新==========")
+                        print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
+                        print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                        answer, reason, difference = self.LLM.coordination_aware(my_progress,oppo_progress,self.opponent_subplans,self.my_subplan)
+                        #有必要就更新
+                        if "YES" in answer.upper() and self.message_time < self.max_message_time:
+                            message = self.comm(difference,self.my_subplan)
+                            plan =  "send a message: " + message
+                            self.comm_counts += 1
+                            self.comm_chars += len(message)
+                            self.message_time += 1
+                            # self.plan_logger.info(
+                            #     f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                            # )
+
+                    #subplan更新后清空
                     self.action_history = [] #COBEL clean the action history
-                    continue
+                    self.action_history_w_mes = []
 
-                #TODO 刚开始啥也不知道的时候
-                
-                #belief awareness
-                difference_score, difference_content,bert_score = self.belief_awareness()
-                print(f"belief difference score:{difference_score}\ncontent:\n{difference_content}")
-                #TODO difference content不太稳定
+
+                # ======subplan规划结束=======
+                if plan is None:
+                    plan = self.intuitive_planning()
+
                 self.plan_logger.info(
-                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
-                )
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
 
-                self.episode_logger.info(
-                    f"\nAt {self.steps} steps {self.agent_names[self.agent_id]}:\nbert_score:{bert_score}\ndifference_score:{difference_score}\ndifference:\n{difference_content}"
-                )
-                self
-                if int(difference_score) > self.belief_threshold and self.message_time < self.max_message_time: #TODO 这里可以改成adaptive的
-                    mes_to_send = self.adaptive_communication(difference_content) #自适应通信
-
-                    plan =  "send a message: " 
-                    self.message_time += 1
-                    # 统计每个接收者消息的单词数
-                    for recipient, message in mes_to_send.items():
-                        # 统计消息的字符数
-                        char_count = len(message)
-                        # 检查接收者是否存在于统计字典中
-                        if recipient in self.comm_counts:
-                            # 更新已存在接收者的字符数和消息次数
-                            self.comm_counts[recipient]["char_count"] += char_count
-                            self.comm_counts[recipient]["num_count"] += 1
-                        else:
-                            # 为新接收者创建统计记录
-                            self.comm_counts[recipient] = {
-                                "char_count": char_count,
-                                "num_count": 1
-                            }
-                    # for partner in mes_to_send.keys():
-                    #     plan += partner + " : " + mes_to_send[partner] + ". "
-                    plan += str(mes_to_send) #COBEL - zhimin 字典转字符串 然后在接受时转回dic
-                    self.plan_logger.info(
-                        f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
-                    )
-                    
-                else:
-                    plan = self.intuitive_planning()#直观规划
-                    self.message_time = 0
-                    self.plan_logger.info(
-                        f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
-                    )
-                    if plan == "SUBPLAN DONE": #TODO:have to program a fuzzy match in parse
-                        self.my_subplan = None
-                        # self.plan = None #其实不需要
-                        continue
-                        
-                self.obs_not_updated = True #保证每次plan前都更新一次obs
-
-                #TODO 解析mes_list 通过环境发送
-                #COBEL - zhimin end
                 
-
-
+                    
+                if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
+                    self.my_subplan = None
+                    # self.plan = None #其实不需要
+                    continue
 
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
 
-
-                
                 self.plan = plan
 
                 if not plan.startswith('send a message:'):
                     self.action_history.append(
                         f"{plan} at step {self.num_frames}"
                     )
+                    self.message_time = 0
                 self.action_history_w_mes.append(f"{'send a message' if plan.startswith('send a message:') else plan}")
-
-                # a_info.update({"Frames": self.num_frames})
-                # info.update({"LLM": a_info})
-
-
                 lm_times += 1
             if self.plan.startswith("go to"):
                 action = self.gotoroom()
@@ -1305,8 +1440,6 @@ class lm_agent_cobel:
                 action = self.putin()
             elif self.plan.startswith("transport"):
                 action = self.goput()
-                transported_objs = self.holding_objects_id
-                self.zero_order_beliefs = self.update_belief_completion(transported_objs, self.zero_order_beliefs)
             #    self.with_character = [self.agent_id]
             elif self.plan.startswith("send a message:"):
                 # 发送消息动作
@@ -1325,7 +1458,7 @@ class lm_agent_cobel:
 
         info.update({"action": action, "plan": self.plan})
         if self.debug:
-            self.logger.info(self.plan)
+            self.logger.info(f"{self.agent_names[self.agent_id]}: {self.plan}")
             self.logger.debug(info)
         self.last_action = action
         return action
@@ -1335,146 +1468,597 @@ class lm_agent_cobel:
 
     def get_com_counts(self):
         return self.comm_counts
+
+    def get_com_chars(self):
+        return self.comm_chars
+
+    def get_api_num(self):
+        return self.LLM.api
     
-    def update_subplans(self, text, agent_subplan_dic):
-        """
-        遍历 agent_subplan_dic 中的每个 agent_name，对文本中的 agent 子目标进行更新：
-        - 若文本中不存在该 agent，则添加带有默认信息和 subplan 的模板；
-        - 若存在，则查找其后的第一个 subplan(...) 并替换为字典中对应的新 subplan 内容。
-
-        参数:
-            text (str): 原始文本，包含 agent 的描述信息。
-            agent_subplan_dic (dict): 键为 agent_name，值为对应的 subplan 字符串。
-
-        返回:
-            str: 更新后的文本。
-        """
-        result_text = text
-
-        for agent_name in agent_subplan_dic.keys():
-            # 构造正则匹配 agent(agent_name)
-            agent_pattern = f'agent_state\\({re.escape(agent_name)}\\)'
-            agent_matches = list(re.finditer(agent_pattern, result_text))
-
-            if not agent_matches:
-                # Agent 不存在，添加模板
-                print(f"Agent {agent_name} 不存在，添加模板")
-                template = f'''agent({agent_name})
-    - location(Unknown)
-    - objects_in_hand[Unknown,Unknown] 
-    - subplan("{agent_subplan_dic[agent_name]}")
-    '''
-                result_text += template
-            else:
-                # Agent 存在，替换其后第一个 subplan(...)
-                print(f"Agent {agent_name} 存在，替换 subplan")
-                # 从后往前处理，避免字符串替换后位置偏移影响后续匹配
-                for match in reversed(agent_matches):
-                    agent_end_pos = match.end()
-                    remaining_text = result_text[agent_end_pos:]
-
-                    # 查找 agent 后的第一个 subplan(...)
-                    subplan_match = re.search(r'subplan\([^)]*\)', remaining_text)
-                    if subplan_match:
-                        # 计算 subplan 在原字符串中的绝对位置
-                        subplan_start = agent_end_pos + subplan_match.start()
-                        subplan_end = agent_end_pos + subplan_match.end()
-
-                        # 构建新旧 subplan 内容
-                        old_subplan = subplan_match.group(0)
-                        new_subplan = f'subplan("{agent_subplan_dic[agent_name]}")'
-
-                        # 替换内容
-                        result_text = result_text[:subplan_start] + new_subplan + result_text[subplan_end:]
-                        print(f"  已替换 {old_subplan} -> {new_subplan}")
-                    else:
-                        # 未找到 subplan，跳过替换
-                        print(f"  未找到 agent({agent_name}) 后的 subplan，跳过替换")
-
-        return result_text
-    
-    #COBEL
-    def plot_bert_score_distribution(self, output_path=None):
-        """
-        绘制 bert_score 的分布图并保存到指定路径。
-
-        参数:
-            output_path: 图片保存路径，默认为 output_dir 下 bert_score_dist_agent{agent_id}.png
-        """
-        if len(self.bert_scores) == 0:
-            self.logger.warning("No bert_score recorded to plot.")
-            return
-        if output_path is None:
-            output_path = os.path.join(self.output_dir, f"bert_score_dist_agent{self.agent_id}.png")
-        plt.figure(figsize=(8, 6))
-        sns.histplot(self.bert_scores, kde=True, bins=20, color="skyblue", label="BERTScore")
-        plt.title("Distribution of BERTScore", fontsize=14)
-        plt.xlabel("BERTScore", fontsize=12)
-        plt.ylabel("Frequency", fontsize=12)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(output_path)
-        plt.close()
-        self.plan_logger.info(f"bert_score distribution plot saved to {output_path}")
-
-    def update_belief_completion(self, obj_ids, old_beliefs):
-        """
-        根据物体ID列表更新信念字符串中对应物体的状态
+    def parse_belief_line(self,belief_type,beliefs):
+        print("======开始解析信念============")
+        print(beliefs)
+        formatted_beliefs = []
         
-        Args:
-            obj_ids: 需要更新的物体ID列表
-            old_beliefs: 原始信念字符串,格式如:
-                        - target_obj(id1)
-                        - location
-                        - completion(incompleted)
-                        - target_obj(id2)
-                        - location  
-                        - completion(incompleted)
+        #对手拿了什么
+        #first
+        my_container_first =  None
+        oppo_container_first = None
+        #zero
+
+        oppo_container_zero = None
         
-        Returns:
-            更新后的信念字符串
-        """
-        # 将信念字符串按行分割
-        belief_lines = old_beliefs.split('\n')
-        updated_lines = []
-        
-        # 遍历每一行
-        i = 0
-        while i < len(belief_lines):
-            line = belief_lines[i]
-            # 检查是否是物体行
-            if line.strip().startswith('- target_obj'):
-                obj_line = line
-                # 获取location行和completion行
-                if i + 2 < len(belief_lines):
-                    location_line = belief_lines[i + 1]
-                    completion_line = belief_lines[i + 2]
-                    # 如果当前物体ID在需要更新的列表中
-                    # 检查当前物体ID是否在需要更新的列表中
-                    matched_obj_id = None
-                    for obj_id in obj_ids:
-                        if str(obj_id) in obj_line:
-                            matched_obj_id = obj_id
-                            break
-                    if matched_obj_id is not None:
-                        # 将incompleted/unknown改为completed
-                        completion_line = completion_line.lower()
-                        if 'incompleted' in completion_line:
-                            completion_line = completion_line.replace('incompleted', 'completed')
-                        elif 'unknown' in completion_line:
-                            completion_line = completion_line.replace('unknown', 'completed')
-                        else:
-                            self.plan_logger.warning(f"物品完成状态提取失败: {completion_line}")
-                        # 剔除已检测到的obj_id
-                        obj_ids.remove(matched_obj_id)
-                    updated_lines.extend([obj_line, location_line, completion_line])
-                    i += 3
+        print(self.rooms_name)
+        for line in beliefs.splitlines():
+            line = line.strip()
+            #<Office> (1000) -> <Office>(1000)
+            # line = re.sub(r'>([^<]*?)\(', r'>\(', line)
+            line = line.replace('> (', '>(')
+            if not line:
+                continue
+            
+            tokens = line.split()
+            if len(tokens) < 3:
+                continue
+            
+            tokens = [t.lower() for t in tokens]
+
+            
+            if belief_type == "first": 
+                
+                if tokens.count('believe') < 2:
                     continue
-                    
-            updated_lines.append(line)
-            i += 1
-        if not obj_ids:
-            self.plan_logger.warning("有物品id遗漏，未能更新信念完成状态")
+                first_believe_idx = tokens.index('believe')
+                second_believe_idx = tokens.index('believe', first_believe_idx + 1)
 
-        # 将更新后的行重新组合成字符串
-        return '\n'.join(updated_lines)
+                if first_believe_idx == 0:
+                    continue  # 没有前一个 token
+
+
+                # if tokens[first_believe_idx - 1] != self.agent_names[self.agent_id].lower():
+                #     continue  # 不匹配 agent_name
+                
+                if second_believe_idx == 0:
+                    continue  # 不可能，但安全检查
+
+                if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
+                    continue  # 不匹配 oppo_name
+                
+                belief_tokens = tokens[second_believe_idx + 1:]
+                if len(belief_tokens) < 3:
+                    continue
+                
+
+                subject = belief_tokens[0]
+                predicate = belief_tokens[1]
+                obj = belief_tokens[2]
+
+
+                believer_agent = tokens[2]  # first order 中，第二个 agent 是“相信者”（如 Bob）
+
+                #房间情况
+                if "explore" in predicate:
+                    if self.parse_room(subject) is None:
+                        continue
+                    room_str,room_name,room_id = self.parse_room(subject)
+                    if room_str not in self.rooms_name:
+                        continue
+                    if room_str not in self.oppo_rooms_explored.keys():
+                        if 'part' in obj:
+                            self.oppo_rooms_explored.update({f'{room_str}':'part'})
+                            formatted_beliefs.append(f"{room_str}':'part'")
+                        if 'all' in obj:
+                            self.oppo_rooms_explored.update({f'{room_str}':'all'})
+                            formatted_beliefs.append(f"{room_str}':'all'")
+                    else:
+                        if 'part' in obj:
+                            self.oppo_rooms_explored[room_str] = 'part'
+                            formatted_beliefs.append(f"{room_str}':'part'")
+                        if 'all' in obj:
+                            self.oppo_rooms_explored[room_str] = 'all'
+                            formatted_beliefs.append(f"{room_str}':'all'")
+
+
+                #智能体
+                for i, agent_name in enumerate(self.agent_names):
+                    if agent_name in subject.capitalize():
+                        agent_id = i
+                        if agent_id == self.opponent_agent_id:
+                            if 'hold' in predicate:
+
+                                if self.parse_obj(obj) is None:
+                                    continue
+
+
+                                obj_str, name, id = self.parse_obj(obj)
+                                obj_type = 0
+
+                                if name.lower() not in self.goal_objects.keys():
+                                    oppo_container_first = int(id)
+                                    obj_type = 1
+
+                                
+                                hold_dic = {'id': int(id), 'type': obj_type, 'name': name.lower(), 'contained': [None, None, None], 'contained_name': [None, None, None]}
+                                for hand_id , hand in enumerate(self.oppo_holding_objects_first):
+                                    if hand['id'] is None:
+                                        self.oppo_holding_objects_first[hand_id] = hold_dic
+                                        break
+                                formatted_beliefs.append(f"{hold_dic}")
+
+                            elif 'at' in predicate:
+                                if self.parse_room(obj) is None:
+                                    continue
+                                room_str, name, id = self.parse_room(obj)
+                                if room_str not in self.rooms_name:
+                                    continue
+                                self.oppo_current_room_first = room_str
+
+                                formatted_beliefs.append(f"oppo AT{room_str}")
+                        elif agent_id == self.agent_id:
+                            if 'hold' in predicate:
+                                #判断容器
+                                if self.parse_obj(obj) is None:
+                                    continue
+                                obj_str, name, id = self.parse_obj(obj)
+                                obj_type = 0
+                                if name.lower() not in self.goal_objects.keys():
+                                    my_container_first = int(id)
+                                    obj_type = 1
+                                else:
+                                    obj_type = 0
+                                hold_dic = {'id': int(id), 'type': obj_type, 'name': name.lower(), 'contained': [None, None, None], 'contained_name': [None, None, None]}
+                                for hand_id , hand in enumerate(self.my_holding_first):
+                                    if hand['id'] is None:
+                                        self.my_holding_first[hand_id] = hold_dic
+                                        break
+                                formatted_beliefs.append(f"my_first HOLD {hold_dic}")
+                            elif 'at' in predicate:
+                                if self.parse_room(obj) is None:
+                                    continue
+                                room_str, name, id = self.parse_room(obj)
+                                if room_str not in self.rooms_name:
+                                    continue
+                                self.my_current_room_first = room_str
+                                formatted_beliefs.append(f"my_first current room:{room_str}")
+
+
+
+                #物体判断
+                if predicate == 'in' and (subject not in self.agent_names):
+                    
+                    if self.parse_room(obj) is None or self.parse_obj(subject) is None:
+                        continue
+
+
+                    room_str,room_name,room_id = self.parse_room(obj)
+                    obj_str,obj_name, obj_id = self.parse_obj(subject)
+
+                    if room_str not in self.rooms_name:
+                        continue
+                    if 'bed' in subject:
+                        self.my_object_per_room[room_str][2].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str.lower()} IN {room_str}")
+                        continue
+                    
+
+                    if obj_name.lower() in self.goal_objects.keys():
+                        if obj_str.lower() not in self.oppo_object_per_room[room_str][0]:
+                            self.oppo_object_per_room[room_str][0].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str.lower()} IN {room_str}")
+
+                    elif 'bed' in obj_name.lower():
+                        if obj_str.lower() not in self.oppo_object_per_room[room_str][2]:
+                            self.oppo_object_per_room[room_str][2].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+
+                    else:
+                        if obj_str.lower() not in self.oppo_object_per_room[room_str][1]:
+                            self.oppo_object_per_room[room_str][1].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+            else:
+                try:
+                    believe_idx = tokens.index('believe')  # 不区分大小写
+                except ValueError:
+                    continue
+                
+                # if tokens[believe_idx - 1] != self.agent_names[self.agent_id].lower():
+                #     continue  # 不匹配 agent_name
+
+                belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
+
+                if len(belief_tokens) < 3:
+                    continue
+                subject = belief_tokens[0]
+                predicate = belief_tokens[1]
+                obj = belief_tokens[2]
+                believer_agent = tokens[0]  # zero order 中的主体（如 Alice）
+
+                #房屋
+                if "explore" in predicate:
+                    if self.parse_room(subject) is None:
+                        continue
+                    room_str,room_name,room_id = self.parse_room(subject)
+                    if room_str not in self.rooms_name:
+                        continue
+                    if room_str not in self.my_rooms_explored.keys():
+                        if 'part' in obj:
+                            self.my_rooms_explored.update({f'{room_str}':'part'})
+                            formatted_beliefs.append(f"{room_str}':'part'")
+                        if 'all' in obj:
+                            self.my_rooms_explored.update({f'{room_str}':'all'})
+                            formatted_beliefs.append(f"{room_str}':'all'")
+                    else:
+                        if 'part' in obj:
+                            self.my_rooms_explored[room_str] = 'part'
+                            formatted_beliefs.append(f"{room_str}':'part'")
+                        if 'all' in obj:
+                            self.my_rooms_explored[room_str] = 'all'
+                            formatted_beliefs.append(f"{room_str}':'all'")
+                #物体
+                if 'in' in predicate and (subject not in self.agent_names):
+
+                    if self.parse_room(obj) is None or self.parse_obj(subject) is None:
+                        continue
+                    
+
+                    room_str,room_name,room_id = self.parse_room(obj)
+                    obj_str,obj_name, obj_id = self.parse_obj(subject)
+
+                    if room_str not in self.rooms_name: #同时避免了容器
+                        continue
+                    if 'bed' in subject:
+                        self.my_object_per_room[room_str][2].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+                        continue
+                    
+                    
+                    if obj_name.lower() in self.goal_objects.keys():
+                        if obj_str.lower() not in self.my_object_per_room[room_str][0]:
+                            self.my_object_per_room[room_str][0].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}") 
+
+                    elif 'bed' in obj_name.lower():
+                        if obj_str.lower() not in self.my_object_per_room[room_str][2]:
+                            self.my_object_per_room[room_str][2].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+
+                    else:
+                        if obj_str.lower() not in self.my_object_per_room[room_str][1]:
+                            self.my_object_per_room[room_str][1].append(obj_str.lower())
+                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+                #智能体        
+                for i, agent_name in enumerate(self.agent_names):
+                    if agent_name in subject.capitalize():
+                        if i == self.opponent_agent_id:
+                            if self.parse_obj(obj) is None:
+                                    continue
+                            if 'hold' in predicate:
+                                #判断容器
+                                obj_str, name, id = self.parse_obj(obj)
+                                if name.lower() not in self.goal_objects.keys():
+                                    obj_type = 1
+                                    oppo_container_zero = int(id)
+                                else:
+                                    obj_type = 0
+                                hold_dic = {'id': int(id), 'type': obj_type, 'name': name.lower(), 'contained': [None, None, None], 'contained_name': [None, None, None]}
+                                for hand_id , hand in enumerate(self.oppo_holding_objects_zero):
+                                    if hand['id'] is None:
+                                        self.oppo_holding_objects_zero[hand_id] = hold_dic
+                                        break
+                            elif 'at' in predicate:
+                                if self.parse_obj(obj) is None:
+                                    continue
+                                room_str, name, id = self.parse_obj(obj)
+                                if room_str not in self.rooms_name:
+                                    continue
+                                self.oppo_current_room_zero = room_str
+                                formatted_beliefs.append(f"oppo_zero AT {room_str}")
+             
+
+
+        if belief_type == 'first':
+            if oppo_container_first != None or my_container_first != None:
+                oppo_contain = []
+                my_contain = []
+                oppo_contain_name = []
+                my_contain_name = []
+                for line in beliefs.splitlines():
+                    line = line.strip()
+
+                    tokens = line.split()
+                    if len(tokens) < 3:
+                        continue
+                    
+                    tokens = [t.lower() for t in tokens]
+                
+                    if tokens.count('believe') < 2:
+                        continue
+                    first_believe_idx = tokens.index('believe')
+                    second_believe_idx = tokens.index('believe', first_believe_idx + 1)
+                    belief_tokens = tokens[second_believe_idx + 1:]
+
+
+                    if len(belief_tokens) < 3:
+                        continue
+                    
+
+                    subject = belief_tokens[0]
+                    predicate = belief_tokens[1]
+                    obj = belief_tokens[2]
+
+                    if 'in' in predicate:
+                        if self.parse_obj(obj) is None or self.parse_obj(subject) is None:
+                            continue
+
+                        con_str,con_name,con_id = self.parse_obj(obj)
+                        obj_str,obj_name,obj_id = self.parse_obj(subject)
+                        if con_str in self.rooms_name:
+                            continue
+                        if oppo_container_first == int(con_id):
+                            for index, dic in enumerate(self.oppo_holding_objects_first):
+                                if dic['id'] == int(con_id):
+                                    for idx, obj_loc in enumerate(dic['container']):
+                                        if obj_loc is None:
+                                            dic['contained'][idx] = obj_id
+                                            dic['contained_name'][idx] = obj_name
+                                    formatted_beliefs.append(dic)
+
+                        if my_container_first == int(con_id):
+                            for index, dic in enumerate(self.my_holding_first):
+                                if dic['id'] == int(con_id):
+                                    for idx, obj_loc in enumerate(dic['container']):
+                                        if obj_loc is None:
+                                            dic['contained'][idx] = obj_id
+                                            dic['contained_name'][idx] = obj_name
+                                    formatted_beliefs.append(dic)
+
+
+
+            
+
+
+        else:
+            if oppo_container_zero != None:
+                oppo_contain = []
+                oppo_contain_name = []
+                for line in beliefs.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    tokens = line.split()
+                    if len(tokens) < 3:
+                        continue
+                    
+                    tokens = [t.lower() for t in tokens]
+                    if tokens.count('believe') < 1:
+                        continue
+                    
+                    believe_idx = tokens.index('believe')  # 不区分大小写
+
+                    belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
+                    if len(belief_tokens) < 3:
+                        continue
+                    subject = belief_tokens[0]
+                    predicate = belief_tokens[1]
+                    obj = belief_tokens[2]
+                    believer_agent = tokens[0]
+
+                    if 'in' in predicate:
+                        if self.parse_obj(obj) is None or self.parse_obj(subject) is None:
+                            continue
+
+                        con_str,con_name,con_id = self.parse_obj(obj)
+                        obj_str,obj_name,obj_id = self.parse_obj(subject)
+                        if con_str in self.rooms_name:
+                            continue
+                        if oppo_container_zero == int(con_id):
+                            for index, dic in enumerate(self.oppo_holding_objects_zero):
+                                if dic['id'] == int(con_id):
+                                    for idx, obj_loc in enumerate(dic['contained']):
+                                        if obj_loc is None:
+                                            dic['container'][idx] = obj_id
+                                            dic['container_name'][idx] = obj_name
+                                    formatted_beliefs.append(dic)
+        print("----------------解析结果----------------------\n")
+        belief_string = ""
+        for belief_formatted in formatted_beliefs:
+            print(belief_formatted,"\n")
+            belief_string += belief_formatted
+            belief_string += "\n"
+            self.episode_logger.info(f"{belief_type}信念更新:\n{belief_string}") 
+        print("==================解析结束============================\n")
+
+    def parse_room(self, text):
+        """
+        将类似 <livingroom>(1000) 的字符串：
+        1. 格式化为 <Livingroom> (1000)
+        2. 提取出 name 和 id
+
+        :param text: str, 如 "<livingroom>(1000)"
+        :return: tuple (formatted_str, name, id_int)
+                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
+        """
+        # 使用正则匹配 <...>(数字)
+        match = re.match(r'<([^>]+)>\s*\((\d+)\)', text.strip())
+        if not match:
+            # raise ValueError(f"无法解析格式: {text}")
+            return None
+
+        name_raw = match.group(1)   # 'livingroom'
+        id_str = match.group(2)     # '1000'
+
+        # 名字首字母大写（其他字母保持原样，如 livingRoom → LivingRoom）
+        # 如果希望每个单词首字母大写，用 .title()；如果只第一个字母，用 .capitalize()
+        name_capitalized = name_raw.capitalize()  # "livingroom" → "Livingroom"
+
+        # 格式化输出字符串
+        formatted = f"<{name_capitalized}> ({id_str})"
+
+        return formatted, name_capitalized, id_str
+    
+    def parse_obj(self, text):
+        """
+        将类似 <livingroom>(1000) 的字符串：
+        1. 格式化为 <Livingroom> (1000)
+        2. 提取出 name 和 id
+
+        :param text: str, 如 "<livingroom>(1000)"
+        :return: tuple (formatted_str, name, id_int)
+                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
+        """
+        # 使用正则匹配 <...>(数字)
+        match = re.match(r'<([^>]+)>\s*\((\d+)\)', text.strip())
+        if not match:
+            # raise ValueError(f"无法解析格式: {text}")
+            return None
+
+        name_raw = match.group(1)   # 'livingroom'
+        id_str = match.group(2)     # '1000'
+
+        # 名字首字母大写（其他字母保持原样，如 livingRoom → LivingRoom）
+        # 如果希望每个单词首字母大写，用 .title()；如果只第一个字母，用 .capitalize()
+        name_raw = name_raw.lower() # "livingroom" → "Livingroom"
+        id = int(id_str)
+        # 格式化输出字符串
+        formatted = f"<{name_raw}>({id_str})"
+
+        return formatted, name_raw, id
+    
+    def get_oppo_progress(self):
+        s = f"I've taken {self.steps}/3000 steps. "
+
+        sss = {}
+        for room, obj_list in self.oppo_object_per_room.items():
+            sr = ""
+            s_obj = ""
+            s_con = ""
+            s_bed = ""
+            objs = obj_list[0]
+            cons = obj_list[1]
+            if len(objs) > 0:
+                if len(objs) == 1:
+                    x = objs[0]
+                    s_obj += f"a target object {x}"
+                else:
+                    ss = ', '.join([f"{x}" for x in objs])
+                    s_obj += f"target objects " + ss
+
+            if len(cons) > 0:
+                if len(cons) == 1:
+                    x = cons[0]
+                    s_con = f"a container {x}"
+                else:
+                    ss = ', '.join([f"{x}" for x in cons])
+                    s_con = f"containers " + ss
+            if len(obj_list[2]) > 0:
+                s_bed = 'the goal position bed'
+            if s_obj == "" and s_con == "" and s_bed == "":
+                sr += 'nothing'
+            elif s_obj != "" and s_con != "" and s_bed == "":
+                sr += s_obj + ', and ' + s_con
+            elif s_obj != "" and s_con == "" and s_bed != "":
+                sr += s_obj + ', and ' + s_bed
+            elif s_obj == "" and s_con != "" and s_bed != "":
+                sr += s_con + ', and ' + s_bed
+            elif s_obj != "" and s_con != "" and s_bed != "":
+                sr += s_obj + ', ' + s_con + ', and ' + s_bed
+            else:
+                sr += s_obj + s_con + s_bed
+            sss[room] = sr
+
+        satisfied_obj_info = [self.object_info[x] for x in self.satisfied if x in self.object_info]
+
+        if len(satisfied_obj_info) == 0:
+            s += ""
+        else:
+            s += f"{'I' if self.single else 'We'}'ve already transported "
+            unique_satisfied = []
+            for x in satisfied_obj_info:
+                if x not in unique_satisfied:
+                    unique_satisfied.append(x)
+            if len([x for x in unique_satisfied if x['type'] == 0]) == 0:
+                s += 'nothing'
+            s += ', '.join([f"<{x['name']}> ({x['id']})" for x in unique_satisfied if x['type'] == 0])
+            s += ' to the bed. '
+
+        s_hold = ["", ""]
+        for i, obj in enumerate(self.oppo_holding_objects_first):
+            if obj['type'] == 0:
+                s_hold[i] = f"a target object <{obj['name']}> ({obj['id']}). "
+            elif obj['type'] == 1:
+                ss = ""
+                cnt = 0
+                for j, o in enumerate(obj['contained']):
+                    if o is None:
+                        break
+                    cnt += 1
+                    ss += f"<{obj['contained_name'][j]}> ({o}), "
+                if cnt == 0:
+                    ss = 'nothing'
+                else:
+                    ss = f"target object{'s' if cnt > 1 else ''} {ss[:-2]}"
+                s_hold[i] = f"a container <{obj['name']}> ({obj['id']}) with {ss} in it. "
+
+        if self.oppo_holding_objects_first[0]["type"] == 0 and self.oppo_holding_objects_first[1]['type'] == 0:
+            s += f"I'm holding two target objects <{self.oppo_holding_objects_first[0]['name']}> ({self.oppo_holding_objects_first[0]['id']}) and <{self.oppo_holding_objects_first[1]['name']}> ({self.oppo_holding_objects_first[1]['id']}). "
+        elif s_hold[0] == "" and s_hold[1] == "":
+            s += "I'm holding nothing. "
+        elif s_hold[0] != "" and s_hold[1] != "":
+            s += f"I'm holding {s_hold[0][:-2]}, and {s_hold[1]}"
+        else:
+            s += f"I'm holding {s_hold[0]}{s_hold[1]}"
+
+        # print(self.current_room, self.obj_per_room)
+        if self.oppo_current_room_first not in self.oppo_rooms_explored: pred_room = 'none'
+        else: pred_room = self.oppo_rooms_explored[self.oppo_current_room_first]
+        if pred_room != 'all' and sss[self.oppo_current_room_first] == 'nothing':
+            s += f"I'm in the {self.oppo_current_room_first}, where I've explored {pred_room} of it. "
+        else:
+            s += f"I'm in the {self.oppo_current_room_first}, where I've explored {pred_room} of it and found {sss[self.oppo_current_room_first]}. "
+        ### opponent modeling
+        if not self.single:
+            s_hold = ["", ""]
+            for i, obj in enumerate(self.my_holding_first):
+                if obj['type'] == 0:
+                    s_hold[i] = f"a target object <{obj['name']}> ({obj['id']}). "
+                elif obj['type'] == 1:
+                    ss = ""
+                    cnt = 0
+                    for j, o in enumerate(obj['contained']):
+                        if o is None:
+                            break
+                        cnt += 1
+                        ss += f"<{obj['contained_name'][j]}> ({o}), "
+                    if cnt == 0:
+                        ss = 'nothing'
+                    else:
+                        ss = f"target object{'s' if cnt > 1 else ''} {ss[:-2]}"
+                    s_hold[i] = f"a container <{obj['name']}> ({obj['id']}) with {ss} in it. "
+            if self.my_holding_first[0]["type"] == 0 and self.my_holding_first[1]['type'] == 0:
+                ss = f"two target objects <{self.my_holding_first[0]['name']}> ({self.my_holding_first[0]['id']}) and <{self.my_holding_first[1]['name']}> ({self.my_holding_first[1]['id']}). "
+            if s_hold[0] == "" and s_hold[1] == "":
+                ss = "nothing. "
+            elif s_hold[0] != "" and s_hold[1] != "":
+                ss = f"{s_hold[0][:-2]}, and {s_hold[1]}"
+            else:
+                ss = f"{s_hold[0]}{s_hold[1]}"
+
+            if self.my_current_room_first is None:
+                s += f"I don't know where {self.agent_names[self.agent_id]} is. "
+            elif self.my_current_room_first == self.oppo_current_room_first:
+                s += f"I also see {self.agent_names[self.agent_id]} here in the {self.oppo_current_room_first}, he is holding {ss}"
+            else:
+                s += f"Last time I saw {self.agent_names[self.agent_id]} was in the {self.my_current_room_first}, he was holding {ss}"
+
+            for room in self.rooms_name:
+                if room == self.oppo_current_room_first:
+                    continue
+                #s += f"I've explored {self.rooms_explored[room] if room in self.rooms_explored else 'None'} of the {room}, and I found {sss[room]} there. "
+                if room not in self.oppo_rooms_explored: pred_room = 'none'
+                else: pred_room = self.oppo_rooms_explored[room]
+                if pred_room != 'all' and sss[room] == 'nothing':
+                    s += f"I've explored {pred_room} of the {room}. "
+                else:
+                    s += f"I've explored {pred_room} of the {room}, and I found {sss[room]} there. "
+        return s

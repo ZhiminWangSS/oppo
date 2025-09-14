@@ -626,14 +626,10 @@ class lm_agent:
         return action
     
     def get_tokens(self):
-        return self.LLM.completion_tokens
-    
-    def get_com_cost(self):
+        return self.LLM.token_stats
+
+    def get_com_counts(self):
+        return self.comm_counts
+
+    def get_com_chars(self):
         return self.comm_chars
-    def get_api_num(self):
-        return self.LLM.api
-    def get_total_tokens(self):## for generated content counting
-        return self.LLM.total_tokens
-    
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens

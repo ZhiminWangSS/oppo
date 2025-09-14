@@ -50,10 +50,20 @@ class LLM_capo(LLM):
             self.refiner_prompt = None
             self.parsing_prompt = df["prompt"][4]
 
+
+        self.token_stats = {}
+        for call_name in ["communication","meta-plan","parsing"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
         if self.source == 'openai':
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key="sk-dd98729d7f9e4004a6ec69a743e85bdd",
-                base_url="https://api.deepseek.com"
+                api_key=api_key,
+                base_url=base_url,
             )
             print(f"loading openai model =============={lm_id}")
             if self.chat:
@@ -131,13 +141,10 @@ class LLM_capo(LLM):
                                 choice.message.content 
                                 for choice in response.choices 
                             ]
-                            if 'gpt-4' in self.lm_id:
-                                usage_cost = (response.usage.prompt_tokens * 0.03 / 1000 + 
-                                        response.usage.completion_tokens * 0.06 / 1000)
-                            elif 'gpt-3.5' in self.lm_id:
-                                usage = ( response.usage.prompt_tokens + response.usage.completion_tokens ) * 0.002 / 1000
-                            elif 'deepseek-r1' in self.lm_id:
-                                usage = (( response.usage.prompt_tokens * 0.0024 )+ (response.usage.completion_tokens * 0.0096)) / 1000
+
+                            self.api_num += 1
+                            #COBEL usage = completion token
+                            usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
                         elif "text-" in lm_id:
                             response = openai.Completion.create(model=lm_id, prompt=prompt, **sampling_params)
                             if self.debug:
@@ -174,6 +181,27 @@ class LLM_capo(LLM):
             return _generate
         self.generator = self.generator = lm_engine(self.source, self.lm_id, self.device)
         
+
+
+    def reset(self, rooms_name, roomname2id, goal_location, unsatisfied):
+        self.rooms = rooms_name
+        self.roomname2id = roomname2id
+        self.completion_tokens = 0
+        self.comm_tokens = 0
+        self.total_tokens = 0
+        self.api_num = 0
+        self.goal_location = goal_location
+        self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
+        self.goal_desc, self.goal_location_with_r = self.goal2description(unsatisfied, None)
+        self.token_stats = {}
+        for call_name in ["communication","meta-plan","parsing"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
+
+
     def get_available_plans(self, grabbed_objects, unchecked_containers, ungrabbed_objects, room_explored):
 
         """
@@ -212,7 +240,13 @@ class LLM_capo(LLM):
         chat_prompt = [{"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
         meta_plan = output[0]
-    
+        method_name = "meta-plan"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
         return meta_plan,usage
     def disscuss_refine(self,refine,meta_plan,oppo_progress,current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)
@@ -233,6 +267,13 @@ class LLM_capo(LLM):
         chat_prompt = [{"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
         message = output[0],usage
+        method_name = "communication"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
         return message
     def parsing(self, meta_plan,current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)
@@ -250,6 +291,13 @@ class LLM_capo(LLM):
         chat_prompt = [{"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
         output = output[0]
+        method_name = "parsing"
+        # 使用usage.prompt_tokens和usage.completion_tokens
+        prompt_tokens = usage[0]
+        completion_tokens = usage[1]
+        self.token_stats[method_name]["prompt"] += prompt_tokens
+        self.token_stats[method_name]["completion"] += completion_tokens
+        self.token_stats[method_name]["call_counts"] += 1
         plan = self.parse_answer(available_plans_list, output)
         return plan
 

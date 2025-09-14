@@ -440,7 +440,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 
 		if len(script_list[0]) > 0:
 			if self.recording_options['recording']:
-				assert False, "Recording not supported"
+				# assert False, "Recording not supported"
 				success, message = self.comm.render_script(script_list,
 														   recording=True,
 														   # gen_vid=False,
