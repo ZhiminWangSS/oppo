@@ -89,6 +89,7 @@ class TDW(Env):
         self.call = 0
         self.turn = 0
         self.disscuss_status = [0,0]
+        self.calls = []
         rgb_space = gym.spaces.Box(0, 256,
                                  (3,
                                   self.screen_size,
@@ -284,6 +285,7 @@ class TDW(Env):
         self.call = 0
         self.turn = 0
         self.disscuss_status = [0,0]
+        self.calls = []
         self.segmentation_colors = {}
         self.object_names = {}
         self.object_ids = {}
@@ -729,12 +731,14 @@ class TDW(Env):
                             else:
                                 self.turn += 1
                         else:
+                            self.calls.append(2)
                             #end the disscussion
                             self.disscuss = 0
                             self.turn = 0
                             self.call = 0
                         match =re.search(r"<Exit>",curr_action['message'])
                         if match:
+                            self.calls.append(self.call)
                             self.disscuss = 0
                             self.turn = 0
                             self.call = 0

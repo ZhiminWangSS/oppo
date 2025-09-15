@@ -43,14 +43,12 @@ class Challenge:
 
         start = time.time()
         results = {}
-        
+        total_tokens = {}
+        total_comm_counts = {}
+        total_comm_chars = {}
+
         #roco
-        total_0_prompt_tokens = 0
-        total_1_prompt_tokens = 0
-        total_0_api = 0
-        total_1_api = 0
-        total_0_comm_num = 0
-        total_1_
+        
         for i, episode in enumerate(eval_episodes):
             episode_logger = init_episode_logs(self.output_dir, episode)
 
@@ -99,38 +97,24 @@ class Challenge:
                 for agent_id, agent in enumerate(agents):
                     actions[str(agent_id)] = agent.act_roco(state[str(agent_id)])
                 state, reward, done, info = self.env.step(actions)
+                #print(self.env.calls)
                 local_reward += reward
                 local_finish = self.env.check_goal()
                 self.logger.info(f"Executing step {step_num} for episode: {episode}, actions: {actions}, finish: {local_finish}, frame: {self.env.num_frames}")
                 if done:
                     break
-            #COBEL episode count
-            episode_0_comm_chars = agents[0].comm_chars
-            episode_1_comm_chars = agents[1].comm_chars
-            episode_0_com = agents[0].comm_num
-            episode_1_com = agents[1].comm_num
-            episode_0_api = agents[0].get_api_num()
-            episode_1_api = agents[1].get_api_num()
-            episode_0_tokens = agents[0].get_tokens()
-            episode_1_tokens = agents[1].get_tokens()
-            episode_0_total_tokens = agents[0].get_total_tokens()
-            episode_1_total_tokens = agents[1].get_total_tokens()
-            episode_0_comm_tokens = agents[0].get_comm_tokens()
-            episode_1_comm_tokens = agents[1].get_comm_tokens()
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-            total_0_comm_tokens += episode_0_comm_tokens
-            total_1_comm_tokens += episode_1_comm_tokens
+            #count
+            for agent_id,agent in enumerate(agents):
+                total_tokens[agent_id] = agent.get_tokens() 
+                total_comm_counts[agent_id] = agent.get_comm_counts()
+                total_comm_chars[agent_id] = agent.get_comm_chars()
 
+            average_calls_per_discussion = 0
+
+            for call in self.env.calls:
+                average_calls_per_discussion += (call)
+            
+            average_calls_per_discussion /= len(self.env.calls)
             episode_total_time = time.time() - episode_start_time
             total_finish += local_finish[0] / local_finish[1]
             result = {
@@ -138,19 +122,16 @@ class Challenge:
                 "total": local_finish[1],
                 "step_num": step_num,
                 "frame": self.env.num_frames,
-                "communication num_0": episode_0_com,
-                "communication num_1": episode_1_com,
-                "comm_chars_0":episode_0_comm_chars,
-                "comm_chars_1":episode_1_comm_chars,
+                "agent_0_tokens": {"prompt":total_tokens[0][0],"completion":total_tokens[0][1]},
+                "agent_1_tokens": {"prompt":total_tokens[1][0],"completion":total_tokens[1][1]},
+                "agent_0_comm_count":total_comm_counts[0],
+                "agent_1_comm_count":total_comm_counts[1],
                 "episode_total_time": episode_total_time,
-                "api_0":episode_0_api,
-                "api_1":episode_1_api,
-                "completion_tokens_0":episode_0_tokens,
-                "completion_tokens_1":episode_1_tokens,
-                "total_tokens_0":episode_0_total_tokens,
-                "total_tokens_1":episode_1_total_tokens,
-                "comm_tokens_0": episode_0_comm_tokens,
-                "comm_tokens_1": episode_1_comm_tokens
+                "api_0":agents[0].get_api_num(),
+                "api_1":agents[1].get_api_num(),
+                "agent_0_comm_chars":total_comm_chars[0],
+                "agent_1_comm_chars":total_comm_chars[1],
+                "average_calls_per_discussion":average_calls_per_discussion
             }
             with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
                 json.dump(result, f)
@@ -160,23 +141,6 @@ class Challenge:
             "episode_results": results,
             "avg_finish": avg_finish
         }
-        total_info = {
-            "total_com_chars_0":total_0_comm_chars,
-            "total_com_chars_1":total_1_comm_chars,
-            "total_com_0":total_0_com,
-            "total_com_1":total_1_com,
-            "total_api_0":total_0_api,
-            "total_api_1":total_1_api,
-            "total_complete_tokens_0":total_0_tokens,
-            "total_complete_tokens_1":total_1_tokens,
-            "total_total_tokens_0":total_0_total_tokens,
-            "total_total_tokens_1":total_1_total_tokens,
-            "total_comm_tokens_0":total_0_comm_tokens,
-            "total_comm_tokens_1":total_1_comm_tokens
-        }
-        # roco total information record
-        with open(os.path.join(self.output_dir,"total_info.json"),'w') as f:
-            json.dump(total_info,f,indent=4)
         with open(os.path.join(self.output_dir, 'eval_result.json'), 'w') as f:
             json.dump(results, f, indent=4)
         self.logger.info(f'eval done, avg transport rate {avg_finish}')

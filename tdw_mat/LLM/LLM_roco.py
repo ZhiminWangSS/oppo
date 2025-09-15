@@ -31,18 +31,8 @@ class LLM_roco:
 
         #some count
         self.api = 0
-        self.token_stats = {}
-        self.token_stats.update({
-            "prompt":0,
-            "completion":0
-        })
-        self.comm_stats = {}
-        self.comm_stats.update(
-            {
-                "num_count":0,
-                "char_count":0
-            }
-        )
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
 
         self.debug = sampling_parameters.debug
         self.rooms = []
@@ -120,9 +110,13 @@ class LLM_roco:
                                 f.write('\n')
                         generated_samples = [response.choices[i].message.content for i in
                                              range(sampling_params['n'])]
-                        self.token_stats['prompt'] += response.usage.prompt_tokens
-                        self.token_stats['completion'] += response.usage.completion_tokens
-                        usage = response.usage.completion_tokens
+                        
+                        usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
+                        prompt_tokens = usage[0]
+                        completion_tokens = usage[1]
+                        self.prompt_tokens += prompt_tokens
+                        self.completion_tokens += completion_tokens
+
                         # if 'gpt-4' or 'gpt4' in self.lm_id:
                         #     usage = response.usage.prompt_tokens * 0.03 / 1000 + response.usage.completion_tokens * 0.06 / 1000
                         # elif 'gpt-3.5' in self.lm_id:
@@ -226,10 +220,8 @@ class LLM_roco:
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
         self.api = 0
-        self.token_stats['prompt'] = 0
-        self.token_stats['completion'] = 0
-        self.comm_stats["num_count"] = 0
-        self.comm_stats["char_count"] = 0
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
        
         self.available_actions = None
 
@@ -534,7 +526,6 @@ class LLM_roco:
                                {"role": "user", "content": gen_prompt}]
                 outputs, usage = self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)
                 self.total_cost += usage
-                self.comm_tokens += usage
                 message = outputs[0]
                 if len(message) > 0 and message[0] != '"':
                     message = re.search(r'"([^"]+)"', message)
@@ -613,7 +604,6 @@ class LLM_roco:
     #roco disscussion happen
     def disscuss(self,current_step,current_room,rooms_explored,holding_objects,satisfied,object_list,obj_per_room,action_history,dialogue_history,opponent_grabbed_objects = None,opponent_last_room = None,max_call = NotImplementedError):
         print("current_step", current_step)
-        self.comm_stats["num_count"] +=1
         self.current_room = current_room
         self.rooms_explored = rooms_explored
         self.holding_objects = holding_objects
@@ -642,7 +632,7 @@ This is the last call, you must end your response by choosing choice 2)
         outputs,usage = self.generator(prompt,self.sampling_params)
         #for communication completion
         output = outputs[0]
-        self.comm_stats["char_count"] += len(output)
+        
         return output#the disscussion return 
 
 

@@ -87,6 +87,8 @@ class lm_agent_roco:
         self.rotated = None
         self.navigation_threshold = 5
         self.detection_threshold = 5
+        self.comm_counts = 0
+        self.comm_chars = 0
 
 
     def pos2map(self, x, z):
@@ -314,6 +316,8 @@ class lm_agent_roco:
         self.save_img = save_img
         self.episode = episode
         self.episode_logger = episode_logger
+        self.comm_counts = 0
+        self.comm_chars = 0
 
     def move(self, target_pos):
         self.local_step += 1
@@ -431,6 +435,8 @@ class lm_agent_roco:
         return self.LLM.run(self.num_frames, self.current_room, self.rooms_explored, self.obs['held_objects'],[self.object_info[x] for x in self.satisfied if x in self.object_info], self.object_list, self.object_per_room, self.action_history, self.dialogue_history, self.obs['oppo_held_objects'], self.oppo_last_room)
     def LLM_disscuss(self,max_call=None):#dialogue history must be changed to current round history
         output = self.LLM.disscuss(self.num_frames,self.current_room,self.rooms_explored,self.obs['held_objects'],[self.object_info[x] for x in self.satisfied if x in self.object_info],self.object_list,self.object_per_room,self.action_history,self.dialogue_history,self.obs['oppo_held_objects'], self.oppo_last_room,max_call)
+        self.comm_counts += 1
+        self.comm_chars += len(output)
         #log the output
         self.episode_logger.info(f"{self.agent_id} agent disscuss :{output}")
         return output
@@ -870,13 +876,14 @@ class lm_agent_roco:
         self.last_action = action
         return action
     
-    def get_api(self):
+    def get_api_num(self):
         return self.LLM.api
-    def get_token_stats(self):
-        return self.LLM.token_stats
-    def get_comm_stats(self):
-        return self.LLM.comm_stats    
-    
+    def get_tokens(self):
+        return (self.LLM.prompt_tokens,self.LLM.completion_tokens)    
+    def get_comm_counts(self):
+        return self.comm_counts
+    def get_comm_chars(self):
+        return self.comm_chars
    
     
     
