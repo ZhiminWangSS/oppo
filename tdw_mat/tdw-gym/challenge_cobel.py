@@ -129,6 +129,7 @@ class Challenge:
         results = {}
         total_tokens = {}
         total_com_counts = {}
+        total_comm_chars = {}
         for i, episode in enumerate(eval_episodes):
             #COBEL belief info logger
             episode_logger = init_episode_logs(self.output_dir, episode)
@@ -165,6 +166,7 @@ class Challenge:
             )
 
             # 重置每个智能体
+            init_challenge_descs = []
             for id, agent in enumerate(agents):
                 if type(env_api) == list:
                     curr_api = env_api[id]
@@ -205,7 +207,7 @@ class Challenge:
                             gt_mask=self.gt_mask,
                             save_img=self.save_img,
                             episode_logger=episode_logger,
-                            plan_logger = plan_logger
+                            plan_logger=plan_logger
                         )
                     else:
                         raise Exception(f"{agent.agent_type} not available")
@@ -218,6 +220,21 @@ class Challenge:
             done = False
             step_num = 0
             local_reward = 0.0
+
+            init_challenge_descs = []
+            # for agent_id, agent in enumerate(agents):
+            #     init_challenge_desc = agent.act_init(state[str(agent_id)]) #COBEL - zhimin 这里是act_init
+            #     init_challenge_desc = "I haven't know any goal objects' location yet." + init_challenge_desc
+            #     init_challenge_descs.append(init_challenge_desc)
+            # for agent_id, agent in enumerate(agents):
+            #     agent.init_challenge_descs = init_challenge_descs
+            agent_current_room = []
+            for agent_id, agent in enumerate(agents):
+                agent_current_room.append(agent.current_room)
+            for agent_id, agent in enumerate(agents):
+                agent.oppo_current_room_first = agent_current_room[1-agent_id]
+                agent.oppo_current_room_zero = agent_current_room[1-agent_id]
+                agent.my_current_room_first = agent_current_room[agent_id]
             while not done:
                 step_num += 1
                 actions = {}
@@ -227,11 +244,11 @@ class Challenge:
                         os.path.join(self.output_dir, str(episode), "Images")
                     )
                 for agent_id, agent in enumerate(agents):
-                    
-                    # print(f"agent状态：{state[str(agent_id)]}")
                     actions[str(agent_id)] = agent.act_cobel(state[str(agent_id)])
-                    # 执行大模型推理获得动作
-                    print(f"agent_id:{agent_id}\ntoken_cost:{agent.get_tokens()}")
+                    #组内通信 - COBEL
+                    if actions[str(agent_id)]['type'] == 6:
+                        state[str(1-agent_id)]['messages'][agent_id] = actions[str(agent_id)]['message']
+
                 state, reward, done, info = self.env.step(actions)
                 local_reward += reward
                 local_finish = self.env.check_goal()
@@ -240,30 +257,33 @@ class Challenge:
                 )
                 if done:
                     break
-                # for agent_id, agent in enumerate(agents):
-                #     if actions[str(agent_id)] == "send a message":
-                #         communication_num += 1
-                #         print("Communication action taken by agent:", agent_id)
-            episode_time = time.time() - start_time
-
+            episode_total_time = time.time() - start_time
+            #COBEL episode count
+            episode_0_comm_chars = agents[0].comm_chars
+            episode_1_comm_chars = agents[1].comm_chars
+            episode_0_com = agents[0].get_com_counts()
+            episode_1_com = agents[1].get_com_counts()
+            episode_0_api = agents[0].get_api_num()
+            episode_1_api = agents[1].get_api_num()
+            episode_0_tokens = agents[0].get_tokens()
+            episode_1_tokens = agents[1].get_tokens()
             # 记录结果
             #COBEL - TODO
-            for agent_id,agent in enumerate(agents):
-                total_com_counts[agent_id] = agent.get_com_counts()
-                total_tokens[agent_id] = agent.get_tokens()
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
                 "total": local_finish[1],
                 "step_num": step_num,
                 "frame": self.env.num_frames,
-                "agent_0_tokens":total_tokens[0], #character
-                "agent_1_tokens":total_tokens[1], #character
-                "agent_0_com_num":total_com_counts[0], #count TODO
-                "agent_1_com_num":total_com_counts[1],
-                "tokens_per_step_1":(total_tokens[0]['large_model']['prompt']+total_tokens[0]['large_model']['completion'])/step_num,
-                "tokens_per_step_2":(total_tokens[1]['large_model']['prompt']+total_tokens[1]['large_model']['completion'])/step_num,
-                "episode_time": episode_time                     
+                "communication num_0": episode_0_com,
+                "communication num_1": episode_1_com,
+                "comm_chars_0":episode_0_comm_chars,
+                "comm_chars_1":episode_1_comm_chars,
+                "episode_total_time": episode_total_time,
+                "api_0":episode_0_api,
+                "api_1":episode_1_api,
+                "tokens_0":episode_0_tokens,
+                "tokens_1":episode_1_tokens,
             }
 
             with open(
@@ -375,7 +395,6 @@ def main():
     parser.add_argument("--data_prefix", type=str, default="dataset/dataset_train/")
     parser.add_argument("--port", default=1071, type=int)
     parser.add_argument("--agents", nargs="+", type=str, default=("h_agent",))
-    parser.add_argument("--belief_threshold", default=6, type=int)
     parser.add_argument(
         "--eval_episodes",
         nargs="+",
@@ -394,7 +413,7 @@ def main():
     parser.add_argument(
         "--source",
         default="openai",
-        choices=["hf", "openai", "deepseek"],
+        choices=["hf", "openai", "deepseek",'aliyun'],
         help="openai API or load huggingface models",
     )
     parser.add_argument(
@@ -407,7 +426,7 @@ def main():
         default="LLM/prompt_single.csv",
         help="path to prompt template file",
     )
-    parser.add_argument("--t", default=0.7, type=float)
+    parser.add_argument("--t", default=0.1, type=float)
     parser.add_argument("--top_p", default=1.0, type=float)
     parser.add_argument("--max_tokens", default=64, type=int)
     parser.add_argument("--n", default=1, type=int)
@@ -472,7 +491,7 @@ def main():
         elif agent == "lm_agent":
             agents.append(lm_agent(i, logger, args.max_frames, args, args.output_dir))
         elif agent == "lm_agent_cobel":
-            agents.append(lm_agent_cobel(i, logger, args.max_frames, args, args.output_dir,args.belief_threshold))
+            agents.append(lm_agent_cobel(i, logger, args.max_frames, args, args.output_dir))
         else:
             pass
     try:

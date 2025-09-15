@@ -1247,11 +1247,11 @@ class lm_agent_capo:
         self.last_action = action
         return action
 
-    def get_completion_tokens(self):
-        return self.LLM.completion_tokens
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens
-    def get_total_tokens(self):
-        return self.LLM.total_tokens
-    def get_api_num(self):
-        return self.LLM.api
+    def get_tokens(self):
+        return self.LLM.token_stats
+
+    def get_com_counts(self):
+        return self.comm_counts
+
+    def get_com_chars(self):
+        return self.comm_chars

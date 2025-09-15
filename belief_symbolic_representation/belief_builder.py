@@ -7,9 +7,13 @@ import re
 
 # 设置OpenAI API密钥
 # 请替换为您的实际API密钥
+
+api_key=os.environ.get("CHATANYWHERE_API_KEY")
+base_url=os.environ.get("CHATANYWHERE_URL")
+
 client = openai.OpenAI(
-    api_key="sk-b09c374d8bd2478fa94697ae79dad1bd",
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key=api_key,
+    base_url=base_url,
 )
 
 #Done: construct + refine  to generate rules, a advocator and refiner multi-round until satisfatory, 
@@ -21,26 +25,24 @@ class BeliefBuilder:
         Args:
             csv_path: CSV文件路径，包含各阶段的提示词
         """
-        self.prompts = self._load_prompts(csv_path)
+        self._load_prompts(csv_path)
         self.belief = None
         self.history = []
-        self.advice = None
+        self.suggestions = None
         self.previous_content = None
 
     def _load_prompts(self, csv_path: str) -> Dict[str, str]:
 
-        prompts = {}
+        self.prompts = {}
         try:
             # 使用pandas读取CSV文件
             df = pd.read_csv(csv_path, encoding="utf-8")
             # 将DataFrame转换为字典
-            prompts["init"] = df['prompt'][0]
-            prompts['debate'] = df["prompt"][1]
-            prompts['refine'] = df['prompt'][2]
-            return prompts
+            self.prompts["init"] = df['prompt'][0]
+            self.prompts['debate'] = df["prompt"][1]
+            self.prompts['refine'] = df['prompt'][2]
         except Exception as e:
             print(f"读取CSV文件时出错: {e}")
-            return {}
 
     def _call_openai_api(self, prompt: str) -> str:
         """调用OpenAI API
@@ -56,9 +58,9 @@ class BeliefBuilder:
         try:
             response = client.chat.completions.create(
                 # model="qwen3-235b-a22b-instruct-2507",
-                model="qwen3-30b-a3b-thinking-2507",
+                model="gpt-4o",
                 messages=messages,
-                temperature=0.2,
+                temperature=0,
                 # 较低的温度以获得更确定性的输出
                 max_tokens=2000,
             )
@@ -69,60 +71,65 @@ class BeliefBuilder:
             print(f"调用OpenAI API时出错: {e}")
             return ""
 
-    def init_construction(self, challenge_description: str):
+    def init_construction(self, challenge_description: str,belief_language):
         
         prompt = self.prompts.get("init", "")
-        prompt = prompt.replace("$Challenge_des$", challenge_description)
-
+        prompt = prompt.replace("$Task_description$", challenge_description)
+        prompt = prompt.replace("$Belief_language$", belief_language)
+        print("=================init prompt===================\n",prompt)
         if not prompt:
-            raise ValueError("未找到zero-stage提示词")
+            raise ValueError("未找到init提示词")
         # 调用API
         response = self._call_openai_api(prompt)
         print(response)
         return response
 
-    def disscussion(self,challenge_description:str,content:str):
+    def discussion(self,challenge_description:str,content:str,belief_language):
         
         prompt = self.prompts.get("debate", "")
         if not prompt:
             raise ValueError("未找到check-refine提示词")
         # 调用API
-        prompt = prompt.replace("$Challenge_des$", challenge_description)
+        prompt = prompt.replace("$Task_description$", challenge_description)
         prompt = prompt.replace('$Alice_content$',content)
+        prompt = prompt.replace("$Belief_language$", belief_language)
         response = self._call_openai_api(prompt)
+        print("=================discuss prompt===================\n",prompt)
         print(response)
         return response
         
 
-    def refine(self,challenge_des:str,previous_content:str,advice:str):
+    def refine(self,challenge_des:str,previous_content:str,suggestions:str,belief_language):
         
         prompt = self.prompts.get("refine", "")
-        prompt = prompt.replace("$Challenge_des$", challenge_des)
+        prompt = prompt.replace("$Task_description$", challenge_des)
         prompt = prompt.replace('$previous_content$',previous_content)
-        prompt = prompt.replace('$advice$',advice)
+        prompt = prompt.replace("$Belief_language$", belief_language)
+        prompt = prompt.replace('$suggestions$',suggestions)
         if not prompt:
             raise ValueError("未找到one-stage提示词")
         # 调用API
         response = self._call_openai_api(prompt)
+        print("=================refine prompt===================\n",prompt)
         print(response)
         return response
 
     
-    def build_complete_belief(self, challenge_description: str,outputfile:str):
+    def build_complete_belief(self, challenge_description: str,outputfile:str, belief_language):
         
         
         
         for i in range(3):
             if i == 0:
-                construction = self.init_construction(challenge_description)
+                construction = self.init_construction(challenge_description,belief_language)
             else:
-                construction = self.refine(challenge_description,self.previous_content,self.advice)
+                construction = self.refine(challenge_description,self.previous_content,self.suggestions,belief_language)
 
             self.previous_content = construction
 
-            disscussion = self.disscussion(challenge_description,construction)
-            self.advice = disscussion
-            match = re.search(r'satisfied:\s*([a-zA-Z]+)', disscussion, re.IGNORECASE)
+            discussion = self.discussion(challenge_description,construction,belief_language)
+            self.suggestions = discussion
+            match = re.search(r'satisfied:\s*([a-zA-Z]+)', discussion, re.IGNORECASE)
             satisfied = None
             if match:
                 satisfied  =  match.group(1).strip()
@@ -130,11 +137,13 @@ class BeliefBuilder:
             if satisfied.lower() == 'yes':
                 break
         final_construction = self.previous_content
-        match = re.search(r'construction:\s*(.*)', final_construction, re.DOTALL)
+        # 提取 "zero order belief rules:" 及之后所有内容
+        match = re.search(r'zero order belief rules:\s*(.*)', final_construction, re.DOTALL | re.IGNORECASE)
         if match:
             final_construction = match.group(1).strip()
-
+        final_construction = "zero order belief rules:\n" + final_construction
         self.save_belief(final_construction,outputfile)
+
     def save_belief(self, belief, output_path: str) -> None:
         """保存belief到JSON文件
 
@@ -142,23 +151,45 @@ class BeliefBuilder:
             belief: belief字典
             output_path: 输出文件路径
         """
-        with open(output_path,'w') as f:
-            f.write(belief)
+        with open(output_path, 'w') as f:
+            f.write(str(belief))
             f.write("\n")
 
 
 # 使用示例
 def main():
     # CSV文件路径
-    csv_path = r"./construct.csv"
-
+    csv_path = r"./belief_symbolic_representation/construct.csv"
+    
     # 创建BeliefBuilder实例
     builder = BeliefBuilder(csv_path)
 
-    challenge_description = "In this domain, two agents must collaborate to transporting as many target objects as possible to a designated bed location(unknown at beginning)(totice that bed is an important entity class as destination with only attribution: location) using available containers given a shared goal(e.g. like transport 2 apples and one pen to the bed). Each target object corresponds to a task, which can be either complete or incomplete. Agents can autonomously plan subgoals based on the overall objective.Objects, containers, and agents all have a location attribute. Initially, objects and containers are scattered across various rooms. A container can hold up to three objects, and an agent can carry up to two items at a time—these may be objects or containers. The domain consists of multiple rooms, and agents are deployed within this multi-room space, where they can freely move and explore. Each room’s exploration state is categorized as None (unexplored), Part (partially explored), or All (fully explored)."
+    challenge_cwah = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene. The objects are initially in any room or cabnet. The cabnets can contain objects, and the cabnets can be checked or unchecked. Agents can hold objects to transport them to the target table. The room's exploration state includes explored and unexplored."
+    
+    challenge_tdw = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene.  The objects are initially in any room. The container can contain objects. Agents can hold objects to transport them to the bed. Agents can hold container and put objects into them to hold more objects at a time. Agent can get the rooms' exploration state."
+    belief_language = '''
+Syntax:
+?belief = ?entity PREDICATE [?entity:?confidence] OR ?entity ATTRIBUTE [?state:?confidence]
+PREDICATE — a relational verb or state descriptor (e.g., IN, HOLD, BELIEVE, AT, INSIDE)
+ATTRIBUTE — a property or characteristic of an entity (e.g., EXPLORATION_STATE, CLEAN_STATE)
+?entity — a placeholder for any agent, object, or location in the environment (e.g., agentA, apple, room3)
+?state — a specific condition or status of an entity (e.g., part, opened)
+?confidence — one of: certain, high, medium, low
+
+Zero-order belief:
+?agent BELIEVE ?belief
+Example: 
+agentA BELIEVE apple IN [kitchen:high]
+agentA BELIEVE livingroom EXPLORED [part:high]
+
+First-order belief:
+?agentA BELIEVE ?agentB BELIEVE ?belief
+Example: agentA BELIEVE agentB BELIEVE banana IN [pantry:medium]
+
+'''
     os.makedirs("./belief_rules",exist_ok=True)
-    outputfile = "./belief_rules/rules.txt"
-    builder.build_complete_belief(challenge_description,outputfile)
+    outputfile = "./belief_rules/rules.txt" 
+    builder.build_complete_belief(challenge_tdw,outputfile,belief_language)
     process = builder.history
     
 

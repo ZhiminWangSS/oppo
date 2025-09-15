@@ -359,13 +359,13 @@ class LLM_agent:
 		self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
 		self.episode_logger = episode_logger
 		
-	def get_completion_tokens(self):
-		return self.LLM.completion_tokens
-	def get_total_tokens(self):
-		return self.LLM.total_tokens
-	
+
 	def get_api_num(self):
 		return self.LLM.api_num
-	
+
+
 	def get_comm_tokens(self):
 		return self.LLM.comm_tokens
+	
+	def get_token_stats(self):
+		return self.LLM.token_stats
