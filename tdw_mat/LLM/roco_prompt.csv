@@ -1,0 +1,18 @@
+type,prompt
+disscuss,"You are $AGENT_NAME$, collaborating with $OPPO_NAME$. You want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. You can hold two things at a time, and they can be objects or containers. You can grasp containers and put objects into them to hold more objects at a time.  Note that a container can contain three objects, and will be lost once transported to the bed. You can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed.
+Goal: $GOAL$.
+Current observation:$current_observation$
+Previous actions:$previous_actions$
+[Action Options]:$available_actions$
+Dialogue history:$dialogue history$
+You are disscussing with $OPPO_NAME$, the dialogue history is your previous discussion, you should think carefully about the task, previous actions and others' response. Carefully check and make advice to achieve better collaboration. 
+
+When you respond, tell others about your plan and your condition. Respond very concisely but informatively, and do not repeat what others have said.
+Discuss together to come up with the best plan to complete the goal. Never forget you are $AGENT_NAME$! 
+Propose exactly one action as your own plan at the **current** round, select it from [Action Options] according to the your current observation. At least one agent should be acting, you can't all WAIT.
+End your response by either: 1) output PROCEED, if the plans require further discussion, or 2) If everyone has made proposals and got approved, output EXit and the final plan. 
+Must strictly follow [Action Output Instruction]! and feel free to choose 2) to save your word.
+[Action Output Instruction]:
+If you choose  1), output: <Proceed> <your response>
+If you choose  2), output: <Exit> alice_plan:   bob_plan:   
+"
