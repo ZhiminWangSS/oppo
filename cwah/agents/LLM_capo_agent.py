@@ -407,8 +407,6 @@ class capo_agent(LLM_agent):
         self.node_memory = []
         self.comm_num = 0
         self.characters = 0
-        self.LLM.api = 0
-        self.LLM.tokens = 0
     def get_api(self):
         return self.LLM.api_num
     def get_comm_tokens(self):

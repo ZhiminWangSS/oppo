@@ -88,8 +88,6 @@ class lm_agent_roco:
         self.navigation_threshold = 5
         self.detection_threshold = 5
 
-        self.comm_chars = 0
-        self.comm_num = 0
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -298,8 +296,6 @@ class lm_agent_roco:
         self.rotated = None
         self.rooms_explored = {}
         #COBEL
-        self.comm_chars = 0
-        self.comm_num = 0
         self.plan = None
         self.action_history = [f"go to {self.current_room} at initial step"]
         self.dialogue_history = []
@@ -434,9 +430,7 @@ class lm_agent_roco:
     def LLM_plan(self):
         return self.LLM.run(self.num_frames, self.current_room, self.rooms_explored, self.obs['held_objects'],[self.object_info[x] for x in self.satisfied if x in self.object_info], self.object_list, self.object_per_room, self.action_history, self.dialogue_history, self.obs['oppo_held_objects'], self.oppo_last_room)
     def LLM_disscuss(self,max_call=None):#dialogue history must be changed to current round history
-        self.comm_num += 1
         output = self.LLM.disscuss(self.num_frames,self.current_room,self.rooms_explored,self.obs['held_objects'],[self.object_info[x] for x in self.satisfied if x in self.object_info],self.object_list,self.object_per_room,self.action_history,self.dialogue_history,self.obs['oppo_held_objects'], self.oppo_last_room,max_call)
-        self.comm_chars += len(output)
         #log the output
         self.episode_logger.info(f"{self.agent_id} agent disscuss :{output}")
         return output
@@ -618,8 +612,8 @@ class lm_agent_roco:
                           "message": ' '.join(self.plan.split(' ')[3:])}
                 self.plan = None
 
-                self.comm_num += 1
-                self.comm_chars += len(action["message"])
+
+               
             elif self.plan.startswith('wait'):
                 action = None
                 break
@@ -861,8 +855,6 @@ class lm_agent_roco:
                           "message": ' '.join(self.plan.split(' ')[3:])}
                 self.plan = None
 
-                self.comm_num += 1
-                self.comm_chars += len(action["message"])
             #if one agent choose to wait, it means no plan for it and he have to wait for disscussion
             elif self.plan.startswith("Wait"):
                 self.plan = None
@@ -878,19 +870,14 @@ class lm_agent_roco:
         self.last_action = action
         return action
     
-    
-    
+    def get_api(self):
+        return self.LLM.api
+    def get_token_stats(self):
+        return self.LLM.token_stats
+    def get_comm_stats(self):
+        return self.LLM.comm_stats    
     
    
     
     
-    def get_tokens(self):
-        return self.LLM.completion_tokens
     
-    def get_api_num(self):
-        return self.LLM.api
-    def get_total_tokens(self):## for generated content counting
-        return self.LLM.total_tokens
-    
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens

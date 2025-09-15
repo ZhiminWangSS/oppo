@@ -34,7 +34,7 @@ class Challenge:
         self.logger.info("done")
 
 
-        #COBEL
+        #roco
     def submit(self, agents, logger, eval_episodes):
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -44,19 +44,13 @@ class Challenge:
         start = time.time()
         results = {}
         
-        #COBEL
-        total_0_comm_chars = 0
-        total_1_comm_chars = 0
-        total_0_com = 0
-        total_1_com = 0
+        #roco
+        total_0_prompt_tokens = 0
+        total_1_prompt_tokens = 0
         total_0_api = 0
         total_1_api = 0
-        total_0_tokens = 0
-        total_1_tokens = 0
-        total_0_total_tokens = 0
-        total_1_total_tokens = 0
-        total_0_comm_tokens = 0
-        total_1_comm_tokens = 0
+        total_0_comm_num = 0
+        total_1_
         for i, episode in enumerate(eval_episodes):
             episode_logger = init_episode_logs(self.output_dir, episode)
 
