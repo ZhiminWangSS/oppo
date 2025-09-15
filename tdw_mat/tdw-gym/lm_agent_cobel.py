@@ -1015,7 +1015,8 @@ class lm_agent_cobel:
         hand = 0
         for x in self.obs["held_objects"]:
             if x['type'] != None:
-                self.my_holding_first[hand] = x
+                # self.my_holding_first[hand] = x
+                self.holding_objects_id.append(x['id'])
                 hand += 1
             if x["type"] == 0:
                 self.holding_objects_id.append(x["id"])
@@ -1198,7 +1199,7 @@ class lm_agent_cobel:
                         }
 
 
-                # 处理 holding_objects_id（注意：这里是 ID 列表）
+                # 处理 with character（注意：这里是 ID 列表）
                 for idx, hand_id in enumerate(self.with_character):
                     for room in self.rooms_name:
                         to_remove = []
@@ -1385,6 +1386,10 @@ class lm_agent_cobel:
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                         print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                         answer, reason, difference = self.LLM.coordination_aware(my_progress,oppo_progress,self.opponent_subplans,self.my_subplan)
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
+                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
+                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} difference:{difference}")
                         #有必要就更新
                         if "YES" in answer.upper() and self.message_time < self.max_message_time:
                             message = self.comm(difference,self.my_subplan)
@@ -1406,6 +1411,10 @@ class lm_agent_cobel:
                     plan = self.intuitive_planning()
 
                 self.plan_logger.info(
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
+                
+                self.episode_logger.info(
                             f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
                         )
 
@@ -1646,10 +1655,10 @@ class lm_agent_cobel:
                             self.oppo_object_per_room[room_str][0].append(obj_str.lower())
                         formatted_beliefs.append(f"{obj_str.lower()} IN {room_str}")
 
-                    elif 'bed' in obj_name.lower():
-                        if obj_str.lower() not in self.oppo_object_per_room[room_str][2]:
-                            self.oppo_object_per_room[room_str][2].append(obj_str.lower())
-                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+                    # elif 'bed' in obj_name.lower():
+                    #     if obj_str.lower() not in self.oppo_object_per_room[room_str][2]:
+                    #         self.oppo_object_per_room[room_str][2].append(obj_str.lower())
+                    #     formatted_beliefs.append(f"{obj_str} IN {room_str}")
 
                     else:
                         if obj_str.lower() not in self.oppo_object_per_room[room_str][1]:
@@ -1717,10 +1726,10 @@ class lm_agent_cobel:
                             self.my_object_per_room[room_str][0].append(obj_str.lower())
                         formatted_beliefs.append(f"{obj_str} IN {room_str}") 
 
-                    elif 'bed' in obj_name.lower():
-                        if obj_str.lower() not in self.my_object_per_room[room_str][2]:
-                            self.my_object_per_room[room_str][2].append(obj_str.lower())
-                        formatted_beliefs.append(f"{obj_str} IN {room_str}")
+                    # elif 'bed' in obj_name.lower():
+                    #     if obj_str.lower() not in self.my_object_per_room[room_str][2]:
+                    #         self.my_object_per_room[room_str][2].append(obj_str.lower())
+                    #     formatted_beliefs.append(f"{obj_str} IN {room_str}")
 
                     else:
                         if obj_str.lower() not in self.my_object_per_room[room_str][1]:
@@ -1866,7 +1875,7 @@ class lm_agent_cobel:
             print(belief_formatted,"\n")
             belief_string += belief_formatted
             belief_string += "\n"
-            self.episode_logger.info(f"{belief_type}信念更新:\n{belief_string}") 
+        self.episode_logger.info(f"{belief_type}信念更新:\n{belief_string}") 
         print("==================解析结束============================\n")
 
     def parse_room(self, text):

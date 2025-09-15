@@ -1294,7 +1294,7 @@ class LLM_cobel:
             episode_logger.info(f"{self.agent_name}: 选动作 {output[0]}")
         
         episode_logger.info(
-            f"\n{self.agent_name}intuitive_planning:\n{output[0]}"
+            f"\n{self.agent_name} intuitive_planning:\n{output[0]}"
         )
 
         pattern_answer = rf"answer:\s*(.*)"

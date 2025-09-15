@@ -152,7 +152,7 @@ class lm_agent_capo:
         self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
         self.episode_logger = None  # 记录当前episode的日志
         self.comm_chars = 0
-        self.comm_num = 0
+        self.comm_counts = 0
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -371,7 +371,7 @@ class lm_agent_capo:
     ):
         self.force_ignore = []
         self.comm_chars = 0 
-        self.comm_num = 0 
+        self.comm_counts = 0 
         self.agent_memory = AgentMemory(
             agent_id=self.agent_id,
             agent_color=agent_color,
@@ -640,7 +640,7 @@ class lm_agent_capo:
     def LLM_meta_plan_init(self):
         output = self.LLM.meta_plan_init()
         self.comm_chars += len(output)
-        self.comm_num += 1
+        self.comm_counts += 1
         return output
     
     def LLM_disscuss_refine(self,refine,oppo_progress):## oppoprogress appear after the metaplan send to teammate and the teammate send oppoprogress to the host
@@ -661,7 +661,7 @@ class lm_agent_capo:
             opponent_last_room = self.oppo_last_room
         )
         self.comm_chars += len(output)
-        self.comm_num += 1
+        self.comm_counts += 1
         return output
     
     

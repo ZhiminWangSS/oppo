@@ -1,5 +1,6 @@
 zero order belief rules:
 ?agent BELIEVE ?object IN ?room
+?agent BELIEVE ?bed IN ?room
 ?agent BELIEVE ?container IN ?room
 ?agent BELIEVE ?agent HOLD ?object
 ?agent BELIEVE ?agent HOLD ?container
@@ -9,6 +10,7 @@ zero order belief rules:
 
 first order belief rules:
 ?agentA BELIEVE ?agentB BELIEVE ?object IN ?room
+?agentA BELIEVE ?agentB BELIEVE ?bed IN ?room
 ?agentA BELIEVE ?agentB BELIEVE ?container IN ?room
 ?agentA BELIEVE ?agentB BELIEVE ?agent HOLD ?object
 ?agentA BELIEVE ?agentB BELIEVE ?agent HOLD ?container
