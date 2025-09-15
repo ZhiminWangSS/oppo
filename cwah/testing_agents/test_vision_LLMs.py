@@ -21,7 +21,7 @@ if __name__ == '__main__':
     # with open("test_env.json", "w") as f:
     #     json.dump(env_task_set, f, indent=4)
 
-    args.record_dir = f'./test_results/{args.mode}' # set the record_dir right!
+    args.record_dir = f'./results/{args.mode}' # set the record_dir right!
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:

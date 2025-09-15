@@ -298,9 +298,9 @@ class LLM:
         sss = {}
         for room, objs in ungrabbed_objects.items():
             cons = unchecked_containers[room]
-            extra_obj = None
+            extra_obj = None 
             if type(goal_location_room) is not list and goal_location_room == room:
-                extra_obj = self.goal_location
+                extra_obj = self.goal_location #extra_obj == 目标物体
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
                 continue

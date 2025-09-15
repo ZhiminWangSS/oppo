@@ -9,7 +9,7 @@ python testing_agents/test_vision_LLM.py \
 --executable_file ../executable/linux_exec.v2.3.0.x86_64 \
 --base-port 6415 \
 --use-alice \
---lm_id gpt-4 \
+--lm_id gpt-4-ca \
 --source openai \
 --t 0.7 \
 --max_tokens 256 \

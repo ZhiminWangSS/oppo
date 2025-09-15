@@ -86,7 +86,7 @@ class lm_agent:
         self.navigation_threshold = 5
         self.detection_threshold = 5
         self.comm_chars = 0
-        self.comm_num = 0
+        self.comm_counts = 0
 
     def pos2map(self, x, z):
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
@@ -296,7 +296,7 @@ class lm_agent:
         self.rooms_explored = {}
         #COBEL
         self.comm_chars = 0
-        self.comm_num = 0
+        self.comm_counts = 0
         self.plan = None
         self.action_history = [f"go to {self.current_room} at initial step"]
         self.dialogue_history = []
@@ -609,7 +609,7 @@ class lm_agent:
                           "message": ' '.join(self.plan.split(' ')[3:])}
                 self.plan = None
 
-                self.comm_num += 1
+                self.comm_counts += 1
                 self.comm_chars += len(action["message"])
             elif self.plan.startswith('wait'):
                 action = None
