@@ -1,0 +1,19 @@
+type,prompt
+disscuss,"I'm $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712).
+You are disscussing with $OPPO_NAME$ to get your plans, the dialogue history is your previous discussion, you should think carefully about the task, previous actions and others' response. Carefully check and make advice to achieve better collaboration. 
+Goal: $GOAL$
+Current observation:$current_observation$
+Dialogue history:
+$DIALOGUE_HISTORY$
+Previous actions: $ACTION_HISTORY$
+[Action Options]:
+$AVAILABLE_ACTIONS$
+When you respond, tell others about your plan and your condition. Respond very concisely but informatively, and do not repeat what others have said.
+Discuss together to come up with the best plan to complete the goal. Never forget you are $AGENT_NAME$! 
+Propose exactly one action as your own plan at the **current** round, select it from [Action Options] according to the your current observation. At least one agent should be acting, you can't all WAIT.
+End your response by either: 1) output PROCEED My_plan: , if the plans require further discussion, or 2) If everyone has made proposals and got approved, output EXit and the final plan. 
+Must strictly follow [Action Output Instruction]! and feel free to choose 2) to save your word.
+[Action Output Instruction]:
+If you choose  1), output: <Proceed> <your response>
+If you choose  2), output: <Exit> alice_plan:   bob_plan:   
+"
