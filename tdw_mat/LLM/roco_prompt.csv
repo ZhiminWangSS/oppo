@@ -10,7 +10,7 @@ You are disscussing with $OPPO_NAME$, the dialogue history is your previous disc
 When you respond, tell others about your plan and your condition. Respond very concisely but informatively, and do not repeat what others have said.
 Discuss together to come up with the best plan to complete the goal. Never forget you are $AGENT_NAME$! 
 Propose exactly one action as your own plan at the **current** round, select it from [Action Options] according to the your current observation. At least one agent should be acting, you can't all WAIT.
-End your response by either: 1) output PROCEED, if the plans require further discussion, or 2) If everyone has made proposals and got approved, output EXit and the final plan. 
+End your response by either: 1) output PROCEED My_plan: , if the plans require further discussion, or 2) If everyone has made proposals and got approved, output EXit and the final plan. 
 Must strictly follow [Action Output Instruction]! and feel free to choose 2) to save your word.
 [Action Output Instruction]:
 If you choose  1), output: <Proceed> <your response>
