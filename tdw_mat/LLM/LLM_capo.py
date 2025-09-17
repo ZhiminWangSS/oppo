@@ -118,9 +118,7 @@ class LLM_capo:
         self.model = None  # 模型实例
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
-        self.chat = (
-            "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id or source =="openai"
-        )  # 是否为聊天模型
+        self.chat = True
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.completion_tokens = 0
         self.comm_tokens = 0
@@ -162,7 +160,7 @@ class LLM_capo:
             )
             if self.chat:
                 self.sampling_params = {
-                    "enable_thinking": False,
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,

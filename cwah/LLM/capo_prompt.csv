@@ -1,13 +1,12 @@
 type,prompt
-meta_planer,"I am Alice. My teammate Bob and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
-Assume that you are an expert plan outline designer. Given our shared goal, please help me generate a global meta plan for me and Bob during task execution, guiding me and Bob to achieve the goal collaboratively as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+meta_planer,"I’m Alice. I’m in a hurry to finish the housework with my friend Bob together. Assume that you are an expert plan outline designer. Given our shared goal, please help me generate a global meta plan for me and Bob during task execution, guiding me and Bob to achieve the goal collaboratively as soon as possible. Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+
 The generated meta plan must meet following requirements:
-1.There are 5 allowed actions you can use to construct the meta plan. 
-    1) ‘go to’: move to a specified room. 
-    2) ’explore’: explore a room for underlying target objects. 
-    3) ‘go grasp’: go to grasp a specified target object. 
-    4) ‘put’: Place an object into a specified container. 
-    5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+1.There are 4 allowed actions you can use to construct the meta plan. 
+    1) ’go explore’: explore a room for underlying target objects.
+    2) ‘go grab’: go to grab a specified target object.
+    3) ‘go put’: Put an object into/on the goal location. 
+    4) 'go check' Check an unchecked container to find if there is any objects in it.
 2.The meta plan should be concise, brief, and reliable.
 3.The meta plan must be structured strictly in the three-step format: {Action Plan: Step 1:
 Alice xxx, Bob xxx; Step 2: Alice xxx, Bob xxx; Step 3: Alice xxx, Bob xxx}. Here, 'xxx'
@@ -24,8 +23,8 @@ Step 3: Alice goes to one of the remaining rooms and explores it. Bob goes to on
 remaining rooms and explores it]}
 Goal: $GOAL$
 Given the above goal, think step by step, and generate the meta plan:"
-host,"I am Alice. My teammate Bob and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
-Assume that you are an excellent leader for coordinating the task. Given our shared goal, meta plan, dialogue history, latest progress, and my previous actions, please help me generate a message sent to Bob, in order to share my progress and inquire the opinion of Bob about the meta plan. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+host,"I’m Alice. I’m in a hurry to finish the housework with my friend Bob together. 
+Assume that you are an excellent leader for coordinating the task. Given our shared goal, meta plan, dialogue history, latest progress, and my previous actions, please help me generate a message sent to Bob, in order to share my progress and inquire the opinion of Bob about the meta plan.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 The generated message should strictly meet following requirements:
 The message has to be concise, reliable, and helpful for assisting Bob and me to make an efficient and consistent action plan, and transport as many objects to the bed as possible.
 Don't generate repetitive messages.
@@ -40,8 +39,8 @@ Previous meta plan: $PREVIOUS\_PLAN$
 Dialogue history: $DIALOGUE\_HISTORY$
 Progress: $PROGRESS$
 Teammate progress: $OPP\_PROGRESS$"
-teammate,"I am Bob. My teammate Alice and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
-Assume that you are an excellent leader for coordinating the task. Given our shared goal, action plan, dialogue history, progress, and my previous actions, please help me analyze the feasibility of the action plan proposed by Alice and generate a message to send to Alice. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+teammate,"I’m Bob. I’m in a hurry to finish the housework with my friend Alice together. 
+Assume that you are an excellent leader for coordinating the task. Given our shared goal, action plan, dialogue history, progress, and my previous actions, please help me analyze the feasibility of the action plan proposed by Alice and generate a message to send to Alice. Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 The generated meta plan should strictly meet following requirements:
 1.The message has to be concise, reliable, and helpful for assisting Bob and me to make an
 efficient and consistent action plan, and transport as many objects to the bed as possible.
@@ -71,12 +70,11 @@ Assume that you are an expert plan outline designer. Given our shared goal, prev
 The generated meta plan should strictly meet following requirements:
 1.The meta plan should be brief, reliable, authentic, and consistent with the latest progress of
 Alice and Bob. Don’t make random and meaningless plans.
-2.There are 5 allowed actions you can use to construct the meta plan. 
-    1) ‘go to’: move to a specified room. 
-    2) ’explore’: explore a room for underlying target objects. 
-    3) ‘ go grasp’: go to grasp a specified target object. 
-    4) ‘put’: Place an object into a specified container. 
-    5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+2.There are 4 allowed actions you can use to construct the meta plan. 
+    1) ’go explore’: explore a room for underlying target objects.
+    2) ‘go grab’: go to grab a specified target object.
+    3) ‘go put’: Put an object into/on the goal location. 
+    4) 'go check' Check an unchecked container to find if there is any objects in it.
 3.The meta plan must be structured strictly in a three-step format: {Action Plan: Step 1: Alice
 xxx, Bob xxx; Step 2: Alice xxx, Bob xxx; Step 3: Alice xxx, Bob xxx}. Here, 'xxx'
 represents one or multiple allowed actions. The actions in Step 1 are of the highest priority,

@@ -73,3 +73,19 @@ D. [goexplore] <bathroom> (11)
 
 ===================self.current_room============
 {'id': 56, 'category': 'Rooms', 'class_name': 'kitchen', 'prefab_name': 'PRE_ROO_Kitchen_02', 'obj_transform': {'position': [-3.75, 0.0, 6.25], 'rotation': [0.0, -0.7071068, 0.0, 0.7071067], 'scale': [1.0, 1.0, 1.0]}, 'bounding_box': {'center': [-6.249999, 1.25, 2.5], 'size': [8.0, 3.0, 8.0]}, 'properties': [], 'states': []}
+
+
+goal_location 是 cabit 123这种
+goal_location_room 一开始是列表
+
+
+
+
+
+location check
+ 
+ungrasp check
+ 
+unchecked check
+
+hold check

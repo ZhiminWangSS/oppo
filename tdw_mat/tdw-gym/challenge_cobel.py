@@ -426,7 +426,7 @@ def main():
         default="LLM/prompt_single.csv",
         help="path to prompt template file",
     )
-    parser.add_argument("--t", default=0.1, type=float)
+    parser.add_argument("--t", default=0.7, type=float)
     parser.add_argument("--top_p", default=1.0, type=float)
     parser.add_argument("--max_tokens", default=64, type=int)
     parser.add_argument("--n", default=1, type=int)

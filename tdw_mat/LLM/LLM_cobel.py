@@ -90,8 +90,10 @@ class LLM_cobel:
         self.api = 0
         self.comm_chars = 0
         self.comm_counts = 0
-        with open("./LLM/rules_tdw_no_conf.txt", "r", encoding="utf-8") as f:
+        with open("./LLM/rules_tdw_replace.txt", "r", encoding="utf-8") as f:
             self.belief_rules = f.read()
+        # with open("./LLM/rules_tdw_no_conf.txt", "r", encoding="utf-8") as f:
+        #     self.belief_rules = f.read()
         # 添加token统计字典
         self.token_stats = {}
         for call_name in ['small_model',"large_model","init_beliefs","update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware","communication"]:
@@ -121,9 +123,7 @@ class LLM_cobel:
         self.model = None  # 模型实例
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
-        self.chat = (
-            "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id
-        )  # 是否为聊天模型
+        self.chat = True
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.total_cost = 0  # 总花费
         self.communication_cost = 0  # 通信花费
@@ -163,7 +163,7 @@ class LLM_cobel:
             )
             if self.chat:
                 self.sampling_params = {
-                    "enable_thinking": False,
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -171,7 +171,7 @@ class LLM_cobel:
                 }
             else:
                 self.sampling_params = {
-                    "enable_thinking": False,
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -204,94 +204,96 @@ class LLM_cobel:
             @backoff.on_exception(backoff.expo, OpenAIError)
             def openai_generate(prompt, sampling_params, model_size="large"):
                 
-                
-                try:
-                    # 根据model_size参数选择不同的模型
-                    if model_size == "small":
-                        # 使用小参数模型
-                        model_to_use = "qwen2.5-7b-instruct" #TODO
-                    else:
-                        # 使用大参数模型（默认）
-                        model_to_use = self.lm_id #TODO
-                    
-                    if self.chat:
-                        response = client.chat.completions.create(
-                            model=model_to_use, messages=prompt, **sampling_params
-                        )
-                        self.api += 1
-                        usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
-                        
-                        # 获取token数量
-                        prompt_tokens = usage[0]
-                        completion_tokens = usage[1]
-                        self.total_tokens += (prompt_tokens + completion_tokens)
-                        self.completion_tokens += completion_tokens
-                        # 根据模型大小记录token使用情况
+                for attempt in range(10):
+                    try:
+                        # 根据model_size参数选择不同的模型
                         if model_size == "small":
-                            # 同时记录到token_stats中
-                            self.token_stats["small_model"]["prompt"] += prompt_tokens
-                            self.token_stats["small_model"]["completion"] += completion_tokens
-                            self.token_stats["small_model"]["call_counts"] += 1
+                            # 使用小参数模型
+                            model_to_use = "qwen2.5-7b-instruct" #TODO
                         else:
-                            self.token_stats["large_model"]["prompt"] += prompt_tokens
-                            self.token_stats["large_model"]["completion"] += completion_tokens
-                            self.token_stats["large_model"]["call_counts"] += 1
+                            # 使用大参数模型（默认）
+                            model_to_use = self.lm_id #TODO
                         
-                        # 总token计数
-                        if self.debug:
-                            with open(f"LLM/chat_raw.json", "a") as f:
-                                f.write(
-                                    json.dumps(
-                                        response.choices[0].message.content, indent=4
+                        if self.chat:
+                            response = client.chat.completions.create(
+                                model=model_to_use, messages=prompt, **sampling_params
+                            )
+                            self.api += 1
+                            usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
+                            
+                            # 获取token数量
+                            prompt_tokens = usage[0]
+                            completion_tokens = usage[1]
+                            self.total_tokens += (prompt_tokens + completion_tokens)
+                            self.completion_tokens += completion_tokens
+                            # 根据模型大小记录token使用情况
+                            if model_size == "small":
+                                # 同时记录到token_stats中
+                                self.token_stats["small_model"]["prompt"] += prompt_tokens
+                                self.token_stats["small_model"]["completion"] += completion_tokens
+                                self.token_stats["small_model"]["call_counts"] += 1
+                            else:
+                                self.token_stats["large_model"]["prompt"] += prompt_tokens
+                                self.token_stats["large_model"]["completion"] += completion_tokens
+                                self.token_stats["large_model"]["call_counts"] += 1
+                            
+                            # 总token计数
+                            if self.debug:
+                                with open(f"LLM/chat_raw.json", "a") as f:
+                                    f.write(
+                                        json.dumps(
+                                            response.choices[0].message.content, indent=4
+                                        )
                                     )
-                                )
-                                f.write("\n")
-                        generated_samples = [
-                            response.choices[i].message.content
-                            for i in range(sampling_params["n"])
-                        ]   
-                        # if "gpt-4" or "gpt4" in self.lm_id:
-                        #     usage = (
-                        #         response.usage.prompt_tokens * 0.03 / 1000
-                        #         + response.usage.completion_tokens * 0.06 / 1000
-                        #     )
-                        # elif "gpt-3.5" in self.lm_id:
-                        #     usage = response.usage.total_tokens * 0.002 / 1000
-                    # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
-                    #                   range(sampling_params['n'])]
-                    elif "text-" in lm_id:
-                        response = client.completions.create(
-                            model=model_to_use, prompt=prompt, **sampling_params
-                        )
-                        
-                        # 根据模型大小记录token使用情况
-                        if model_size == "small":
-                            self.small_model_tokens_in += response.usage.prompt_tokens
-                            self.small_model_tokens_out += response.usage.completion_tokens
+                                    f.write("\n")
+                            generated_samples = [
+                                response.choices[i].message.content
+                                for i in range(sampling_params["n"])
+                            ]   
+                            # if "gpt-4" or "gpt4" in self.lm_id:
+                            #     usage = (
+                            #         response.usage.prompt_tokens * 0.03 / 1000
+                            #         + response.usage.completion_tokens * 0.06 / 1000
+                            #     )
+                            # elif "gpt-3.5" in self.lm_id:
+                            #     usage = response.usage.total_tokens * 0.002 / 1000
+                        # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
+                        #                   range(sampling_params['n'])]
+                        elif "text-" in lm_id:
+                            response = client.completions.create(
+                                model=model_to_use, prompt=prompt, **sampling_params
+                            )
+                            
+                            # 根据模型大小记录token使用情况
+                            if model_size == "small":
+                                self.small_model_tokens_in += response.usage.prompt_tokens
+                                self.small_model_tokens_out += response.usage.completion_tokens
+                            else:
+                                self.large_model_tokens_in += response.usage.prompt_tokens
+                                self.large_model_tokens_out += response.usage.completion_tokens
+
+                            # 总token计数
+                            
+
+                            # print(json.dumps(response, indent=4))
+                            if self.debug:
+                                with open(f"LLM/raw.json", "a") as f:
+                                    f.write(json.dumps(response, indent=4))
+                                    f.write("\n")
+                            generated_samples = [
+                                response.choices[i].text
+                                for i in range(sampling_params["n"])
+                            ]
+                        # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
+                        #               range(sampling_params['n'])]
                         else:
-                            self.large_model_tokens_in += response.usage.prompt_tokens
-                            self.large_model_tokens_out += response.usage.completion_tokens
-
-                        # 总token计数
-                        
-
-                        # print(json.dumps(response, indent=4))
-                        if self.debug:
-                            with open(f"LLM/raw.json", "a") as f:
-                                f.write(json.dumps(response, indent=4))
-                                f.write("\n")
-                        generated_samples = [
-                            response.choices[i].text
-                            for i in range(sampling_params["n"])
-                        ]
-                    # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
-                    #               range(sampling_params['n'])]
-                    else:
-                        raise ValueError(f"{lm_id} not available!")
-                except OpenAIError as e:
-                    print(e)
-                    raise e
-                return generated_samples, usage
+                            raise ValueError(f"{lm_id} not available!")
+                        return generated_samples, usage
+                    except OpenAIError as e:
+                        if attempt == 5:
+                            print(e)
+                            raise e
+                    
 
             
             def tokenize_dialog(dialog):
@@ -868,18 +870,7 @@ class LLM_cobel:
         return plans, len(available_plans), available_plans
 
     #COBEL-zhimin
-    def update_beliefs(self, received_messages, dialogues):
-        """
-        更新信念状态
-
-        参数:
-            zero_order_beliefs: 零阶信念
-            first_orderbeliefs: 一阶信念
-            belief_rules: 信念规则
-
-        返回:
-            更新后的信念状态
-        """
+    def update_beliefs(self,received_messages,dialogues):
         print("======更新信念======")
         updated_zero_order_beliefs = None
         updated_first_order_beliefs = None
@@ -888,13 +879,16 @@ class LLM_cobel:
         if not match_zero:
             raise ValueError("Failed to extract updated beliefs from output.")
         zero_order_belief_rules = match_zero.group(1).strip()
-
+        zero_order_belief_rules = zero_order_belief_rules.replace("$AGENT_NAME$", self.agent_name).replace("$OPPO_NAME$", self.oppo_name)
+        
+        
+        
         pattern_first = r"first order belief rules:\s*(.*)"
         match_first = re.search(pattern_first, self.belief_rules, re.IGNORECASE | re.DOTALL)
         if not match_first:
             raise ValueError("Failed to extract updated beliefs from output.")
         first_order_belief_rules = match_first.group(1).strip()
-        
+        first_order_belief_rules = first_order_belief_rules.replace("$AGENT_NAME$", self.agent_name).replace("$OPPO_NAME$", self.oppo_name)
         #first
         if dialogues != "None":
             prompt = (
@@ -994,6 +988,9 @@ class LLM_cobel:
 
         
         return updated_zero_order_beliefs, updated_first_order_beliefs , oppo_subplan
+        
+
+        
 
     #COBEL-zhimin
     def prediction_first_order(self, oppo_progress):

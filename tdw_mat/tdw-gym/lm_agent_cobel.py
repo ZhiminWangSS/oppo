@@ -168,7 +168,7 @@ class lm_agent_cobel:
         self.obs_not_updated = True  # 是否更新了观测
         self.max_message_time = 2
         self.message_time = 0
-        self.action_history_max_length = 3
+        self.action_history_max_length = 2
         self.action_history_w_mes = []
         self.my_subplan = None
         self.comm_counts = 0
@@ -625,6 +625,7 @@ class lm_agent_cobel:
         return action
 
     def gograsp(self):
+        #这个好像也不用看见
         target_object_id = int(self.plan.split(" ")[-1][1:-1])
         if target_object_id in self.holding_objects_id:
             self.logger.info(f"successful holding!")
@@ -1131,9 +1132,13 @@ class lm_agent_cobel:
 
         if self.obs["status"] == 0:  # ongoing###
             return {"type": "ongoing"}
-
+        self.observe_new = False
         self.get_new_object_list()
-        # print(self.new_object_list)
+        if self.new_object_list != {0: [], 1: [], 2: []}:
+            self.observe_new = True
+            print("===================新物体====================")
+            self.episode_logger.info(f"\n{self.agent_names[self.agent_id]}: 新物体")
+        print(self.new_object_list)
         self.get_object_list()
 
 
@@ -1160,10 +1165,10 @@ class lm_agent_cobel:
         action = None
         lm_times = 0
         
-        while action is None: #SUBPLAN DONE
+        while action is None : #SUBPLAN DONE
             
             # if self.plan is None:
-            if self.plan is None or self.message_received != []: #cobel
+            if self.plan is None or self.message_received!= [] or self.observe_new: #cobel
                 
                 # ==================================================================================
                         # 处理 oppo_holding_objects_zero
@@ -1277,6 +1282,41 @@ class lm_agent_cobel:
                         }
 
 
+
+                for room in self.rooms_name:
+                    to_remove = []
+                    for idx2, obj_str in enumerate(self.oppo_object_per_room[room][0]):
+                        obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                        if obj_id in self.satisfied:
+                            to_remove.append(idx2)
+                    for idx3 in sorted(to_remove, reverse=True):
+                        self.oppo_object_per_room[room][0].pop(idx3)
+
+                    to_remove = []
+                    for idx2, obj_str in enumerate(self.oppo_object_per_room[room][1]):
+                        obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                        if obj_id in self.satisfied:
+                            to_remove.append(idx2)
+                    for idx3 in sorted(to_remove, reverse=True):
+                        self.oppo_object_per_room[room][1].pop(idx3)
+
+                    to_remove = []
+                    for idx2, obj_str in enumerate(self.my_object_per_room[room][0]):
+                        obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                        if obj_id in self.satisfied:
+                            to_remove.append(idx2)
+                    for idx3 in sorted(to_remove, reverse=True):
+                        self.my_object_per_room[room][0].pop(idx3)
+
+                    to_remove = []
+                    for idx2, obj_str in enumerate(self.my_object_per_room[room][1]):
+                        obj_type, name, obj_id = self.parse_obj(obj_str)  # 修复命名
+                        if obj_id in self.satisfied:
+                            to_remove.append(idx2)
+                    for idx3 in sorted(to_remove, reverse=True):
+                        self.my_object_per_room[room][1].pop(idx3)
+
+            
                 print("===========清理手中check===========")
                 print(self.satisfied)
                 print(self.oppo_holding_objects_first[0])
@@ -1311,7 +1351,7 @@ class lm_agent_cobel:
                     messages_received += mes + '\n'
 
                 #measurement update
-                updated_zero_order_beliefs,updated_first_order_beliefs,self.opponent_subplans = self.LLM.update_beliefs(messages_received,dialogues)
+                updated_zero_order_beliefs, updated_first_order_beliefs, self.opponent_subplans = self.LLM.update_beliefs(messages_received,dialogues)
                 print("=========updated_first_beleifs==========")
                 print(updated_first_order_beliefs)
                 print("=========updated_zero_beleifs==========")
@@ -1341,6 +1381,7 @@ class lm_agent_cobel:
                     self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
                     print("=========被动更新==========")
                     self.plan_logger.info("=========被动更新==========")
+                    self.episode_logger.info("=========被动更新==========")
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                     print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     self.action_history = []
@@ -1348,7 +1389,8 @@ class lm_agent_cobel:
                     self.opponent_subplans = None
 
                 #===== 只在更新计划的时候走 =====
-                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:
+                if self.my_subplan is None or len(self.action_history) > self.action_history_max_length: #TODO 发现新物体
+                    
                     print("=============\n", self.LLM.token_stats)
                     oppo_progress = self.get_oppo_progress()
                     my_progress = self.get_progress_description()
@@ -1385,7 +1427,7 @@ class lm_agent_cobel:
                         self.plan_logger.info("=========主动更新==========")
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                         print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
-                        answer, reason, difference = self.LLM.coordination_aware(my_progress,oppo_progress,self.opponent_subplans,self.my_subplan)
+                        answer, reason, difference = self.LLM.coordination_aware(my_progress,oppo_progress,self.my_subplan,self.opponent_subplans)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
@@ -1806,20 +1848,20 @@ class lm_agent_cobel:
                         if oppo_container_first == int(con_id):
                             for index, dic in enumerate(self.oppo_holding_objects_first):
                                 if dic['id'] == int(con_id):
-                                    for idx, obj_loc in enumerate(dic['container']):
+                                    for idx, obj_loc in enumerate(dic['contained']):
                                         if obj_loc is None:
                                             dic['contained'][idx] = obj_id
                                             dic['contained_name'][idx] = obj_name
-                                    formatted_beliefs.append(dic)
+                                    formatted_beliefs.append(f"dic")
 
                         if my_container_first == int(con_id):
                             for index, dic in enumerate(self.my_holding_first):
                                 if dic['id'] == int(con_id):
-                                    for idx, obj_loc in enumerate(dic['container']):
+                                    for idx, obj_loc in enumerate(dic['contained']):
                                         if obj_loc is None:
                                             dic['contained'][idx] = obj_id
                                             dic['contained_name'][idx] = obj_name
-                                    formatted_beliefs.append(dic)
+                                    formatted_beliefs.append(f"dic")
 
 
 
@@ -1866,9 +1908,9 @@ class lm_agent_cobel:
                                 if dic['id'] == int(con_id):
                                     for idx, obj_loc in enumerate(dic['contained']):
                                         if obj_loc is None:
-                                            dic['container'][idx] = obj_id
-                                            dic['container_name'][idx] = obj_name
-                                    formatted_beliefs.append(dic)
+                                            dic['contained'][idx] = obj_id
+                                            dic['contained_name'][idx] = obj_name
+                                    formatted_beliefs.append(f"dic")
         print("----------------解析结果----------------------\n")
         belief_string = ""
         for belief_formatted in formatted_beliefs:

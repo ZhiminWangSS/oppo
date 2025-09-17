@@ -23,3 +23,11 @@ cwah
 - coela
 
 - cobel
+
+
+
+- 好像其实没有用上重规划效果已经很好了
+
+
+
+cobel food gpt4o从10开始改用了；replace stuff 14

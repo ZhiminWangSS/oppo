@@ -300,7 +300,7 @@ class LLM:
             cons = unchecked_containers[room]
             extra_obj = None 
             if type(goal_location_room) is not list and goal_location_room == room:
-                extra_obj = self.goal_location #extra_obj == 目标物体
+                extra_obj = self.goal_location #extra-obj
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
                 continue
