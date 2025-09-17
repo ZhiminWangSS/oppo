@@ -119,7 +119,7 @@ class LLM_capo:
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
         self.chat = (
-            "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id or source =="openai"
+            "qwen" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id or source =="openai"
         )  # 是否为聊天模型
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.completion_tokens = 0
@@ -154,15 +154,15 @@ class LLM_capo:
         
         elif self.source == "aliyun":
             # DeepSeek模型初始化
-            api_key=os.environ.get("ALIYUN_API_KEY")
-            base_url=os.environ.get("ALIYUN_URL")
+            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("ALIYUN_API_KEY")
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("ALIYUN_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
             )
             if self.chat:
                 self.sampling_params = {
-                    "enable_thinking": False,
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -887,7 +887,11 @@ class LLM_capo:
         chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
-        method_name = "communication"
+        # change for refine the meta-plan
+        if not refine:
+            method_name = "communication"
+        else:
+            method_name = "meta-plan"
         # 使用usage.prompt_tokens和usage.completion_tokens
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
