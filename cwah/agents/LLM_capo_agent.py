@@ -97,7 +97,7 @@ class capo_agent(LLM_agent):
     def LLM_metaplan_init(self):
         output,usage = self.LLM.meta_plan_init()
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
+        self.LLM.comm_tokens += usage[1]
         self.comm_num += 1
         self.logger.info(
             f"{self.agent_id}: meta_plan: {output}"
@@ -120,7 +120,7 @@ class capo_agent(LLM_agent):
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
+        self.LLM.comm_tokens += usage[1]
         self.comm_num += 1
         self.logger.info(
             f"{self.agent_id}: message: {output}"
