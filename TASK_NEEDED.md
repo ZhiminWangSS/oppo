@@ -1,33 +1,22 @@
-TODO 当所有物体都发现时 直接去拿 （早停）
-TODO 小修一个计划设计 尽可能让手上先满了再去其他的
-TODO 手满了不知道去放
+cwah:
+- 原始cobel 消息-新物体-无计划触发
+- 带未check容器
 
-Done 加了床位置
-Done 修复手上没有的bug
-
-
-协作拿物品 stuff cobel 2166frame run0913
-
-metric
-
-tdw
-- capo
-
-- coela done
-
-- cobel
-
-cwah
-- capo
-
-- coela
-
-- cobel
+tdw：
+- 新物体触发 + 消息触发 + 计划做完
 
 
+策略：最下策：用grasp刷到84-5
+先直接重跑一遍stuff
 
-- 好像其实没有用上重规划效果已经很好了
+cobel的实验全面开展了
+- 如果qw3 tdw 不好 考虑整理belief强制限制死更新
+- 如果cwah不好？
+
+- 现在cobel cwah都换成了原始plan
 
 
+symbolic con True vision false 看看能不能跑通
 
-cobel food gpt4o从10开始改用了；replace stuff 14
+
+原来那一版应该是no_con

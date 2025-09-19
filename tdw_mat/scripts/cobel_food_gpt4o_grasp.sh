@@ -23,7 +23,7 @@ echo "PYTHONPATH: $PYTHONPATH"
 
 
 python3 tdw-gym/challenge_cobel.py \
---output_dir results/gpt4o_food_grasp \
+--output_dir results/gpt4o_food_grasp_v2 \
 --lm_id $lm_id \
 --experiment_name LMs-$lm_id \
 --run_id run_0915 \

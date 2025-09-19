@@ -71,7 +71,7 @@ class LLM_cobel:
         
         # 调试和配置
         self.debug = sampling_parameters.debug  # 调试模式
-        self.belief_debug = False
+        self.belief_debug = True
         self.rooms = []  # 房间列表
 
         # 提示词模板相关
@@ -916,7 +916,7 @@ class LLM_cobel:
 
 
             if self.belief_debug:
-                print(f"=========prompt===========: \n{prompt}")
+                # print(f"=========prompt===========: \n{prompt}")
                 print(f"=========updated_first_beliefs=============: \nfirst:{first_output[0]}")
 
             pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
@@ -968,7 +968,7 @@ class LLM_cobel:
             
             
             if self.belief_debug:
-                print(f"=========prompt===========: \n{prompt}")
+                # print(f"=========prompt===========: \n{prompt}")
                 print(f"=========updated_zero_beliefs=============: \nzero:{zero_output[0]}")
             
             if not zero_match or not plan_match:
@@ -1173,7 +1173,7 @@ class LLM_cobel:
         
 
         if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
+            # print(f"=========prompt===========: \n{prompt}")
             print(f"=========coordination_aware=============: \n{output[0]}")
 
         pattern_reason = r'reasons:\s*(.*?)(?=' + re.escape("answer:") + r'|$)'
@@ -1240,7 +1240,7 @@ class LLM_cobel:
         # message = match_message.group(1).strip()
         message = output[0]
         if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
+            # print(f"=========prompt===========: \n{prompt}")
             print(f"=========message=============: \n{output[0]}")
         return message
     
@@ -1303,6 +1303,17 @@ class LLM_cobel:
         #TODO: COBEL parse checking the efficiency
         plan, flags = self.parse_answer(available_plans_list, answer)
         return plan
+    
+    def random_planning(self):
+
+        
+        available_plans, num, available_plans_list = self.get_available_plans_cobel()
+        filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
+        random_plan = random.choice(filtered_plans)
+        return random_plan
+    
+
+    
 
     def get_progress_description(
         self,

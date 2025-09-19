@@ -885,14 +885,36 @@ class LLM_capo:
         chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
-        method_name = "communication"
-        # 使用usage.prompt_tokens和usage.completion_tokens
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-        self.comm_tokens += usage[1]
+
+
+        if refine ==1:
+            method_name = "meta-plan"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1]
+        elif host == 1 and refine == 0:
+            method_name = "communication"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1] 
+        else:
+            method_name = "communication"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1]
+        
         message = output[0]
         return message
     

@@ -99,8 +99,8 @@ class ArenaMP(object):
             
             if 'LLM_vision' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)
-                plan_logger = self.init_plan_logs(self.record_dir, task_id)
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id,plan_logger)
+
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id)
             elif 'vision' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, self.env.all_room_name, self.env.all_containers_name, self.env.all_goal_objects_name, seed=agent.seed)
                 'TODO: dwh still work on it now'
@@ -108,15 +108,11 @@ class ArenaMP(object):
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)## add when shaokang debug
-                plan_logger = self.init_plan_logs(self.record_dir, task_id)
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id,plan_logger)
-                agent_init_rooms[agent.agent_id] = agent.current_room #cobel
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
+                
             else:
                 agent.reset(self.env.full_graph)
-        for it, agent in enumerate(self.agents):
-            for agent_id,agent_init_room in enumerate(agent_init_rooms): #第一个智能体 name
-                for agent_name,agent_current_room in agent.team_current_room.items():
-                    agent.team_current_room[agent_name][agent.agent_names[agent_id]] = agent_init_room
+
         
 
     def set_weigths(self, epsilon, weights):
@@ -165,10 +161,8 @@ class ArenaMP(object):
                     dict_actions[it], dict_info[it] = agent.get_action(obs[it], self.task_goal, action_space_ids=action_space[it])
 
             elif 'LLM' in agent.agent_type:
-                dict_actions[it], dict_info[it] = agent.get_action_cobel(obs[it], goal_spec)
-                if dict_actions[it].startswith('[send_message]'):
-                    obs[1-it]['messages'][it] = dict_actions[it][14:]
-                #改成多人 TODO
+                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)
+                
         return dict_actions, dict_info
 
     def reset_env(self):

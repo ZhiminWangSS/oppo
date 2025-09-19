@@ -14,7 +14,7 @@ class capo_agent(LLM_agent):
         self.oppo_progress = ""
         self.node_memory = []
         #counting 
-        self.comm_num = 0
+        self.comm_counts = 0
         self.comm_chars = 0
         self.logger = logger# metaplan, message, subplan
 
@@ -97,8 +97,8 @@ class capo_agent(LLM_agent):
     def LLM_metaplan_init(self):
         output,usage = self.LLM.meta_plan_init()
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
-        self.comm_num += 1
+        self.LLM.comm_tokens += usage[1]
+        self.comm_counts += 1
         self.logger.info(
             f"{self.agent_id}: meta_plan: {output}"
         )
@@ -120,8 +120,8 @@ class capo_agent(LLM_agent):
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
-        self.comm_num += 1
+        self.LLM.comm_tokens += usage[1]
+        self.comm_counts += 1
         self.logger.info(
             f"{self.agent_id}: message: {output}"
         )
@@ -405,10 +405,9 @@ class capo_agent(LLM_agent):
         self.oppo_progress = "" 
         self.metaplan = None
         self.node_memory = []
-        self.comm_num = 0
+        self.comm_counts = 0
         self.comm_chars = 0
-        self.LLM.api = 0
-        self.LLM.tokens = 0
+
     def get_tokens(self):
         return self.LLM.token_stats
 
@@ -419,7 +418,7 @@ class capo_agent(LLM_agent):
         return self.comm_chars
 
     def get_api_num(self):
-        return self.LLM.api
+        return self.LLM.api_num
 
     def filter_graph(self, obs):
         relative_id = [node['id'] for node in obs['nodes'] if node['class_name'] in self.all_relative_name]

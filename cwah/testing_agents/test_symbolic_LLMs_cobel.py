@@ -12,7 +12,7 @@ from envs.unity_environment import UnityEnvironment
 from agents import LLM_agent
 from agents.LLM_agent_cobel import LLM_agent_cobel
 from arguments import get_args
-from cwah.algos.arena_mp2 import ArenaMP
+from cwah.algos.arena_mp2_cobel import ArenaMP
 
 
 if __name__ == '__main__':
@@ -25,13 +25,13 @@ if __name__ == '__main__':
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
-        os.system("Xvfb :98 & export DISPLAY=:98")
+        os.system("Xvfb :101 & export DISPLAY=:101")
         import time
         time.sleep(3) # ensure Xvfb is open
         os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
         executable_args = {
                         'file_name': args.executable_file,
-                        'x_display': '98',
+                        'x_display': '101',
                         'no_graphics': False,
                         'timeout_wait': 5000,
         }
@@ -134,8 +134,8 @@ if __name__ == '__main__':
             #COBEL episode count
             episode_0_comm_chars = arena.agents[0].comm_chars
             episode_1_comm_chars = arena.agents[1].comm_chars
-            episode_0_com = arena.agents[0].comm_num
-            episode_1_com = arena.agents[1].comm_num
+            episode_0_com = arena.agents[0].comm_counts
+            episode_1_com = arena.agents[1].comm_counts
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
             episode_0_token_stats = arena.agents[0].get_token_stats()

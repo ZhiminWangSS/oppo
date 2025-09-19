@@ -34,7 +34,7 @@ class LLM_cobel:
         self.rooms = []
         self.prompt_template_path = prompt_template_path
         self.single = 'single' in self.prompt_template_path
-        self.belief_debug = 0
+        self.belief_debug = False
 
         self.cobel_prompts_df = pd.read_csv(self.prompt_template_path)
         with open("./LLM/rules_cwah_no_conf.txt", "r", encoding="utf-8") as f:
@@ -51,7 +51,7 @@ class LLM_cobel:
         self.completion_tokens = 0
         self.total_tokens = 0
         self.comm_tokens = 0
-        self.api = 0
+        self.api_num = 0
 
         self.token_stats = {}
         for call_name in ['total',"update_beliefs","prediction_zero_order","prediction_first_order","intuitive_planning","cooradination_aware","communication"]:
@@ -164,7 +164,7 @@ class LLM_cobel:
                                     choice.message.content 
                                     for choice in response.choices  # 直接遍历 choices 对象
                                 ]
-                                self.api += 1
+                                self.api_num += 1
                                 usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
 
                                 # if 'gpt-4' in self.lm_id:
@@ -226,7 +226,7 @@ class LLM_cobel:
         self.completion_tokens = 0
         self.comm_tokens = 0
         self.total_tokens = 0
-        self.api = 0
+        self.api_num = 0
         self.goal_location = goal_location
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
         self.goal_desc, self.goal_location_with_r = self.goal2description(unsatisfied, None)
@@ -289,7 +289,7 @@ class LLM_cobel:
         返回:
             更新后的信念状态
         """
-        print("======更新信念======")
+        
         updated_zero_order_beliefs = {}
         updated_first_order_beliefs = {}
         oppo_subplans = {}
@@ -307,46 +307,48 @@ class LLM_cobel:
         
         #first
         if dialogues != {}:
-                for agent_id, agent_name in enumerate(agent_names):
-                    if agent_name in dialogues.keys():
-                        if self.agent_name in dialogues.keys():
-                            my_oppo_dialogue = dialogues[agent_name] +'\n' + dialogues[self.agent_name]
-                        else:
-                            my_oppo_dialogue = dialogues[agent_name]
-                        prompt = (
-                            self.cobel_prompts_df["prompt"][0]
-                            .replace("$AGENT_NAME$", self.agent_name)
-                            .replace("$OPPO_NAME$", agent_name) #oppo
-                            .replace("$MESSAGE$", my_oppo_dialogue)
-                            .replace("$RULE$", first_order_belief_rules)
-                        )
-                        system_prompt = "You MUST answer strictly in this format:\n$OPPO_NAME$ knows:\nfirst order beliefs\n$OPPO_NAME$'s plan:".replace("$OPPO_NAME$", self.oppo_name)
-                        chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
-                        # chat_prompt = [{"role": "user", "content": prompt}]
-                        first_output, usage = self.generator(
-                                    chat_prompt, self.sampling_params
-                                ) # usage token cost
-                        # 记录token消耗
-                        method_name = "update_beliefs"
-                        # 使用usage.prompt_tokens和usage.completion_tokens
-                        prompt_tokens = usage[0]
-                        completion_tokens = usage[1]
-                        self.token_stats[method_name]["prompt"] += prompt_tokens
-                        self.token_stats[method_name]["completion"] += completion_tokens
-                        self.token_stats[method_name]["call_counts"] += 1
+            print("======更新信念======")
+            for agent_id, agent_name in enumerate(agent_names):
+                if agent_name == self.agent_name:
+                    continue
+                my_oppo_dialogue = ""
+                for agent_name1 in agent_names:
+                    if agent_name1 in dialogues.keys(): #改成多人
+                        my_oppo_dialogue += f"{agent_name1}: {dialogues[agent_name1]}"
+                    prompt = (
+                        self.cobel_prompts_df["prompt"][0]
+                        .replace("$AGENT_NAME$", self.agent_name)
+                        .replace("$OPPO_NAME$", agent_name) #oppo
+                        .replace("$MESSAGE$", my_oppo_dialogue)
+                        .replace("$RULE$", first_order_belief_rules)
+                    )
+                    system_prompt = "You MUST answer strictly in this format:\n$OPPO_NAME$ knows:\nfirst order beliefs\n$OPPO_NAME$'s plan:".replace("$OPPO_NAME$", self.oppo_name)
+                    chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
+                    # chat_prompt = [{"role": "user", "content": prompt}]
+                    first_output, usage = self.generator(
+                                chat_prompt, self.sampling_params
+                            ) # usage token cost
+                    # 记录token消耗
+                    method_name = "update_beliefs"
+                    # 使用usage.prompt_tokens和usage.completion_tokens
+                    prompt_tokens = usage[0]
+                    completion_tokens = usage[1]
+                    self.token_stats[method_name]["prompt"] += prompt_tokens
+                    self.token_stats[method_name]["completion"] += completion_tokens
+                    self.token_stats[method_name]["call_counts"] += 1
 
 
 
-                        if self.belief_debug:
-                            print(f"=========prompt===========: \n{prompt}")
-                            print(f"=========updated_first_beliefs=============: \nfirst:{first_output[0]}")
+                    if self.belief_debug:
+                        print(f"=========prompt===========: \n{prompt}")
+                        print(f"=========updated_first_beliefs=============: \nfirst:{first_output[0]}")
 
-                        pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
-                        first_match = re.search(pattern_first, first_output[0], re.IGNORECASE | re.DOTALL)
-                        if not first_match:
-                            continue
-                        else:
-                            updated_first_order_beliefs.update({agent_name:first_match.group(1).strip()})
+                    pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
+                    first_match = re.search(pattern_first, first_output[0], re.IGNORECASE | re.DOTALL)
+                    if not first_match:
+                        continue
+                    else:
+                        updated_first_order_beliefs.update({agent_name:first_match.group(1).strip()})
 
         else:
             updated_first_order_beliefs = {}
@@ -354,6 +356,7 @@ class LLM_cobel:
                 print(f"=========no first update==========: \n")
             
         if received_messages != {}:
+            print("======更新信念======")
             for agent_name in agent_names:
                 if agent_name in received_messages.keys():
                     prompt = (
@@ -759,7 +762,7 @@ class LLM_cobel:
             action = available_actions[i]
             option = chr(ord('A') + i)
             # txt = text.lower()
-            if f"option {option}" in text or f"{option}." in text.split(' ') or f"{option}," in text.split(' ') or f"Option {option}" in text or f"({option})" in text:
+            if f"option {option}" in text or f"{option}." in text.split(' ') or f"{option}," in text.split(' ') or f"Option {option}" in text or f"({option})" in text or f"{option}" in text:
                 return action
         print("WARNING! Fuzzy match!")
         for i in range(len(available_actions)):
@@ -786,7 +789,7 @@ class LLM_cobel:
             cons = unchecked_containers[room]
             extra_obj = None
             if type(goal_location_room) is not list and goal_location_room == room:
-                extra_obj = self.goal_location
+                extra_obj = self.goal_location#目标物体
             #没有物体在这个房间 这个房间也没有目标物体 并且 没有记录
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
@@ -859,7 +862,11 @@ class LLM_cobel:
                 s += sss[room]
             else:
                 s += f"I found {sss[room]} in the {room}. "
-
+        for room,state in room_explored.items():
+            if state == None:
+                s += f"I've explored none of the {room}. "
+            elif state == 'all':
+                s += f"I've explored all of the {room}. "
         return s
 
     def oppo_progress2text(self, current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored):
@@ -941,7 +948,11 @@ class LLM_cobel:
                 s += sss[room]
             else:
                 s += f"I found {sss[room]} in the {room}. "
-
+        for room,state in room_explored.items():
+            if state == None:
+                s += f"I've explored none of the {room}. "
+            elif state == 'all':
+                s += f"I've explored all of the {room}. "
         return s
 
     def get_available_plans_cobel(self, grabbed_objects, unchecked_containers, ungrabbed_objects, message, room_explored):

@@ -60,8 +60,6 @@ Notice:
 
 Following are provided information for you:
 
-Old beliefs: $BELIEFS$
-
 Messages: $MESSAGE$
 
 Answer strictly in this format:
@@ -81,25 +79,24 @@ The generated subplan must meet following requirements:
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
 Here are some examples for you:
 Go to a room and explore to grasp objects.
-Go to a room and explore it.
-Explore current and grasp the objects here.
-Go grasp objects and transport them to the bed.
-Explore current room.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
 Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time.
-
+It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport.
 
 
 Notice: Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). You need to output best three subplans,use ""subplan1: subplan2: subplan3:"" to represent. 
-
-What I can do:
-I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
 Following are provided information for you:
 
 Goal: $GOAL$
 
 Progress: $OPPO_PROGRESS$
+
+What I can do:
+I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. With a container, I can hold at most four objects(three in the container hold by one hand and one object on the other hand). Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
 Answer strictly in this format:
 reasoning:
@@ -114,29 +111,34 @@ First, please reason over my progress to answer the following question:
 What the possible locations of goal objects which haven't been transported based on the room exploration state?
 Such as: If a room is explored none, the probability of the goal objects in this room is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons. If you've found all the goal objects, just grasp them and transport them to the bed.
 
-Second, based on your reasoning, please generate ONLY one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible.
+Second, based on your reasoning, please generate one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible.
 The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
+- This subplan contains 1 to 3 actions. 
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
 Here are some examples for you:
 Go to a room and explore to grasp objects.
-Go to a room and explore it.
-Explore current and grasp the objects here).
-Go grasp objects and transport them to the bed.
-Explore current room.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
-Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time.
+
+Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time. It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport. If there are no more than 500 steps, just transport the objects. The total time is at most 3000 steps.
+
 
 Notice: Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017). 
 
-What I can do:
-I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+
 
 Following are provided information for you:
 
 Goal: $GOAL$
 
 Progress: $MY_PROGRESS$
+
+
+What I can do:
+I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. With a container, I can hold at most four objects(three in the container hold by one hand and one object on the other hand). Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
+
 
 Answer strictly in this format:
 reasoning:
@@ -149,25 +151,20 @@ First, please reason over my progress  to answer the following question:
 What the possible locations of goal objects which haven't been transported based on the room exploration state?
 Such as: If a room is explored none, the probability of the goal objects in this room is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons.
 
-Second, based on your reasoning and the $OPPO_NAME$'s subplan, please generate ONLY one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
+Second, based on your reasoning and the $OPPO_NAME$'s subplan, please generate one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
 
 The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
+- This subplan contains 1 to 3 actions.  
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
 Here are some examples for you:
 Go to a room and explore to grasp objects.
-Go to a room and explore it.
-Explore current and grasp the objects here.
-Go grasp objects and transport them to the bed.
-Go grasp objects and put them into the container.
-Explore current room.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
-Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time.
+Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time. It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport.
 
 Notice: Represent objects,container and room strictly in the format <name>(id) like <livingroom>(1000) <wicker_basket>(5388017).
-
-What I can do:
-I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 
 Following are provided information for you:
 
@@ -177,6 +174,8 @@ $OPPO_NAME$'s subplan: $OPPO_SUBPLAN$
 
 Progress: $MY_PROGRESS$
 
+What I can do:
+I can hold two things at a time, and they can be objects or containers. I can grasp ONLY one container at a time and put objects into the holding container to hold more objects at a time. With a container, I can hold at most four objects(three in the container hold by one hand and one object on the other hand). Note that a container can contain three objects, and will be lost once transported to the bed. The room can be explored none/part/all.
 Answer strictly in this format:
 reasoning:
 subplan:"
@@ -238,7 +237,7 @@ My subplan:  $MY_SUBPLAN$
 parsing_module,"I am $AGENT_NAME$. My teammate $OPPO_NAME$ and I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time. Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
 
 Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
-
+If i'm holding nothing, just grasp a object i found and then keep on exploring or grasping another object.
 Please provide up to three reasons to support your answer.
 
 Following are provided information for you:

@@ -58,8 +58,6 @@ Notice:
 6.The check state of containers MUST be yes/no.
 Following are provided information for you:
 
-Old beliefs: $BELIEFS$
-
 Messages: $MESSAGE$
 
 Answer strictly in this format:
@@ -86,7 +84,7 @@ Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. It may be efficient to first check the unchecked containers to find the goal objects. Note that I can hold two objects at a time and there are no costs for holding objects.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
 
 
 
@@ -128,7 +126,7 @@ Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. It may be efficient to first check the unchecked containers to find the goal objects. Note that I can hold two objects at a time and there are no costs for holding objects.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
  
 
 
@@ -167,7 +165,7 @@ Here are some examples for you:
 Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. It may be efficient to first check the unchecked containers to find the goal objects. Note that I can hold two objects at a time and there are no costs for holding objects.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
 
 
 
@@ -243,7 +241,7 @@ My subplan:  $MY_SUBPLAN$
 "
 parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
-Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly.
+Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.
 
 Please provide up to three reasons to support your answer.
 
@@ -259,6 +257,7 @@ Progress: $PROGRESS$
 
 Action list: $ACTION_LIST$
 
+You MUST choose one in the Action list, do not choose action not in the action list.
 Answer strictly in this format:
 reasons:
 answer: "

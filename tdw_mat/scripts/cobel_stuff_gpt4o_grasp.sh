@@ -23,7 +23,7 @@ echo "PYTHONPATH: $PYTHONPATH"
 
 
 python3 tdw-gym/challenge_cobel.py \
---output_dir results/gpt4o_stuff_grasp \
+--output_dir results/gpt4o_stuff_grasp_v2 \
 --lm_id $lm_id \
 --experiment_name LMs-$lm_id \
 --run_id run_0915 \
@@ -34,6 +34,6 @@ python3 tdw-gym/challenge_cobel.py \
 --prompt_template_path LLM/cobel_promptsV2.2_grasp.csv \
 --max_tokens 1024 \
 --data_prefix dataset/dataset_test/ \
---eval_episodes 12 13 14 21 22 23 15 16 17 18 19 20 \
+--eval_episodes 12 13 14 21 22 23 15 16 17 18 19 20 21 22 23 \
 --screen_size 256
 pkill -f -9 "port $port"
