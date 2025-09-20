@@ -1,0 +1,54 @@
+type,prompt
+meta_planer,"I am Alice. I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
+Assume that you are an expert plan outline designer. Given my goal, please help me generate a global meta plan for me during task execution, guiding me to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+The generated meta plan must meet following requirements:
+1.There are 5 allowed actions you can use to construct the meta plan. 
+    1) ‘go to’: move to a specified room. 
+    2) ’explore’: explore a room for underlying target objects. 
+    3) ‘go grasp’: go to grasp a specified target object. 
+    4) ‘put’: Place an object into a specified container. 
+    5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+2.The meta plan should be concise, brief, and reliable.
+3.The meta plan must be structured strictly in the three-step format: {Action Plan: Step 1:
+Alice xxx; Step 2: Alice xxx; Step 3: Alice xxx}. Here, 'xxx'
+represents one or multiple allowed actions. The actions in Step 1 are of the highest execution
+priority, while those in Step 2 and Step 3 are of medium and lowest execution priority.
+4.The meta plan should reasonably arrange action for Alice in
+order to achieve the goal as soon as possible.
+Here is an example for you:
+{Goal: [Transport 3 pens, 1 lighter, and 3 iPods to the bed.]
+Meta plan: [Step 1: Alice explores the current room. 
+Step 2: If any target objects are found, Alice go grasp objects, put them into
+containers, and transport them to the bed.
+Step 3: Alice goes to one of the remaining rooms and explores it.]}
+Goal: $GOAL$
+Given the above goal, think step by step, and generate the meta plan:"
+refiner,"I am Alice. I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
+Assume that you are an expert plan outline designer. Given my goal, previous meta plan, dialogue history, latest progress, please help me refine the meta plan into a more comprehensive and efficient plan for me, in order to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+The generated meta plan should strictly meet following requirements:
+1.The meta plan should be brief, reliable, authentic, and consistent with the latest progress of
+Alice. Don’t make random and meaningless plans.
+2.There are 5 allowed actions you can use to construct the meta plan. 
+    1) ‘go to’: move to a specified room. 
+    2) ’explore’: explore a room for underlying target objects. 
+    3) ‘go grasp’: go to grasp a specified target object. 
+    4) ‘put’: Place an object into a specified container. 
+    5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+3.The meta plan must be structured strictly in a three-step format: {Action Plan: Step 1: Alice
+xxx; Step 2: Alice xxx; Step 3: Alice xxx}. Here, 'xxx'
+represents one or multiple allowed actions. The actions in Step 1 are of the highest priority,
+while those in Step 2 and Step 3 are of medium and lowest priority, respectively.
+4.The meta plan should reasonably arrange action for Alice in
+order to achieve the goal as soon as possible.
+Following are provided information for you:
+Goal: $GOAL$
+Previous meta plan: $PREVIOUS\_PLAN$
+Progress: $PROGRESS$
+"
+parsing,"I am Alice. I want to transport as many target objects as possible to the bed with the help of containers within 3000 steps. I can hold two things at a time, and they can be objects or containers. I can grasp containers and put objects into them to hold more objects at a time.
+Assume that you are an expert decision maker. Given my goal, action plan, my progress, and previous actions, please help me choose the best available action to achieve the goal as soon as possible. Note that a container can contain three objects, and will be lost once transported to the bed. I can only put objects into the container I hold after grasping it. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly.
+Goal: $GOAL$
+Meta plan: $META\_PLAN$
+Progress: $PROGRESS$
+Previous action: $PREVIOUS\_ACTIONS$
+Action list: $ACTION\_LIST$"

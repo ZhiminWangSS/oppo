@@ -118,6 +118,7 @@ class LLM_capo:
         self.model = None  # 模型实例
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
+
         self.chat = True
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.completion_tokens = 0
@@ -152,8 +153,8 @@ class LLM_capo:
         
         elif self.source == "aliyun":
             # DeepSeek模型初始化
-            api_key=os.environ.get("ALIYUN_API_KEY")
-            base_url=os.environ.get("ALIYUN_URL")
+            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("ALIYUN_API_KEY")
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("ALIYUN_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
@@ -914,7 +915,7 @@ class LLM_capo:
             self.token_stats[method_name]["completion"] += completion_tokens
             self.token_stats[method_name]["call_counts"] += 1
             self.comm_tokens += usage[1]
-        
+       
         message = output[0]
         return message
     

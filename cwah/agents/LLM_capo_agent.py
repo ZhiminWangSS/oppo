@@ -98,6 +98,7 @@ class capo_agent(LLM_agent):
         output,usage = self.LLM.meta_plan_init()
         self.comm_chars += len(output.strip())
         self.LLM.comm_tokens += usage[1]
+
         self.comm_counts += 1
         self.logger.info(
             f"{self.agent_id}: meta_plan: {output}"
@@ -121,7 +122,9 @@ class capo_agent(LLM_agent):
                                           )
         self.comm_chars += len(output.strip())
         self.LLM.comm_tokens += usage[1]
+
         self.comm_counts += 1
+
         self.logger.info(
             f"{self.agent_id}: message: {output}"
         )
