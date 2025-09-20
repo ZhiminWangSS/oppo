@@ -1,5 +1,5 @@
 kill -9 $(lsof -t -i :6418)
-python testing_agents/test_vision_LLMs.py \
+python testing_agents/test_vision_LLMs_capo.py \
 --mode capo_vision_gpt4o \
 --communication \
 --prompt_template_path LLM/prompt_com.csv \

@@ -112,7 +112,8 @@ if __name__ == '__main__':
         total_1_comm_tokens = 0
 
         for episode_id in test_episodes:
-
+            kill_process_on_port(6418)
+            kill_process_on_port(6418)
             arena.reset(episode_id)
             
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
@@ -199,3 +200,36 @@ if __name__ == '__main__':
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))
 
+
+
+# kill the process
+def kill_process_on_port(port):
+    try:
+        # 执行 lsof 命令获取占用指定端口的进程 PID
+        result = subprocess.run(
+            ['lsof', '-t', '-i', f':{port}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+            return
+        
+        pids = result.stdout.strip().split('\n')
+        pids = [pid for pid in pids if pid]  # 过滤空行
+
+        if not pids:
+            print(f"没有找到占用端口 {port} 的进程。")
+            return
+
+        print(f"找到占用端口 {port} 的进程 PID: {pids}")
+
+        # 使用 kill -9 终止每个进程
+        for pid in pids:
+            subprocess.run(['kill', '-9', pid])
+            print(f"已终止 PID {pid} 的进程。")
+
+    except Exception as e:
+        print(f"发生错误: {e}")

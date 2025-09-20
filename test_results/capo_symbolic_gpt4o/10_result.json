@@ -1,0 +1,50 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        65
+    ],
+    "COBEL": {
+        "episode_0_comm_chars": 10732,
+        "episode_1_comm_chars": 3617,
+        "episode_0_com": 0,
+        "episode_1_com": 0,
+        "episode_0_api": 50,
+        "episode_1_api": 24,
+        "episode_0_tokens": {
+            "communication": {
+                "prompt": 13654,
+                "completion": 2561,
+                "call_counts": 11
+            },
+            "meta-plan": {
+                "prompt": 515,
+                "completion": 131,
+                "call_counts": 1
+            },
+            "parsing": {
+                "prompt": 17954,
+                "completion": 3026,
+                "call_counts": 13
+            }
+        },
+        "episode_1_tokens": {
+            "communication": {
+                "prompt": 7857,
+                "completion": 827,
+                "call_counts": 6
+            },
+            "meta-plan": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "parsing": {
+                "prompt": 7626,
+                "completion": 1310,
+                "call_counts": 6
+            }
+        }
+    }
+}

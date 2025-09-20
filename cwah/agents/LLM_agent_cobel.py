@@ -462,9 +462,9 @@ class LLM_agent_cobel:
                     print("=======新物体触发重新规划=======")
                     self.episode_logger.info("=======新物体=======")
                     self.plan_logger.info("=======新物体触发重新规划=======")
-                if self.message_received != {}:
-                    print("=======新消息触发重新规划=======")
-                    self.plan_logger.info("=======新消息触发重新规划=======")
+                # if self.message_received != {}:
+                #     print("=======新消息触发重新规划=======")
+                #     self.plan_logger.info("=======新消息触发重新规划=======")
                 if self.plan == None:
                     print("=======没计划触发重新规划=======")
                     self.plan_logger.info("=======没计划触发重新规划=======")
