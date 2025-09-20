@@ -1,0 +1,90 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        42
+    ],
+    "COBEL": {
+        "episode_0_comm_chars": 1328,
+        "episode_1_comm_chars": 1286,
+        "episode_0_com": 4,
+        "episode_1_com": 3,
+        "episode_0_api": 58,
+        "episode_1_api": 68,
+        "episode_0_tokens": {
+            "total": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "update_beliefs": {
+                "prompt": 4242,
+                "completion": 1869,
+                "call_counts": 7
+            },
+            "prediction_zero_order": {
+                "prompt": 6461,
+                "completion": 1769,
+                "call_counts": 9
+            },
+            "prediction_first_order": {
+                "prompt": 5742,
+                "completion": 1384,
+                "call_counts": 8
+            },
+            "intuitive_planning": {
+                "prompt": 17217,
+                "completion": 3123,
+                "call_counts": 24
+            },
+            "cooradination_aware": {
+                "prompt": 6816,
+                "completion": 2778,
+                "call_counts": 8
+            },
+            "communication": {
+                "prompt": 1022,
+                "completion": 202,
+                "call_counts": 2
+            }
+        },
+        "episode_1_tokens": {
+            "total": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "update_beliefs": {
+                "prompt": 8309,
+                "completion": 4253,
+                "call_counts": 14
+            },
+            "prediction_zero_order": {
+                "prompt": 7234,
+                "completion": 1957,
+                "call_counts": 10
+            },
+            "prediction_first_order": {
+                "prompt": 6605,
+                "completion": 1583,
+                "call_counts": 9
+            },
+            "intuitive_planning": {
+                "prompt": 18447,
+                "completion": 3126,
+                "call_counts": 24
+            },
+            "cooradination_aware": {
+                "prompt": 8016,
+                "completion": 2997,
+                "call_counts": 9
+            },
+            "communication": {
+                "prompt": 1175,
+                "completion": 320,
+                "call_counts": 2
+            }
+        }
+    }
+}

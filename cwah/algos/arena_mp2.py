@@ -61,6 +61,29 @@ class ArenaMP(object):
     
         return episode_logger
 
+
+
+    def init_plan_logs(self,output_dir, episode):
+        """
+        初始化每个episode的日志记录器
+        """
+        episode_dir = os.path.join(output_dir, str(episode))
+        os.makedirs(episode_dir, exist_ok=True)
+        
+        plan_logger = logging.getLogger(f"plan_episode_{episode}")
+        plan_logger.setLevel(logging.DEBUG)
+        
+        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+        fh.setLevel(logging.DEBUG)
+        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        fh.setFormatter(formatter)
+        
+        plan_logger.addHandler(fh)
+        
+        return plan_logger
     def reset(self, task_id=None):
         self.cnt_duplicate_subgoal = 0
         self.cnt_nouse_subgoal = 0
@@ -71,10 +94,12 @@ class ArenaMP(object):
         ob = None
         while ob is None:
             ob = self.env.reset(task_id=task_id)
-
+        agent_init_rooms = [None,None,None]
         for it, agent in enumerate(self.agents):
+            
             if 'LLM_vision' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)
+
                 agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id)
             elif 'vision' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, self.env.all_room_name, self.env.all_containers_name, self.env.all_goal_objects_name, seed=agent.seed)
@@ -83,9 +108,14 @@ class ArenaMP(object):
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)## add when shaokang debug
+                print("==================观测=======\n")
+                print(ob[it])
                 agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
+                
             else:
                 agent.reset(self.env.full_graph)
+
+        
 
     def set_weigths(self, epsilon, weights):
         for agent in self.agents:
@@ -134,7 +164,7 @@ class ArenaMP(object):
 
             elif 'LLM' in agent.agent_type:
                 dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)
-
+                
         return dict_actions, dict_info
 
     def reset_env(self):

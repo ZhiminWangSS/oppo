@@ -34,6 +34,6 @@ python3 tdw-gym/challenge_cobel.py \
 --prompt_template_path LLM/cobel_promptsV2.1_no_conf_two_update_hardencode.csv \
 --max_tokens 1024 \
 --data_prefix dataset/dataset_test/ \
---eval_episodes 12 13 14 21 22 23 \
+--eval_episodes 12 13 14 21 22 23 15 16 17 18 19 20 \
 --screen_size 256
 pkill -f -9 "port $port"

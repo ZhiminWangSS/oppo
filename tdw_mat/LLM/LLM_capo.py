@@ -118,9 +118,8 @@ class LLM_capo:
         self.model = None  # 模型实例
         self.tokenizer = None  # 分词器
         self.lm_id = lm_id  # 模型ID
-        self.chat = (
-            "qwen" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id or source =="openai"
-        )  # 是否为聊天模型
+
+        self.chat = True
         self.OPENAI_KEY = None  # OpenAI API密钥
         self.completion_tokens = 0
         self.comm_tokens = 0
@@ -887,18 +886,36 @@ class LLM_capo:
         chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": prompt}]
         output,usage = self.generator(chat_prompt,self.sampling_params)
-        # change for refine the meta-plan
-        if not refine:
-            method_name = "communication"
-        else:
+
+
+        if refine ==1:
             method_name = "meta-plan"
-        # 使用usage.prompt_tokens和usage.completion_tokens
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-        self.comm_tokens += usage[1]
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1]
+        elif host == 1 and refine == 0:
+            method_name = "communication"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1] 
+        else:
+            method_name = "communication"
+            # 使用usage.prompt_tokens和usage.completion_tokens
+            prompt_tokens = usage[0]
+            completion_tokens = usage[1]
+            self.token_stats[method_name]["prompt"] += prompt_tokens
+            self.token_stats[method_name]["completion"] += completion_tokens
+            self.token_stats[method_name]["call_counts"] += 1
+            self.comm_tokens += usage[1]
+       
         message = output[0]
         return message
     
