@@ -307,6 +307,10 @@ class LLM_agent:
 				if target in node:
 					meta_plan = self.refiner()
 					self.meta_plan = meta_plan
+
+
+		for node in new_node:
+			self.node_memory.append(node)
 		
 		#trigger 2
 		if observation["finish_goal"] == 1:
