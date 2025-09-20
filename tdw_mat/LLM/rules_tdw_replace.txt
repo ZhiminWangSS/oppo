@@ -1,0 +1,19 @@
+zero order belief rules:
+$AGENT_NAME$ BELIEVE ?object IN ?room
+$AGENT_NAME$ BELIEVE ?bed IN ?room
+$AGENT_NAME$ BELIEVE ?container IN ?room
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ HOLD ?object
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ HOLD ?container
+$AGENT_NAME$ BELIEVE ?container CONTAIN ?object
+$AGENT_NAME$ BELIEVE ?room EXPLORED ?exploration_state
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ AT ?room
+
+first order belief rules:
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?object IN ?room
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?bed IN ?room
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?container IN ?room
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?agent HOLD ?object
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?agent HOLD ?container
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?container CONTAIN ?object
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?room EXPLORED ?exploration_state
+$AGENT_NAME$ BELIEVE $OPPO_NAME$ BELIEVE ?agent AT ?room

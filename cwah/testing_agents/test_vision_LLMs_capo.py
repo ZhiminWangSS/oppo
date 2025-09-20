@@ -177,6 +177,7 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
+
             result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
                                         'COBEL': {

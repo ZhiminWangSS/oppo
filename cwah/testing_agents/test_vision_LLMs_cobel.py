@@ -10,9 +10,9 @@ import numpy as np
 from pathlib import Path
 
 from envs.unity_environment import UnityEnvironment
-from agents import vision_LLM_agent
+from agents.vision_LLM_agent_cobel import vision_LLM_agent_cobel
 from arguments import get_args
-from algos.arena_mp2 import ArenaMP
+from algos.arena_mp2_cobel import ArenaMP
 
 
 if __name__ == '__main__':
@@ -25,13 +25,13 @@ if __name__ == '__main__':
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
-        os.system("Xvfb :98 & export DISPLAY=:98")
+        os.system("Xvfb :102 & export DISPLAY=:102")
         import time
         time.sleep(3) # ensure Xvfb is open
         os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
         executable_args = {
                         'file_name': args.executable_file,
-                        'x_display': '98',
+                        'x_display': '102',
                         'no_graphics': False,
                         'timeout_wait': 5000,
         }
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
+    agents = [lambda x, y: vision_LLM_agent_cobel(**args_agent1), lambda x, y: vision_LLM_agent_cobel(**args_agent2)]
     arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
@@ -141,29 +141,12 @@ if __name__ == '__main__':
             #COBEL episode count
             episode_0_comm_chars = arena.agents[0].comm_chars
             episode_1_comm_chars = arena.agents[1].comm_chars
-            episode_0_com = arena.agents[0].comm_num
-            episode_1_com = arena.agents[1].comm_num
+            episode_0_com = arena.agents[0].comm_counts
+            episode_1_com = arena.agents[1].comm_counts
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
-            episode_0_tokens = arena.agents[0].get_completion_tokens()
-            episode_1_tokens = arena.agents[1].get_completion_tokens()
-            episode_0_total_tokens = arena.agents[0].get_total_tokens()
-            episode_1_total_tokens = arena.agents[1].get_total_tokens()
-            episode_0_comm_tokens = arena.agents[0].get_comm_tokens()
-            episode_1_comm_tokens = arena.agents[1].get_comm_tokens()
-            #total count
-            total_0_comm_chars += episode_0_comm_chars
-            total_1_comm_chars += episode_1_comm_chars
-            total_0_com += episode_0_com
-            total_1_com += episode_1_com
-            total_0_api += episode_0_api
-            total_1_api += episode_1_api
-            total_0_tokens += episode_0_tokens
-            total_1_tokens += episode_1_tokens
-            total_0_total_tokens += episode_0_total_tokens
-            total_1_total_tokens += episode_1_total_tokens
-            total_0_comm_tokens += episode_0_comm_tokens
-            total_1_comm_tokens += episode_1_comm_tokens
+            episode_0_token_stats = arena.agents[0].get_token_stats()
+            episode_1_token_stats = arena.agents[1].get_token_stats()
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -189,7 +172,8 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
-            test_results[episode_id] = {'S': S[episode_id],
+
+            result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
                                         'COBEL': {
                                             'episode_0_comm_chars': episode_0_comm_chars,
@@ -198,13 +182,14 @@ if __name__ == '__main__':
                                             'episode_1_com': episode_1_com,
                                             'episode_0_api': episode_0_api,
                                             'episode_1_api': episode_1_api,
-                                            'episode_0_tokens': episode_0_tokens,
-                                            'episode_1_tokens': episode_1_tokens,
-                                            'episode_0_total_tokens': episode_0_total_tokens,
-                                            'episode_1_total_tokens': episode_1_total_tokens,
-                                            'episode_0_comm_tokens': episode_0_comm_tokens,
-                                            'episode_1_comm_tokens': episode_1_comm_tokens,
+                                            'episode_0_tokens': episode_0_token_stats,
+                                            'episode_1_tokens': episode_1_token_stats,
                                         }}
+            test_results[episode_id] = result_dic
+            # 保存为json
+            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
+            with open(json_path, "w") as f_json:
+                json.dump(result_dic, f_json, indent=4)
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

@@ -8,6 +8,7 @@ from tqdm import tqdm
 import time
 import json
 import atexit
+import logging
 
 # @ray.remote
 class ArenaMP(object):

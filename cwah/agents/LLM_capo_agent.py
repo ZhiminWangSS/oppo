@@ -14,7 +14,7 @@ class capo_agent(LLM_agent):
         self.oppo_progress = ""
         self.node_memory = []
         #counting 
-        self.comm_num = 0
+        self.comm_counts = 0
         self.comm_chars = 0
         self.logger = logger# metaplan, message, subplan
 
@@ -97,8 +97,8 @@ class capo_agent(LLM_agent):
     def LLM_metaplan_init(self):
         output,usage = self.LLM.meta_plan_init()
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
-        self.comm_num += 1
+        self.LLM.comm_tokens += usage[1]
+        self.comm_counts += 1
         self.logger.info(
             f"{self.agent_id}: meta_plan: {output}"
         )
@@ -120,8 +120,8 @@ class capo_agent(LLM_agent):
                                           self.id_inside_room[self.opponent_agent_id]
                                           )
         self.comm_chars += len(output.strip())
-        self.LLM.comm_tokens += usage
-        self.comm_num += 1
+        self.LLM.comm_tokens += usage[1]
+        self.comm_counts += 1
         self.logger.info(
             f"{self.agent_id}: message: {output}"
         )
@@ -393,22 +393,55 @@ class capo_agent(LLM_agent):
         return action, info
     
     def reset(self, obs, containers_name, goal_objects_name, rooms_name, room_info, goal,episode_logger,task_id):
-        super().reset(obs,
-                      containers_name,
-                      goal_objects_name,
-                      rooms_name,
-                      room_info,
-                      goal,
-                      episode_logger,
-                      task_id)
+        self.steps = 0
+        self.containers_name = containers_name
+        self.goal_objects_name = goal_objects_name
+        self.rooms_name = rooms_name
+        self.roomname2id = {x['class_name']: x['id'] for x in room_info}
+        self.id2node = {x['id']: x for x in obs['nodes']}
+        print("==================观测=======\n")
+        print(self.id2node)
+        self.stuck = 0
+        self.last_room = None
+        self.unsatisfied = {k: v[0] for k, v in goal.items()}
+        self.satisfied = []
+        self.goal_location = list(goal.keys())[0].split('_')[-1]
+        self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
+        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None} #初始化
+        self.comm_chars = 0
+        self.comm_num = 0
+        self.task_id = task_id
+        self.unchecked_containers = {
+            "livingroom": None,
+            "kitchen": None,
+            "bedroom": None,
+            "bathroom": None,
+        }
+        self.ungrabbed_objects = {
+            "livingroom": None,
+            "kitchen": None,
+            "bedroom": None,
+            "bathroom": None,
+        }
+        self.opponent_grabbed_objects = []
+        for e in obs['edges']:
+            x, r, y = e['from_id'], e['relation_type'], e['to_id']
+            if x == self.agent_id and r == 'INSIDE':
+                self.current_room = self.id2node[y]
+        print("====================",self.current_room)
+        self.plan = None
+        self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
+        self.dialogue_history = []
+        self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
+        self.episode_logger = episode_logger
+
         self.subplan = None
         self.oppo_progress = "" 
         self.metaplan = None
         self.node_memory = []
-        self.comm_num = 0
+        self.comm_counts = 0
         self.comm_chars = 0
-        self.LLM.api = 0
-        self.LLM.tokens = 0
+
     def get_tokens(self):
         return self.LLM.token_stats
 
@@ -419,7 +452,7 @@ class capo_agent(LLM_agent):
         return self.comm_chars
 
     def get_api_num(self):
-        return self.LLM.api
+        return self.LLM.api_num
 
     def filter_graph(self, obs):
         relative_id = [node['id'] for node in obs['nodes'] if node['class_name'] in self.all_relative_name]

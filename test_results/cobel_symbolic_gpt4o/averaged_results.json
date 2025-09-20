@@ -1,0 +1,90 @@
+{
+    "L": [
+        51.125
+    ],
+    "S": [
+        1.0
+    ],
+    "COBEL": {
+        "episode_0_tokens": {
+            "prediction_zero_order": {
+                "call_counts": 10.375,
+                "completion": 1779.25,
+                "prompt": 7122.75
+            },
+            "cooradination_aware": {
+                "call_counts": 10.0,
+                "completion": 2884.125,
+                "prompt": 8623.0
+            },
+            "communication": {
+                "call_counts": 2.0,
+                "completion": 188.25,
+                "prompt": 1077.875
+            },
+            "intuitive_planning": {
+                "call_counts": 23.625,
+                "completion": 3223.875,
+                "prompt": 15754.0
+            },
+            "prediction_first_order": {
+                "call_counts": 10.0,
+                "completion": 1855.375,
+                "prompt": 7377.375
+            },
+            "total": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "update_beliefs": {
+                "call_counts": 8.75,
+                "completion": 1615.0,
+                "prompt": 5157.75
+            }
+        },
+        "episode_0_api": 64.75,
+        "episode_1_com": 5.25,
+        "episode_1_comm_chars": 1891.125,
+        "episode_0_com": 4.25,
+        "episode_1_tokens": {
+            "prediction_zero_order": {
+                "call_counts": 18.0,
+                "completion": 2831.625,
+                "prompt": 12081.0
+            },
+            "cooradination_aware": {
+                "call_counts": 16.25,
+                "completion": 4411.125,
+                "prompt": 13857.875
+            },
+            "communication": {
+                "call_counts": 1.75,
+                "completion": 146.25,
+                "prompt": 922.75
+            },
+            "intuitive_planning": {
+                "call_counts": 31.5,
+                "completion": 4245.75,
+                "prompt": 19264.5
+            },
+            "prediction_first_order": {
+                "call_counts": 16.25,
+                "completion": 3037.0,
+                "prompt": 12135.25
+            },
+            "total": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "update_beliefs": {
+                "call_counts": 15.625,
+                "completion": 3035.875,
+                "prompt": 9140.375
+            }
+        },
+        "episode_1_api": 99.375,
+        "episode_0_comm_chars": 1347.5
+    }
+}

@@ -50,3 +50,4 @@ virtualhome_userinferface/.*
 virtualhome_userinferface/record_graph/
 virtualhome_userinferface/saved_images/
 *.pik
+*.json

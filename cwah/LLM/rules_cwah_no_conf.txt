@@ -1,15 +1,15 @@
 zero order belief rules:
 ?agent BELIEVE ?object IN ?room
-?agent BELIEVE ?object IN ?container
 ?agent BELIEVE ?container IN ?room
 ?agent BELIEVE ?agent HOLD ?object
 ?agent BELIEVE ?room EXPLORED ?exploration_state
+?agent BELIEVE ?container CHECKED ?check_state
 ?agent BELIEVE ?agent AT ?room
 
 first order belief rules:
 ?agentA BELIEVE ?agentB BELIEVE ?object IN ?room
-?agentA BELIEVE ?agentB BELIEVE ?object IN ?container
 ?agentA BELIEVE ?agentB BELIEVE ?container IN ?room
 ?agentA BELIEVE ?agentB BELIEVE ?agent HOLD ?object
 ?agentA BELIEVE ?agentB BELIEVE ?room EXPLORED ?exploration_state
+?agentA BELIEVE ?agentB BELIEVE ?container CHECKED ?check_state
 ?agentA BELIEVE ?agentB BELIEVE ?agent AT ?room
