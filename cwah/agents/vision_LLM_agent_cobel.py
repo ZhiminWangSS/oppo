@@ -265,8 +265,8 @@ class vision_LLM_agent_cobel:
         return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
     
     def get_oppo_progress(self): #zhe
-        print("=========================对手progress==")
-        print(self.team_current_room)
+        # print("=========================对手progress==")
+        # print(self.team_current_room)
         # return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
         return self.LLM.get_oppo_progress(self.team_current_room[self.agent_names[self.opponent_agent_id]][self.agent_names[self.opponent_agent_id]], self.team_grasped_obj[self.agent_names[self.opponent_agent_id]][self.agent_names[self.opponent_agent_id]], self.satisfied, self.team_unchecked_con[self.agent_names[self.opponent_agent_id]], self.team_ungrasped_obj[self.agent_names[self.opponent_agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.opponent_agent_id]][self.agent_names[self.agent_id]], self.team_current_room[self.agent_names[self.opponent_agent_id]][self.agent_names[self.agent_id]],self.team_explored_rooms[self.agent_names[self.opponent_agent_id]])
 
@@ -522,8 +522,8 @@ class vision_LLM_agent_cobel:
                     self.subplan = None
                     self.episode_logger.info("=======新物体=======")
                     self.plan_logger.info("=======新物体=======")
-                if LM_times > 0:
-                    print(info)
+                # if LM_times > 0:
+                #     print(info)
                 work_agents_name = []
                 for agent_name,agent_state in self.work_agents.items():
                     if agent_state == 1:
@@ -531,9 +531,9 @@ class vision_LLM_agent_cobel:
                 #measurement update
                 updated_zero_order_beliefs,updated_first_order_beliefs,self.opponent_subplans = self.LLM.update_beliefs(self.message_received,self.dialogue,work_agents_name)
 
-                print("=========updated_first_beleifs==========")
+                print("=========updated_first_beliefs==========")
                 print(updated_first_order_beliefs)
-                print("=========updated_zero_beleifs==========")
+                print("=========updated_zero_beliefs==========")
                 print(updated_zero_order_beliefs)
                 if self.con == False:
                     print("==============不带容器更新==============")
@@ -559,7 +559,7 @@ class vision_LLM_agent_cobel:
                 if len(self.opponent_subplans) == len(self.work_agents) - 1: #说明所有智能体计划都知道
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    print(my_progress)
+                    print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
@@ -574,14 +574,12 @@ class vision_LLM_agent_cobel:
 
                 #===== 只在更新计划的时候走 =====
                 if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
-                    print("=============\n", self.LLM.token_stats)
                     oppo_progress = self.get_oppo_progress()
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_progress:{oppo_progress}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    print(my_progress)
-                    print("\n")
-                    print(oppo_progress)
+                    print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
+
                     #这个基本不可能到这
 
 
@@ -614,7 +612,7 @@ class vision_LLM_agent_cobel:
                             print("=========主动更新==========")
                             self.plan_logger.info("=========主动更新==========")
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
-                        print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                        # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                         answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress,self.my_subplan,self.opponent_subplans)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
@@ -652,8 +650,7 @@ class vision_LLM_agent_cobel:
                     if self.done_time > 3:
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
-                        plan = random.choice(filtered_plans)
-                        if len(filtered_plans) == 1:
+                        if filtered_plans == []:
                             my_progress = self.get_my_progress()
                             plan = "[send_message]" + "<" + my_progress + ">"
                         else:
@@ -722,7 +719,7 @@ class vision_LLM_agent_cobel:
             if self.current_room['class_name'] != target_room_name:
                 action = f"[walktowards] <{target_room_name}> ({self.roomname2id[target_room_name]})"
             self.stuck = 0
-        print(f"================={action}==============")
+        print(f"================={self.agent_names[self.agent_id]}{action}==============")
         
         return action, info
 
@@ -839,17 +836,16 @@ class vision_LLM_agent_cobel:
         self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
         self.episode_logger = episode_logger
 
-    def get_completion_tokens(self):
-        return self.LLM.completion_tokens
-    def get_total_tokens(self):
-        return self.LLM.total_tokens
-    
     def get_api_num(self):
         return self.LLM.api_num
-    
+
+
     def get_comm_tokens(self):
         return self.LLM.comm_tokens
-
+    
+    def get_token_stats(self):
+        return self.LLM.token_stats
+    
     def parse_belief_line(self,belief_type,beliefs):
         print("======开始解析信念============")
         
@@ -1194,7 +1190,7 @@ class vision_LLM_agent_cobel:
                         if subject.capitalize() in self.agent_names:
                             if subject.capitalize() == agent_name:
                                 continue
-                            for hold_obj in self.team_grasped_obj[agent_name][subject]:
+                            for hold_obj in self.team_grasped_obj[agent_name][subject.capitalize()]:
                                 if hold_obj['id'] == obj_id:
                                     continue
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})

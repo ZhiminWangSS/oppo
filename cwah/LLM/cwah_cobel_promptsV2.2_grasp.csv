@@ -84,7 +84,7 @@ Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
 
 
 
@@ -106,7 +106,7 @@ subplans:
 subplan1: 
 subplan2: 
 subplan3:"
-plan_zero,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together.
+plan_zero,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together.
 
 First, please reason over my progress to answer the following question:
 What the possible locations of goal objects which haven't been found based on the room exploration state and unchecked containers?
@@ -126,7 +126,7 @@ Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
  
 
 
@@ -145,7 +145,7 @@ reasoning:
 subplan:"
 
 
-passive_plan,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together.
+passive_plan,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together.
 
 First, please reason over my progress to answer the following question:
 What the possible locations of goal objects which haven't been found based on the room exploration state and unchecked containers?
@@ -165,7 +165,7 @@ Here are some examples for you:
 Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to first check the unchecked container in your current room, if the goal objects havn't been found all.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
 
 
 
@@ -185,7 +185,7 @@ Answer strictly in this format:
 reasoning:
 subplan:"
 
-coordination_aware,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+coordination_aware,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
 Please answer the following questions:
 1. Is there any potential miscoordination between my subplan and $OPPO_NAME$'s subplans or between zero_order_beliefs and first_order_beliefs? Please analyze the miscoordination in two aspects:
@@ -218,7 +218,7 @@ reasons:
 answer:
 misaligned information:
 "
-communication,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+communication,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
 Please help me generate a concise and clear message to inform $OPPO_NAME$ of the misaligned information i know but he don't know and inform $OPPO_NAME$ of my subplan to achieve our shared goal collaboratively. The message should meet following requirements:
 
@@ -239,7 +239,7 @@ Misaligned information: $MISALIGNED INFORMATION$
 My subplan:  $MY_SUBPLAN$
 
 "
-parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAMEG$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
 Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.
 

@@ -599,7 +599,7 @@ class LLM_agent_cobel:
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
                         print("================过滤计划==============")
                         print(filtered_plans)
-                        if len(filtered_plans) == 1:
+                        if filtered_plans == []:
                             my_progress = self.get_my_progress()
                             plan = "[send_message]" + "<" + my_progress + ">"
                         else:

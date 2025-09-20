@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6315)
 python testing_agents/test_symbolic_LLMs_cobel.py \
---mode cobel_symbolic_gpt4o \
+--mode cobel_symbolic_gpt4o_v3 \
 --communication \
 --prompt_template_path LLM/cwah_cobel_promptsV2.2_grasp.csv \
 --executable_file ../executable/linux_exec.v2.3.0.x86_64 \

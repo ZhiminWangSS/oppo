@@ -1180,6 +1180,7 @@ class lm_agent_cobel:
             if self.plan is None or self.observe_new: #cobel self.message_received!= [] 
                 if self.observe_new:
                     self.my_subplan = None
+                    self.plan = None
                     self.plan_logger.info("========新物体触发=========")
                     self.episode_logger.info("=========新物体触发=======")
                 # ==================================================================================
