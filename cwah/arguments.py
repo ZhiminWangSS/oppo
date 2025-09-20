@@ -127,7 +127,7 @@ def get_args():
 
     # LLM parameters
     parser.add_argument('--source', default='huggingface',
-        choices=['huggingface', 'openai', 'debug'],
+        choices=['huggingface', 'openai', 'debug','aliyun'],
         help='openai API or load huggingface models')
     parser.add_argument('--lm_id', default='facebook/opt-13b',
                         help='name for openai engine or huggingface model name/path')
