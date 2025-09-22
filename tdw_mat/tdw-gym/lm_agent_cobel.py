@@ -1493,12 +1493,13 @@ class lm_agent_cobel:
                     self.plan_logger.info("No more things to do!")
                     plan = f"[wait]"
 
-            
+                
                 if not plan.startswith('send a message:'):
                     self.action_history.append(
                         f"{plan} at step {self.num_frames}"
                     )
                     self.message_time = 0
+                self.plan = plan
                 self.action_history_w_mes.append(f"{'send a message' if plan.startswith('send a message:') else plan}")
                 lm_times += 1
             

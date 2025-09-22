@@ -20,3 +20,12 @@ symbolic con True vision false 看看能不能跑通
 
 
 原来那一版应该是no_con
+
+
+Here are some examples for you:
+Go grab objects and go put them to goal location.
+Go explore a room and go check the unchecked containers.
+Go put objects.
+
+
+要不要重新用新的subplan跑一遍？

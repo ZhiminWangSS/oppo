@@ -23,7 +23,7 @@ echo "PYTHONPATH: $PYTHONPATH"
 
 
 python3 tdw-gym/challenge_cobel.py \
---output_dir results/qw/cobel_qwen3-32b_food_v2 \
+--output_dir results/qw/cobel_qwen3-32b_food_v3 \
 --lm_id $lm_id \
 --experiment_name LMs-$lm_id \
 --run_id run_0915 \
