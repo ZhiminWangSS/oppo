@@ -10,9 +10,41 @@ from pathlib import Path
 
 from envs.unity_environment import UnityEnvironment
 from agents import LLM_agent
-from agents.LLM_agent_cobel import LLM_agent_cobel
+from agents.LLM_agent_cobel_multi import LLM_agent_cobel
 from arguments import get_args
 from cwah.algos.arena_mp2_cobel_multi import ArenaMP
+import subprocess
+
+def kill_process_on_port(port):
+    try:
+        # 执行 lsof 命令获取占用指定端口的进程 PID
+        result = subprocess.run(
+            ['lsof', '-t', '-i', f':{port}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+            return
+        
+        pids = result.stdout.strip().split('\n')
+        pids = [pid for pid in pids if pid]  # 过滤空行
+
+        if not pids:
+            print(f"没有找到占用端口 {port} 的进程。")
+            return
+
+        print(f"找到占用端口 {port} 的进程 PID: {pids}")
+
+        # 使用 kill -9 终止每个进程
+        for pid in pids:
+            subprocess.run(['kill', '-9', pid])
+            print(f"已终止 PID {pid} 的进程。")
+
+    except Exception as e:
+        print(f"发生错误: {e}")
 
 
 if __name__ == '__main__':
@@ -51,28 +83,42 @@ if __name__ == '__main__':
 
 
     def env_fn(env_id):
-        return UnityEnvironment(num_agents=3,
+        return UnityEnvironment(num_agents=args.agent_num,
                                max_episode_length=args.max_episode_length,
                                port_id=env_id,
                                env_task_set=env_task_set,
                                agent_goals=['LLM', 'LLM'],
-                               observation_types=[args.obs_type, args.obs_type],
+                               observation_types=[args.obs_type for i in range(args.agent_num)],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
                                base_port=args.base_port)
-
+    agent_num = args.agent_num
+    
     args_agent1 = {
-        'agent_id': 1,
-        'char_index': 0,
-        'args': args,
-    }
-    args_agent2 = {
-        'agent_id': 2,
+        'agent_id': 0,
         'char_index': 1,
         'args': args,
     }
+    args_agent2 = {
+        'agent_id': 1,
+        'char_index': 2,
+        'args': args,
+    }
+    #MA 这里扩充了配置 
+    args_agent3 = {
+        'agent_id': 2,
+        'char_index': 3,
+        'args': args,
+    }
+    args_agent4 = {
+        'agent_id': 3,
+        'char_index': 4,
+        'args': args,
+    }
 
-    agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2)]
+    #这里目前给到了3个 后面跑四个再改
+    
+    agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2),lambda x, y: LLM_agent_cobel(**args_agent3)]
     arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
@@ -105,6 +151,8 @@ if __name__ == '__main__':
         total_1_comm_tokens = 0
 
         for episode_id in test_episodes:
+            # kill_process_on_port(args.base_port)
+            # kill_process_on_port(args.base_port)
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],

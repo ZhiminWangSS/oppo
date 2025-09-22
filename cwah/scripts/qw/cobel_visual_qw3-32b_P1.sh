@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6435)
 python testing_agents/test_vision_LLMs_cobel.py \
---mode cobel_vision_qwen3-32b \
+--mode cobel_vision_qwen3-32b_v2 \
 --communication \
 --prompt_template_path LLM/cwah_cobel_promptsV2.2_grasp.csv \
 --obs_type normal_image \

@@ -8,7 +8,14 @@ class LLM_agent_cobel:
         self.debug = args.debug
         self.agent_type = 'LLM'
         self.agent_names = ["Zero", "Alice", "Bob", "Tom"]
-        self.work_agents = {"Zero":1, "Alice":1, "Bob":1, "Tom":0},
+       
+        self.agent_num = args.agent_num
+        if self.agent_num == 3:
+            self.work_agents = {"Zero":1, "Alice":1, "Bob":1, "Tom":0}
+        else:
+            self.work_agents = {"Zero":1, "Alice":1, "Bob":1, "Tom":1}
+            #MA 这里定义了启用的智能体有哪些，因为所有的初始化会统一把四个人的位置 手持物品等等都开出来，所有后面有些地方需要根据启动的智能体来索引有效i的变量
+    
         self.agent_id = agent_id
         # self.opponent_agent_id = 4 - agent_id
         self.source = args.source
@@ -337,12 +344,16 @@ class LLM_agent_cobel:
         #自己的状态
         for e in obs['edges']:
             x, r, y = e['from_id'], e['relation_type'], e['to_id']
-            if x != self.agent_id: ##别人的位置
+            if x in range(self.agent_num) and x!= self.agent_id: ##别人的位置
                 if r == 'INSIDE':
+                    print("oppoid",x)
+                    print(self.team_current_room)
+                    print(self.agent_id)
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[x]] = self.id2node[y]
             if x == self.agent_id:
                 if r == 'INSIDE':
                     self.current_room = self.id2node[y] #id2node返回那个大字典
+                    print(self.agent_id)
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.agent_id]] = self.id2node[y]
                     #####
                     
@@ -465,17 +476,18 @@ class LLM_agent_cobel:
             #===========================结束=========================
             
             if self.plan is None or self.observe_new: #or new obj or message or self.message_received != {} 
+                print(f"======================{self.agent_names[self.agent_id]} get plan==================")
                 if self.observe_new:
                     self.subplan = None
                     print("=======新物体触发重新规划=======")
-                    self.episode_logger.info("=======新物体=======")
-                    self.plan_logger.info("=======新物体触发重新规划=======")
+                    # self.episode_logger.info("=======新物体=======")
+                    # self.plan_logger.info("=======新物体触发重新规划=======")
                 # if self.message_received != {}:
                 #     print("=======新消息触发重新规划=======")
                 #     self.plan_logger.info("=======新消息触发重新规划=======")
                 if self.plan == None:
                     print("=======没计划触发重新规划=======")
-                    self.plan_logger.info("=======没计划触发重新规划=======")
+                    # self.plan_logger.info("=======没计划触发重新规划=======")
                 if LM_times > 0:
                     print(info)
                 plan = None
@@ -487,18 +499,15 @@ class LLM_agent_cobel:
                 #measurement update
                 updated_zero_order_beliefs,updated_first_order_beliefs,self.opponent_subplans = self.LLM.update_beliefs(self.message_received,self.dialogue,work_agents_name)
 
-                print("=========updated_first_beliefs==========")
                 print(updated_first_order_beliefs)
-                print("=========updated_zero_beliefs==========")
+
                 print(updated_zero_order_beliefs)
                 if self.con == False:
-                    print("==============不带容器更新==============")
                     if updated_first_order_beliefs != {}:
                         self.parse_belief_line_con('first',updated_first_order_beliefs)
                     if updated_zero_order_beliefs != {}:
                         self.parse_belief_line_con('zero',updated_zero_order_beliefs)
                 else:
-                    print("==============带容器更新==============")
                     if updated_first_order_beliefs != {}:
                         self.parse_belief_line('first',updated_first_order_beliefs)
                     if updated_zero_order_beliefs != {}:
@@ -517,8 +526,7 @@ class LLM_agent_cobel:
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
                     self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                    print("=========被动更新==========")
-                    self.plan_logger.info("=========被动更新==========")
+                    # self.plan_logger.info("=========被动更新==========")
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                     # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     self.action_history = []
@@ -562,7 +570,7 @@ class LLM_agent_cobel:
                                 total_progress.update({agent_name:oppo_progress})
 
                             # print("=========主动更新==========")
-                            self.plan_logger.info("=========主动更新==========")
+                            # self.plan_logger.info("=========主动更新==========")
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                         # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                         answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress,self.my_subplan,self.opponent_subplans)
@@ -602,7 +610,6 @@ class LLM_agent_cobel:
                     if self.done_time > 3:
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
-                        print("================过滤计划==============")
                         print(filtered_plans)
                         if filtered_plans == []:
                             my_progress = self.get_my_progress()
@@ -621,13 +628,11 @@ class LLM_agent_cobel:
 
                 #如果手上满了 强制执行
                 if len(self.grabbed_objects) == 2:
-                    print("手满了强制去放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 unsatisfied_num = sum(self.unsatisfied.values())
                 print(self.unsatisfied)
                 if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
@@ -696,7 +701,11 @@ class LLM_agent_cobel:
         self.satisfied = []
         self.goal_location = list(goal.keys())[0].split('_')[-1]
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
-        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None}
+        self.id_inside_room = {self.goal_location_id: self.rooms_name[:]}
+        for i in range(self.agent_num):
+            if self.agent_id == i:
+                continue
+            self.id_inside_room.update({i:None})
         self.done_time = 0
         self.task_id = task_id
         self.unchecked_containers = {
@@ -717,7 +726,10 @@ class LLM_agent_cobel:
             if x == self.agent_id and r == 'INSIDE':
                 self.current_room = self.id2node[y]
         self.plan = None
-        self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
+        # print("====================",self.id2node)
+        # print("====================",self.current_room)
+        # self.action_history = [f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"]
+        self.action_history = []
         self.dialogue_history = []
         self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
         self.episode_logger = episode_logger

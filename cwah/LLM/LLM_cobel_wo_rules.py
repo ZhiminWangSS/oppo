@@ -367,20 +367,15 @@ class LLM_cobel:
 
 
 
-    def coordination_aware(self,my_progress, dialogue_history, my_subplan, opponent_subplans):
+    def coordination_aware(self,my_progress, dialogue_history):
         
-        opponent_subplans_str = ""
-        for agent_name, subplan in opponent_subplans.items():
-            opponent_subplans_str += f"{agent_name}'s subplan: {subplan}\n"
-        opponent_subplans_str = opponent_subplans_str.strip()
+
         prompt = (
             self.cobel_prompts_df["prompt"][2]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$MY_PROPGRESS$", my_progress)
             .replace("$DIALOGUE_HISTORY$", dialogue_history)
-            .replace("$MY_SUBPLAN$", my_subplan)
-            .replace("$OPPO_SUBPLAN$", opponent_subplans_str)
         )
         system_prompt = "You MUST follow the output format strictly.Format: reasons:\nanswer:\nmisaligned information:\n"
         chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]

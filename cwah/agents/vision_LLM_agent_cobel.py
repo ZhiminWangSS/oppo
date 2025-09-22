@@ -57,7 +57,7 @@ class vision_LLM_agent_cobel:
         self.done_time = 0 
         self.satisfied = []
         self.reachable_objects = []
-        self.con =False 
+        self.con =True 
         if 'qwen' in self.lm_id:
             self.con = False
         self.room_explored = {

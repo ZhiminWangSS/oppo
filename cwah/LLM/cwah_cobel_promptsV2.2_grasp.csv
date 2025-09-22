@@ -115,16 +115,12 @@ Such as: If a room is explored none OR a container is unchecked, the probability
 
 Second, based on your reasoning, please generate ONLY one best subplan $AGENT_NAME$ will take to find and put goal objects as soon as possible.
 The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
-- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions.
+- This subplan is composed of 3 steps. 
+- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 3 steps.
     1) 'go explore': explore a room for underlying target objects.
     2) 'go grab': go to grab a specified target object.
     3) 'go put': Put an object into/on the goal location. 
     4) 'go check' Check an unchecked container to find if there is any objects in it.
-Here are some examples for you:
-Go explore a room and go check the unchecked containers.
-Go grab objects and go put them to goal location.
-Go put objects.
 If you want to go check or grab an object in another room. If you are holding the last goal object, just go put it.
 
 Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location. I can not grap the object already in other's hand.
@@ -153,20 +149,15 @@ What the possible locations of goal objects which haven't been found based on th
 Such as: If a room is explored none OR a container is unchecked, the probability of the goal objects in this room OR container is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons. If you've found all the goal objects, just put them in goal location.
 
 
-Second, based on your reasoning, please generate ONLY one best subplan $AGENT_NAME$ will take to find and put goal objects as soon as possible. while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
+Second, based on your reasoning, please generate a subplan $AGENT_NAME$ will take to find and put goal objects as soon as possible. while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
 
 The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
-- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions.
+- This subplan is composed of 3 steps. 
+- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 3 steps.
     1) 'go explore': explore a room for underlying target objects.
     2) 'go grab': go to grab a specified target object.
     3) 'go put': Put an object into/on the goal location. 
     4) 'go check' Check an unchecked container to find if there is any objects in it.
-Here are some examples for you:
-Here are some examples for you:
-Go explore a room and go check the unchecked containers.
-Go grab objects and go put them to goal location.
-Go put objects.
 If you want to go check or grab an object in another room. If you are holding the last goal object, just go put it.
 
 Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.

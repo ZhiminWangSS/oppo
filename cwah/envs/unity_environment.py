@@ -86,7 +86,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.detection_name_id_map = {name:  (i + 1) * 10 for i, name in enumerate(self.detection_all_object)}
 		self.location = None
 		self.keep_move_steps = None
- 
+		self.agent_num = num_agents
 	def reward(self):
 		reward = 0.
 		done = True
@@ -315,7 +315,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		print("Resetting... Envid: {}. Taskid: {}. Index: {}".format(self.env_id, self.task_id, task_id))
 
 		# TODO: in the future we may want different goals
-		self.goal_spec = {agent_id: self.get_goal(self.task_goal[agent_id], self.agent_goals[agent_id])
+		self.goal_spec = {agent_id: self.get_goal(self.task_goal[0], self.agent_goals[0])
 						  for agent_id in range(self.num_agents)}
 
 		if False:  # old_env_id == self.env_id:

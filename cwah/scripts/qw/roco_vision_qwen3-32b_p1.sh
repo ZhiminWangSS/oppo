@@ -1,10 +1,11 @@
-kill -9 $(lsof -t -i :6425)
-python testing_agents/test_symbolic_LLMs_cobel.py \
---mode cobel_symbolic_qwen3-32b_v4 \
+kill -9 $(lsof -t -i :6713)
+python testing_agents/test_vision_LLMs_roco.py \
+--mode roco_vision_qwen3-32b\
 --communication \
---prompt_template_path LLM/cwah_cobel_promptsV2.2_grasp.csv \
+--prompt_template_path LLM/prompt_roco.csv \
+--obs_type normal_image \
 --executable_file ../executable/linux_exec.v2.3.0.x86_64 \
---base-port 6425 \
+--base-port 6713 \
 --lm_id qwen3-32b \
 --source aliyun \
 --t 0.7 \

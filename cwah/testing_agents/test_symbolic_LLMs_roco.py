@@ -154,10 +154,8 @@ if __name__ == '__main__':
 
 
             #COBEL episode count
-            episode_0_comm_chars = arena.agents[0].comm_chars
-            episode_1_comm_chars = arena.agents[1].comm_chars
-            episode_0_com = arena.agents[0].comm_counts
-            episode_1_com = arena.agents[1].comm_counts
+            episode_0_com_count = arena.agents[0].comm_counts
+            episode_1_com_count = arena.agents[1].comm_counts
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
             episode_0_token_stats = arena.agents[0].get_token_stats()
@@ -195,16 +193,13 @@ if __name__ == '__main__':
 
             result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
-                                        'symboli_roco': {
-                                            'episode_0_comm_chars': total_comm_chars[0],
-                                            'episode_1_comm_chars': total_comm_chars[1],
-                                            'episode_0_com': total_comm_counts[0],
-                                            'episode_1_com': total_comm_counts[1],
-                                            'episode_0_api': arena.agents[0].get_api_num(),
-                                            'episode_1_api': arena.agents[0].get_api_num(),
-                                            'episode_0_tokens': {"prompt":total_tokens[0][0],"completion":total_tokens[0][1]},
-                                            'episode_1_tokens': {"prompt":total_tokens[1][0],"completion":total_tokens[1][1]},
-                                            "average_call":average_calls_per_discussion
+                                        'symbolic_roco': {
+                                            'episode_0_com': episode_0_com_count,
+                                            'episode_1_com': episode_1_com_count,
+                                            'episode_0_api': episode_0_api,
+                                            'episode_1_api': episode_1_api,
+                                            'episode_0_tokens': {"prompt_tokens":episode_0_token_stats[0],"completion_tokens":episode_0_token_stats[1]},
+                                            'episode_1_tokens': {"prompt_tokens":episode_1_token_stats[0],"completion_tokens":episode_1_token_stats[1]},
                                         }}
             test_results[episode_id] = result_dic
             #==========================

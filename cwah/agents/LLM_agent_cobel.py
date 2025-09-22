@@ -625,13 +625,11 @@ class LLM_agent_cobel:
 
                 #如果手上满了 强制执行
                 if len(self.grabbed_objects) == 2:
-                    print("手满了强制去放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 unsatisfied_num = sum(self.unsatisfied.values())
                 print(self.unsatisfied)
                 if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
@@ -790,17 +788,6 @@ class LLM_agent_cobel:
         self.my_subplan = None
         self.message_time = 0
         
-        
-    def get_completion_tokens(self):
-        return self.LLM.completion_tokens
-    def get_total_tokens(self):
-        return self.LLM.total_tokens
-    
-    def get_api_num(self):
-        return self.LLM.api_num
-    
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens
     
 
     def parse_belief_line(self,belief_type,beliefs):
@@ -1058,14 +1045,14 @@ class LLM_agent_cobel:
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                                #containers_name 有一个全局的容器信息
+                            # else:
+                            #     #检测到的肯定都是未完成的
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")     
+                            #     #containers_name 有一个全局的容器信息
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -1124,15 +1111,15 @@ class LLM_agent_cobel:
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的容器
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                                #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                #containers_name 有一个全局的容器信息
+                            # else:
+                            #     #检测到的肯定都是未完成的容器
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")  
+                            #     #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     #containers_name 有一个全局的容器信息
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1161,11 +1148,11 @@ class LLM_agent_cobel:
             #                 if 'yes' in obj:
             #                     self.team_explored_rooms[agent_name][subject] = 'all'
             #                     formatted_beliefs.append(f"{subject} explored all")
-            for room_name,room_con in self.team_unchecked_con[agent_name].items():
-                if room_name not in unchecked_container.keys():
-                    continue
-                self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
-                formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
+            # for room_name,room_con in self.team_unchecked_con[agent_name].items():
+            #     if room_name not in unchecked_container.keys():
+            #         continue
+            #     self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
+            #     formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
             print(formatted_beliefs)
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
     def parse_obj(self, text):
