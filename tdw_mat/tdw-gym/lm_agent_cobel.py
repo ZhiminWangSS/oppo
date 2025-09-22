@@ -1491,6 +1491,9 @@ class lm_agent_cobel:
                     self.plan_logger.info("No more things to do!")
                     plan = f"[wait]"
 
+                if self.num_frames > 2500 and self.holding_objects_id != []:
+                    plan = "transport"
+                
                 self.plan = plan
 
                 if not plan.startswith('send a message:'):
@@ -1500,6 +1503,7 @@ class lm_agent_cobel:
                     self.message_time = 0
                 self.action_history_w_mes.append(f"{'send a message' if plan.startswith('send a message:') else plan}")
                 lm_times += 1
+                
             if self.plan.startswith("go to"):
                 action = self.gotoroom()
             elif self.plan.startswith("explore"):

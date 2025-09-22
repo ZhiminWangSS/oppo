@@ -92,6 +92,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.turns = 0
 		self.call = 0
 		self.calls = []
+		self.call_for = 0
  
 	def reward(self):
 		reward = 0.
@@ -395,6 +396,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.call = 0
 		self.turns = 0
 		self.calls = []
+		self.call_for = 0
 
 		obs = self.get_observations()
 		self.steps = 0
@@ -454,6 +456,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 			if action == "wait_for_disscussion":
 				action_dict_tobe_changed[i] = None
 				self.disscuss_status[i] = 1
+				self.call_for = 1
 
 			# Add restrictions on 'open' action, since open a container twice will cause an env error
 			if action == 'open':
@@ -479,7 +482,8 @@ class UnityEnvironment(BaseUnityEnvironment):
 			self.call = 0
 			self.turns = 0
 			self.disscuss_status = [0,0]
-			self.steps += 1
+			#self.steps += 1
+			self.call_for = 0
 
 		if len(script_list[0]) > 0:
 			self.steps += 1
@@ -633,6 +637,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 			dict_observations[agent_id]["disscuss"] = self.disscuss
 			dict_observations[agent_id]["call"] = self.call
 			dict_observations[agent_id]["turns"] = self.turns
+			dict_observations[agent_id]["call_for"] = self.call_for
 		return dict_observations
 
 	def get_agent_location(self, agent_id):

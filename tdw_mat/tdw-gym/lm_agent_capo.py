@@ -981,10 +981,14 @@ class lm_agent_capo:
                 self.episode_logger.debug(
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM sub_plan: {sub_plan} at frame {self.num_frames}, step {self.steps}"
                 )
+
+
+
                 self.sub_plan = sub_plan
                 self.action_history.append(
                             f"{self.sub_plan} at step {self.num_frames}"
                     )
+            
             
             if self.sub_plan.startswith("go to"):
                 action = self.gotoroom()

@@ -497,7 +497,9 @@ class LLM_agent:
                 else:
                     action = "[waiting]"
                 return action,{}
-        
+        if observation["call_for"] == 1:
+            action = wait_for_disscussion()
+            return action,{}
         action = None
         LM_times = 0
         while action is None:

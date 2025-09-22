@@ -21,10 +21,6 @@ import logging
 from datetime import datetime
 import subprocess
 
-
-
-
-# kill the process
 def kill_process_on_port(port):
     try:
         # 执行 lsof 命令获取占用指定端口的进程 PID
@@ -115,7 +111,7 @@ if __name__ == '__main__':
     }
 
     agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
-    arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+    #arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
     if args.num_per_task != 10:
@@ -133,10 +129,12 @@ if __name__ == '__main__':
 
 
 
-        
+        #print(args)
         for episode_id in test_episodes:
-            kill_process_on_port(6418)
-            kill_process_on_port(6418)
+            kill_process_on_port(args.base_port)
+            kill_process_on_port(args.base_port)
+            arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+
             arena.reset(episode_id)
             
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
@@ -215,6 +213,9 @@ if __name__ == '__main__':
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)
+            kill_process_on_port(args.base_port)
+            kill_process_on_port(args.base_port)
+            args.base_port += 1
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

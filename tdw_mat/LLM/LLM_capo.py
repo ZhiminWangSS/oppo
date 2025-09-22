@@ -153,11 +153,9 @@ class LLM_capo:
         
         elif self.source == "aliyun":
             # DeepSeek模型初始化
-            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("ALIYUN_API_KEY")
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("ALIYUN_URL")
             client = OpenAI(
-                api_key=api_key,
-                base_url=base_url,
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
             )
             if self.chat:
                 self.sampling_params = {
@@ -169,6 +167,7 @@ class LLM_capo:
                 }
             else:
                 self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -201,66 +200,73 @@ class LLM_capo:
             @backoff.on_exception(backoff.expo, OpenAIError)
             def openai_generate(prompt, sampling_params):
                 usage = [0,0]
-                try:
-                    if self.chat:
-                        response = client.chat.completions.create(
-                            model=self.lm_id, messages=prompt, **sampling_params
-                        )
-                        self.api += 1
-                        self.completion_tokens += response.usage.completion_tokens## generated response tokens
-                        self.total_tokens += response.usage.total_tokens## total tokens
-                        if self.debug:
-                            with open(f"LLM/chat_raw.json", "a") as f:
-                                f.write(
-                                    json.dumps(
-                                        response.choices[0].message.content, indent=4
+                for attempt in range(10):
+                    try:
+                        if self.chat:
+                            response = client.chat.completions.create(
+                                model=self.lm_id, messages=prompt, **sampling_params
+                            )
+                            self.api += 1
+                            self.completion_tokens += response.usage.completion_tokens## generated response tokens
+                            self.total_tokens += response.usage.total_tokens## total tokens
+                            if self.debug:
+                                with open(f"LLM/chat_raw.json", "a") as f:
+                                    f.write(
+                                        json.dumps(
+                                            response.choices[0].message.content, indent=4
+                                        )
                                     )
-                                )
-                                f.write("\n")
-                        generated_samples = [
-                            response.choices[i].message.content
-                            for i in range(sampling_params["n"])
-                        ]
+                                    f.write("\n")
+                            generated_samples = [
+                                response.choices[i].message.content
+                                for i in range(sampling_params["n"])
+                            ]
 
-                        usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
-                        # if "gpt-4" or "gpt4" in self.lm_id:
-                        #     usage = (
-                        #         response.usage.prompt_tokens * 0.03 / 1000
-                        #         + response.usage.completion_tokens * 0.06 / 1000
-                        #     )
-                        # elif "gpt-3.5" in self.lm_id:
-                        #     usage = response.usage.total_tokens * 0.002 / 1000
-                    # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
-                    #                   range(sampling_params['n'])]
-                    elif "text-" in lm_id:
-                        response = client.completions.create(
-                            model=lm_id, prompt=prompt, **sampling_params
-                        )
-                        # print(json.dumps(response, indent=4))
-                        if self.debug:
-                            with open(f"LLM/raw.json", "a") as f:
-                                f.write(json.dumps(response, indent=4))
-                                f.write("\n")
-                        generated_samples = [
-                            response.choices[i].text
-                            for i in range(sampling_params["n"])
-                        ]
-                    # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
-                    #               range(sampling_params['n'])]
-                    else:
-                        raise ValueError(f"{lm_id} not available!")
-                except OpenAIError as e:
-                    print(e)
-                    raise e
+                            usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
+
+                            method_name = "total"
+                            # 使用usage.prompt_tokens和usage.completion_tokens
+                            prompt_tokens = usage[0]
+                            completion_tokens = usage[1]
+                            self.token_stats[method_name]["prompt"] += prompt_tokens
+                            self.token_stats[method_name]["completion"] += completion_tokens
+                            self.token_stats[method_name]["call_counts"] += 1
+                            return generated_samples, usage
+                        
+                            # if "gpt-4" or "gpt4" in self.lm_id:
+                            #     usage = (
+                            #         response.usage.prompt_tokens * 0.03 / 1000
+                            #         + response.usage.completion_tokens * 0.06 / 1000
+                            #     )
+                            # elif "gpt-3.5" in self.lm_id:
+                            #     usage = response.usage.total_tokens * 0.002 / 1000
+                        # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
+                        #                   range(sampling_params['n'])]
+                        elif "text-" in lm_id:
+                            response = client.completions.create(
+                                model=lm_id, prompt=prompt, **sampling_params
+                            )
+                            # print(json.dumps(response, indent=4))
+                            if self.debug:
+                                with open(f"LLM/raw.json", "a") as f:
+                                    f.write(json.dumps(response, indent=4))
+                                    f.write("\n")
+                            generated_samples = [
+                                response.choices[i].text
+                                for i in range(sampling_params["n"])
+                            ]
+
+
+                        # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
+                        #               range(sampling_params['n'])]
+                        else:
+                            raise ValueError(f"{lm_id} not available!")
+                    except OpenAIError as e:
+                        if attempt == 9:
+                            print(e)
+                            raise e
                 
-                method_name = "total"
-                # 使用usage.prompt_tokens和usage.completion_tokens
-                prompt_tokens = usage[0]
-                completion_tokens = usage[1]
-                self.token_stats[method_name]["prompt"] += prompt_tokens
-                self.token_stats[method_name]["completion"] += completion_tokens
-                self.token_stats[method_name]["call_counts"] += 1
-                return generated_samples, usage
+                
             
             def tokenize_dialog(dialog):
                 B_INST, E_INST = "[INST]", "[/INST]"
@@ -917,6 +923,7 @@ class LLM_capo:
             self.comm_tokens += usage[1]
        
         message = output[0]
+        print(message)
         return message
     
     def parsing(self,
