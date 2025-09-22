@@ -17,5 +17,6 @@ python3 tdw-gym/challenge.py \
 --data_prefix dataset/dataset_test/ \
 --eval_episodes 0 1 2 3 4 5 6 7 8 9 10 11 \
 --screen_size 256 \
---source aliyun
+--source aliyun \
+--no_save_img
 pkill -f -9 "port $port"

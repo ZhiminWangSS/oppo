@@ -49,7 +49,7 @@ class ArenaMP(object):
         episode_logger = logging.getLogger(f"episode_{episode}")
         episode_logger.setLevel(logging.DEBUG)
         
-        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_episode_{episode}.log"))
         fh.setLevel(logging.DEBUG)
         
         formatter = logging.Formatter(
@@ -61,6 +61,27 @@ class ArenaMP(object):
     
         return episode_logger
 
+    def init_plan_logs(self,output_dir, episode):
+        """
+        初始化每个episode的日志记录器
+        """
+        episode_dir = os.path.join(output_dir, str(episode))
+        os.makedirs(episode_dir, exist_ok=True)
+        
+        plan_logger = logging.getLogger(f"plan_episode_{episode}")
+        plan_logger.setLevel(logging.DEBUG)
+        
+        fh = logging.FileHandler(os.path.join(episode_dir, f"llm_plan_{episode}.log"))
+        fh.setLevel(logging.DEBUG)
+        
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        fh.setFormatter(formatter)
+        
+        plan_logger.addHandler(fh)
+        
+        return plan_logger
     def reset(self, task_id=None):
         self.cnt_duplicate_subgoal = 0
         self.cnt_nouse_subgoal = 0
@@ -71,11 +92,13 @@ class ArenaMP(object):
         ob = None
         while ob is None:
             ob = self.env.reset(task_id=task_id)
-
+        agent_init_rooms = [None,None,None]
         for it, agent in enumerate(self.agents):
             if 'LLM_vision' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id)
+                plan_logger = self.init_plan_logs(self.record_dir, task_id)
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.goal_spec[it],episode_logger,task_id,plan_logger)
+                agent_init_rooms[agent.agent_id] = agent.current_room #cobel
             elif 'vision' in agent.agent_type:
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, self.env.all_room_name, self.env.all_containers_name, self.env.all_goal_objects_name, seed=agent.seed)
                 'TODO: dwh still work on it now'
@@ -83,9 +106,15 @@ class ArenaMP(object):
                 agent.reset(ob[it], self.env.full_graph, self.env.task_goal, seed=agent.seed)
             elif 'LLM' in agent.agent_type:
                 episode_logger = self.init_episode_logs(self.record_dir, task_id)## add when shaokang debug
-                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id)
+                plan_logger = self.init_plan_logs(self.record_dir, task_id)
+                agent.reset(ob[it], self.env.all_containers_name, self.env.all_goal_objects_name, self.env.all_room_name, self.env.room_info, self.env.goal_spec[it],episode_logger, task_id, plan_logger)
+                agent_init_rooms[agent.agent_id] = agent.current_room #cobel
             else:
                 agent.reset(self.env.full_graph)
+        for it, agent in enumerate(self.agents):
+            for agent_id,agent_init_room in enumerate(agent_init_rooms): #第一个智能体 name
+                for agent_name,agent_current_room in agent.team_current_room.items():
+                    agent.team_current_room[agent_name][agent.agent_names[agent_id]] = agent_init_room
 
     def set_weigths(self, epsilon, weights):
         for agent in self.agents:
@@ -133,7 +162,10 @@ class ArenaMP(object):
                     dict_actions[it], dict_info[it] = agent.get_action(obs[it], self.task_goal, action_space_ids=action_space[it])
 
             elif 'LLM' in agent.agent_type:
-                dict_actions[it], dict_info[it] = agent.get_action(obs[it], goal_spec)
+                dict_actions[it], dict_info[it] = agent.get_action_cobel(obs[it], goal_spec)
+                if dict_actions[it].startswith('[send_message]'):
+                    obs[1-it]['messages'][it] = dict_actions[it][14:]
+                #改成多人 TODO
 
         return dict_actions, dict_info
 

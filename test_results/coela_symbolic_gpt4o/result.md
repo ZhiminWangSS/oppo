@@ -1,0 +1,1 @@
+average steps (finishing the tasks): 51.6

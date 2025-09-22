@@ -87,21 +87,6 @@ if __name__ == '__main__':
             test_results = pickle.load(open(args.record_dir + '/results.pik', 'rb'))
 
         current_tried = iter_id
-        #COBEL
-        #countting for every iter
-        #COBEL
-        total_0_comm_chars = 0
-        total_1_comm_chars = 0
-        total_0_com = 0
-        total_1_com = 0
-        total_0_api = 0
-        total_1_api = 0
-        total_0_tokens = 0
-        total_1_tokens = 0
-        total_0_total_tokens = 0
-        total_1_total_tokens = 0
-        total_0_comm_tokens = 0
-        total_1_comm_tokens = 0
 
         for episode_id in test_episodes:
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
