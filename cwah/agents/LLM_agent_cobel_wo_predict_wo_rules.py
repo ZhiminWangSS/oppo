@@ -1,4 +1,4 @@
-from LLM.LLM_cobel_wo_predict import *
+from LLM.LLM_cobel_wo_predict_wo_rules import *
 import re
 class LLM_agent_cobel:
     """
@@ -459,7 +459,7 @@ class LLM_agent_cobel:
             
             #===========================结束=========================
             
-            if self.plan is None or self.observe_new: #or new obj or message or self.message_received != {} 
+            if self.plan is None: #or new obj or message or self.message_received != {} 
                 if self.observe_new:
                     self.subplan = None
                     print("=======新物体触发重新规划=======")
@@ -481,14 +481,14 @@ class LLM_agent_cobel:
                         work_agents_name.append(agent_name)
 
                 #===== 只在更新计划的时候走 =====
-                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
+                if self.my_subplan is None:#TODO 发现新物体
                     # print("=============\n", self.LLM.token_stats)
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     print("\n")
-
-                    zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress)
+                    dialogue_history_desc = '\n'.join(self.dialogue_history[-3:] if len(self.dialogue_history) > 3 else self.dialogue_history)
+                    zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress,dialogue_history_desc)
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
                     self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
@@ -496,7 +496,7 @@ class LLM_agent_cobel:
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                     # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     if self.dialogue_history != []:
-                        answer, reason, difference = self.LLM.coordination_aware(my_progress,self.dialogue_history)
+                        answer, reason, difference = self.LLM.coordination_aware(my_progress,dialogue_history_desc)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
@@ -551,17 +551,16 @@ class LLM_agent_cobel:
                     plan = f"[wait]"
 
                 #如果手上满了 强制执行
-                if len(self.grabbed_objects) == 2:
-                    print("手满了强制去放")
-                    self.subplan = None
-                    plan =  f"[goput] {self.goal_location}"
+                # if len(self.grabbed_objects) == 2:
+                #     print("手满了强制去放")
+                #     self.subplan = None
+                #     plan =  f"[goput] {self.goal_location}"
 
                 unsatisfied_num = sum(self.unsatisfied.values())
                 print(self.unsatisfied)
-                if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
-                    self.subplan = None
-                    plan =  f"[goput] {self.goal_location}"
+                # if len(self.grabbed_objects) == unsatisfied_num:
+                #     self.subplan = None
+                #     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
@@ -759,7 +758,7 @@ class LLM_agent_cobel:
                 
                 if belief_type == "first": 
                     if agent_name == self.agent_names[self.agent_id]: #自己的不更新
-                        pass
+                        continue
                     if tokens.count('believe') < 2:
                         continue
                     first_believe_idx = tokens.index('believe')

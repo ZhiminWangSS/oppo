@@ -502,6 +502,12 @@ class LLM_agent:
 			return action,{}
 		action = None
 		LM_times = 0
+		if len(self.grabbed_objects) == 2:
+			self.plan =  f"[goput] {self.goal_location}"
+		unsatisfied_num = sum(self.unsatisfied.values())
+		print(self.unsatisfied)
+		if len(self.grabbed_objects) == unsatisfied_num:
+			self.plan =  f"[goput] {self.goal_location}"
 		while action is None:
 			if self.plan is None:
 				action = wait_for_disscussion()

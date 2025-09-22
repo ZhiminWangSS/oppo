@@ -795,7 +795,7 @@ class LLM_agent_cobel:
                 
                 if belief_type == "first": 
                     if agent_name == self.agent_names[self.agent_id]: #自己的不更新
-                        pass
+                        continue
                     if tokens.count('believe') < 2:
                         continue
                     first_believe_idx = tokens.index('believe')
