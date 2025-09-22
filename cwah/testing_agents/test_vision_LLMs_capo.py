@@ -134,6 +134,7 @@ if __name__ == '__main__':
             kill_process_on_port(args.base_port)
             kill_process_on_port(args.base_port)
             arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+
             arena.reset(episode_id)
             
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
@@ -218,4 +219,6 @@ if __name__ == '__main__':
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))
+
+
 

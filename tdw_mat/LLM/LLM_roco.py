@@ -78,6 +78,31 @@ class LLM_roco:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
+
+        elif self.source == "aliyun":
+            # DeepSeek模型初始化
+            client = OpenAI(
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
+            )
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
         elif self.source == 'hf':
             self.tokenizer = LlamaTokenizer.from_pretrained(self.lm_id, use_fast=True)
             self.model = LlamaForCausalLM.from_pretrained(self.lm_id, device_map='auto', load_in_4bit=True)

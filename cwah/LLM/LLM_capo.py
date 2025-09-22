@@ -167,24 +167,26 @@ class LLM_capo(LLM):
                                 for choice in response.choices 
                             ]
 
-                            self.api_num += 1
-                            #COBEL usage = completion token
-                            usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
-                        elif "text-" in lm_id:
-                            response = openai.Completion.create(model=lm_id, prompt=prompt, **sampling_params)
-                            if self.debug:
-                                with open(f"LLM/raw.json", 'a') as f:
-                                    f.write(json.dumps(response, indent=4))
-                                    f.write('\n')
-                            generated_samples = [
-                                choice.message.content 
-                                for choice in response.choices  # 直接遍历 choices 对象
-                            ]
-                        else:
-                            raise ValueError(f"{lm_id} not available!")
-                    except OpenAIError as e:
-                        print(e)
-                        raise e
+                                self.api_num += 1
+                                #COBEL usage = completion token
+                                usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
+                            elif "text-" in lm_id:
+                                response = openai.Completion.create(model=lm_id, prompt=prompt, **sampling_params)
+                                if self.debug:
+                                    with open(f"LLM/raw.json", 'a') as f:
+                                        f.write(json.dumps(response, indent=4))
+                                        f.write('\n')
+                                generated_samples = [
+                                    choice.message.content 
+                                    for choice in response.choices  # 直接遍历 choices 对象
+                                ]
+                            else:
+                                raise ValueError(f"{lm_id} not available!")
+                            return generated_samples, usage
+                        except OpenAIError as e:
+                            if attempt == 5:
+                                print(e)
+                                raise e
                 elif source == 'huggingface':
                     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
                     prompt_len = input_ids.shape[-1]

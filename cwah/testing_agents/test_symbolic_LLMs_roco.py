@@ -152,18 +152,14 @@ if __name__ == '__main__':
             arena.reset(episode_id)
             success, steps, saved_info = arena.run()
 
-            for agent_id,agent in enumerate(agents):
-                total_tokens[agent_id] = arena.agents[agent_id].get_tokens()
-                total_comm_counts[agent_id] = arena.agents[agent_id].get_comm_counts()
-                total_comm_chars[agent_id] = arena.agents[agent_id].get_comm_chars()
 
-            average_calls_per_discussion = 0
-
-            for call in arena.get_calls():
-                average_calls_per_discussion += (call)
-
-            average_calls_per_discussion /= len(arena.get_calls())
-            
+            #COBEL episode count
+            episode_0_com_count = arena.agents[0].comm_counts
+            episode_1_com_count = arena.agents[1].comm_counts
+            episode_0_api = arena.agents[0].get_api_num()
+            episode_1_api = arena.agents[1].get_api_num()
+            episode_0_token_stats = arena.agents[0].get_token_stats()
+            episode_1_token_stats = arena.agents[1].get_token_stats()
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -188,22 +184,27 @@ if __name__ == '__main__':
 
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
+            average_calls_per_discussion = 0
 
+            for call in arena.get_calls():
+                average_calls_per_discussion += (call)
+
+            average_calls_per_discussion /= len(arena.get_calls())
 
             result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
-                                        'symboli_roco': {
-                                            'episode_0_comm_chars': total_comm_chars[0],
-                                            'episode_1_comm_chars': total_comm_chars[1],
-                                            'episode_0_com': total_comm_counts[0],
-                                            'episode_1_com': total_comm_counts[1],
-                                            'episode_0_api': arena.agents[0].get_api_num(),
-                                            'episode_1_api': arena.agents[0].get_api_num(),
-                                            'episode_0_tokens': {"prompt":total_tokens[0][0],"completion":total_tokens[0][1]},
-                                            'episode_1_tokens': {"prompt":total_tokens[1][0],"completion":total_tokens[1][1]},
-                                            "average_call":average_calls_per_discussion
+                                        'symbolic_roco': {
+                                            'episode_0_com': episode_0_com_count,
+                                            'episode_1_com': episode_1_com_count,
+                                            'episode_0_api': episode_0_api,
+                                            'episode_1_api': episode_1_api,
+                                            'episode_0_tokens': {"prompt_tokens":episode_0_token_stats[0],"completion_tokens":episode_0_token_stats[1]},
+                                            'episode_1_tokens': {"prompt_tokens":episode_1_token_stats[0],"completion_tokens":episode_1_token_stats[1]},
                                         }}
             test_results[episode_id] = result_dic
+            #==========================
+            
+            
             # 保存为json
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:

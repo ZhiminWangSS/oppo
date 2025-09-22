@@ -26,7 +26,10 @@ class LLM_agent_cobel:
         self.roomname2id = {}
         self.unsatisfied = {}
         self.steps = 0
-        self.con =True
+        self.con =True 
+        if 'qwen' in self.lm_id:
+            self.con = False
+        
         # self.location = None
         # self.last_location = None
         self.plan = None
@@ -43,6 +46,12 @@ class LLM_agent_cobel:
         self.id_inside_room = {}
         self.satisfied = []
         self.reachable_objects = []
+        self.room_explored = {
+            "livingroom": False,
+            "kitchen": False,
+            "bedroom": False,
+            "bathroom": False,
+        }
         self.unchecked_containers = {
             "livingroom": None,
             "kitchen": None,
@@ -462,9 +471,9 @@ class LLM_agent_cobel:
                     print("=======新物体触发重新规划=======")
                     self.episode_logger.info("=======新物体=======")
                     self.plan_logger.info("=======新物体触发重新规划=======")
-                if self.message_received != {}:
-                    print("=======新消息触发重新规划=======")
-                    self.plan_logger.info("=======新消息触发重新规划=======")
+                # if self.message_received != {}:
+                #     print("=======新消息触发重新规划=======")
+                #     self.plan_logger.info("=======新消息触发重新规划=======")
                 if self.plan == None:
                     print("=======没计划触发重新规划=======")
                     self.plan_logger.info("=======没计划触发重新规划=======")
@@ -616,7 +625,11 @@ class LLM_agent_cobel:
 
                 #如果手上满了 强制执行
                 if len(self.grabbed_objects) == 2:
-                    print("手满了强制去放")
+                    self.subplan = None
+                    plan =  f"[goput] {self.goal_location}"
+                unsatisfied_num = sum(self.unsatisfied.values())
+                print(self.unsatisfied)
+                if len(self.grabbed_objects) == unsatisfied_num:
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
@@ -627,7 +640,7 @@ class LLM_agent_cobel:
                 # a_info.update({"steps": self.steps})
                 # info.update({"LLM": a_info})
                 LM_times += 1
-            
+                self.observe_new = False
             if self.plan.startswith('[goexplore]'):
                 action = self.goexplore()
             elif self.plan.startswith('[gocheck]'):
@@ -775,17 +788,6 @@ class LLM_agent_cobel:
         self.my_subplan = None
         self.message_time = 0
         
-        
-    def get_completion_tokens(self):
-        return self.LLM.completion_tokens
-    def get_total_tokens(self):
-        return self.LLM.total_tokens
-    
-    def get_api_num(self):
-        return self.LLM.api_num
-    
-    def get_comm_tokens(self):
-        return self.LLM.comm_tokens
     
 
     def parse_belief_line(self,belief_type,beliefs):

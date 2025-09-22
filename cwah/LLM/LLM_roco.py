@@ -87,14 +87,12 @@ class LLM_roco:
                 'do_sample': True,
                 'early_stopping': True,
             }
-        elif self.source == 'aliyun':
-            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("CHATANYWHERE_API_KEY")
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("CHATANYWHERE_URL")
+        elif self.source == "aliyun":
+            # DeepSeek模型初始化
             client = OpenAI(
-                api_key=api_key,
-                base_url=base_url,
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
             )
-            print(f"loading openai model =============={lm_id}")
             if self.chat:
                 self.sampling_params = {
                     "extra_body": {"enable_thinking": False},
@@ -105,6 +103,7 @@ class LLM_roco:
                 }
             else:
                 self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -140,7 +139,7 @@ class LLM_roco:
             @backoff.on_exception(backoff.expo, OpenAIError)
             def _generate(prompt, sampling_params):
                 usage = [0,0]
-                if source == 'openai' or source == "aliyun":
+                if source == 'openai' or 'aliyun':
                     try:
                         if self.chat:
                             response = client.chat.completions.create(
@@ -220,6 +219,13 @@ class LLM_roco:
         self.prompt_tokens = 0
         self.completion_tokens = 0
 
+        self.token_stats = {}
+        for call_name in ["communication","planning"]:
+            self.token_stats[call_name] = {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
         self.goal_location = goal_location
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
         self.goal_desc, self.goal_location_with_r = self.goal2description(unsatisfied, None)

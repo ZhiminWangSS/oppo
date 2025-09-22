@@ -1,0 +1,48 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        114
+    ],
+    "vision_capo": {
+        "episode_0_com_count": 16,
+        "episode_1_com_count": 8,
+        "episode_0_api": 70,
+        "episode_1_api": 34,
+        "episode_0_tokens": {
+            "communication": {
+                "prompt": 18962,
+                "completion": 3420,
+                "call_counts": 15
+            },
+            "meta-plan": {
+                "prompt": 602,
+                "completion": 122,
+                "call_counts": 1
+            },
+            "parsing": {
+                "prompt": 24122,
+                "completion": 3258,
+                "call_counts": 19
+            }
+        },
+        "episode_1_tokens": {
+            "communication": {
+                "prompt": 10948,
+                "completion": 944,
+                "call_counts": 8
+            },
+            "meta-plan": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "parsing": {
+                "prompt": 9986,
+                "completion": 1526,
+                "call_counts": 9
+            }
+        }
+    }
+}

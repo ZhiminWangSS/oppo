@@ -21,7 +21,7 @@
                 "--max_tokens","1024",
                 "--data_prefix","dataset/dataset_test/",
                 "--eval_episodes","9","10","11",
-                "--screen_size","256",
+                "--screen_size","256"
 
             ],
             "cwd":"${workspaceFolder}/tdw_mat",

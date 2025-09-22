@@ -188,8 +188,8 @@ if __name__ == '__main__':
         total_comm_tokens_1 = 0 
 
         for episode_id in test_episodes:
-            # kill_process_on_port(6315)
-            # kill_process_on_port(6315)
+            kill_process_on_port(6319)
+            kill_process_on_port(6319)
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(#env_task_set is the whole task set
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
