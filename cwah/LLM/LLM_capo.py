@@ -94,12 +94,14 @@ class LLM_capo(LLM):
                 'do_sample': True,
                 'early_stopping': True,
             }
-        elif self.source == "aliyun":
-            # DeepSeek模型初始化
+        elif self.source == 'aliyun':
+            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("CHATANYWHERE_API_KEY")
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
-                api_key=os.environ.get("ALIYUN_API_KEY"),
-                base_url=os.environ.get("ALIYUN_URL"),
+                api_key=api_key,
+                base_url=base_url,
             )
+            print(f"loading openai model =============={lm_id}")
             if self.chat:
                 self.sampling_params = {
                     "extra_body": {"enable_thinking": False},
@@ -110,7 +112,6 @@ class LLM_capo(LLM):
                 }
             else:
                 self.sampling_params = {
-                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,
@@ -146,26 +147,25 @@ class LLM_capo(LLM):
                 print(f"loaded huggingface model {lm_id}")
             @backoff.on_exception(backoff.expo, OpenAIError)
             def _generate(prompt, sampling_params):
-                usage = [0,0]
-                if source == 'openai'or 'aliyun':
-                    for attempt in range(5):
-                        try:
-                            if self.chat:
-                                response = client.chat.completions.create(
-                                    model=lm_id, messages=prompt, **sampling_params
-                                )
-                                self.completion_tokens += response.usage.completion_tokens
-                                self.api_num += 1
-                                self.total_tokens += response.usage.total_tokens
-                                usage = response.usage.completion_tokens#for comm counting
-                                if self.debug:
-                                    with open(f"LLM/chat_raw.json", 'a') as f:
-                                        f.write(json.dumps(response.to_dict(), indent=4))
-                                        f.write('\n')
-                                generated_samples = [
-                                    choice.message.content 
-                                    for choice in response.choices 
-                                ]
+                usage = 0
+                if source == 'openai' or source == "aliyun":
+                    try:
+                        if self.chat:
+                            response = client.chat.completions.create(
+                                model=lm_id, messages=prompt, **sampling_params
+                            )
+                            self.completion_tokens += response.usage.completion_tokens
+                            self.api_num += 1
+                            self.total_tokens += response.usage.total_tokens
+                            usage = response.usage.completion_tokens#for comm counting
+                            if self.debug:
+                                with open(f"LLM/chat_raw.json", 'a') as f:
+                                    f.write(json.dumps(response.to_dict(), indent=4))
+                                    f.write('\n')
+                            generated_samples = [
+                                choice.message.content 
+                                for choice in response.choices 
+                            ]
 
                                 self.api_num += 1
                                 #COBEL usage = completion token

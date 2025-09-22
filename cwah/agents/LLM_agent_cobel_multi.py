@@ -1,4 +1,4 @@
-from LLM.LLM_cobel import *
+from LLM.LLM_cobel_multi import LLM_cobel
 import re
 class LLM_agent_cobel:
     """
@@ -17,6 +17,8 @@ class LLM_agent_cobel:
             #MA 这里定义了启用的智能体有哪些，因为所有的初始化会统一把四个人的位置 手持物品等等都开出来，所有后面有些地方需要根据启动的智能体来索引有效i的变量
     
         self.agent_id = agent_id
+        my_name = self.agent_names[self.agent_id]
+        self.opponent_agent_id = [i for i in range(self.agent_num) if i != self.agent_id]
         # self.opponent_agent_id = 4 - agent_id
         self.source = args.source
         self.lm_id = args.lm_id
@@ -24,7 +26,7 @@ class LLM_agent_cobel:
         self.communication = args.communication
         self.cot = args.cot
         self.args = args
-        self.LLM = LLM_cobel(self.source, self.lm_id, self.prompt_template_path, self.communication, self.cot, self.args, self.agent_id)
+        self.LLM = LLM_cobel(self.source, self.lm_id, self.prompt_template_path, self.communication, self.cot, self.args, self.agent_id,self.agent_num)
         self.action_history = []
         self.dialogue_history = []
         self.containers_name = []
@@ -192,7 +194,7 @@ class LLM_agent_cobel:
         if self.current_room['class_name'] != target_object_room:
             return f"[walktowards] <{target_object_room}> ({self.roomname2id[target_object_room]})"
         #不在看到的 不在地图上 在oppo手上
-        if target_object_id not in self.id2node or target_object_id not in [w['id'] for w in self.ungrabbed_objects[target_object_room]] or target_object_id in [x['id'] for x in self.opponent_grabbed_objects]:
+        if target_object_id not in self.id2node or target_object_id not in [w['id'] for w in self.ungrabbed_objects[target_object_room]] or target_object_id in [x['id'] for l in self.opponent_grabbed_objects for x in l]:
             if self.debug:
                 print(f"not here any more!")
             self.plan = None
@@ -233,7 +235,7 @@ class LLM_agent_cobel:
         return f"{action} <{x['class_name']}> ({x['id']}) <{y['class_name']}> ({y['id']})"
 
 
-    def get_my_progress(self,oppo_id):
+    def get_my_progress(self,oppo_id=None):
         
         # return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
         return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]], self.team_current_room[self.agent_names[self.agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
@@ -373,7 +375,7 @@ class LLM_agent_cobel:
         unchecked_containers = []
         ungrabbed_objects = []
         for x in obs['nodes']:
-            if x['id'] in self.grabbed_objects or x['id'] in [w['id'] for w in opponent_grabbed_objects]:
+            if x['id'] in self.grabbed_objects or x['id'] in [w['id'] for l in opponent_grabbed_objects for w in l]:
                 for room, ungrabbed in self.ungrabbed_objects.items():
                     if ungrabbed is None: continue
                     j = None
@@ -421,8 +423,9 @@ class LLM_agent_cobel:
                         "current_room": self.current_room['class_name'],
                         },
                 }
-        if self.id_inside_room[self.opponent_agent_id] == self.current_room['class_name']:
-            self.opponent_grabbed_objects = opponent_grabbed_objects
+        for id in range(len(self.opponent_agent_id)):
+            if self.id_inside_room[self.opponent_agent_id[id]+1] == self.current_room['class_name']:
+                self.opponent_grabbed_objects[id] = opponent_grabbed_objects[id]
         action = None
         LM_times = 0
         self.done_time = 0
@@ -720,10 +723,10 @@ class LLM_agent_cobel:
             "bedroom": None,
             "bathroom": None,
         }
-        self.opponent_grabbed_objects = []
+        self.opponent_grabbed_objects = [[],[],[],[]]
         for e in obs['edges']:
             x, r, y = e['from_id'], e['relation_type'], e['to_id']
-            if x == self.agent_id and r == 'INSIDE':
+            if x == (self.agent_id +1) and r == 'INSIDE':
                 self.current_room = self.id2node[y]
         self.plan = None
         # print("====================",self.id2node)
@@ -854,7 +857,7 @@ class LLM_agent_cobel:
                     
                     if second_believe_idx == 0:
                         continue  # 不可能，但安全检查
-
+                    
                     if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
                         continue  # 不匹配 oppo_name
                     
@@ -1022,7 +1025,7 @@ class LLM_agent_cobel:
                 
                 if belief_type == "first": 
                     if agent_name == self.agent_names[self.agent_id]: #自己的不更新
-                        pass
+                        continue
                     if tokens.count('believe') < 2:
                         continue
                     first_believe_idx = tokens.index('believe')
@@ -1038,8 +1041,8 @@ class LLM_agent_cobel:
                     if second_believe_idx == 0:
                         continue  # 不可能，但安全检查
 
-                    if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                    # if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
+                    #     continue  # 不匹配 oppo_name
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:

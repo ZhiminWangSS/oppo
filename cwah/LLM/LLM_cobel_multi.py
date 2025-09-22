@@ -18,14 +18,20 @@ class LLM_cobel:
                  communication,
                  cot,
                  sampling_parameters,
-                 agent_id
+                 agent_id,
+                 agent_num
                  ):
         self.goal_desc = None
         self.goal_location_with_r = None
         self.agent_id = agent_id
-        self.agent_name = "Alice" if agent_id == 1 else "Bob"
-        self.oppo_name = "Alice" if agent_id == 2 else "Bob"
-        self.oppo_pronoun = "she" if agent_id == 2 else "he"
+        self.agent_num = agent_num
+        self.agent_names = ["Zero", "Alice", "Bob", "Tom"]
+        self.agent_name = self.agent_names[self.agent_id]
+        oppo_id = [i for i in range(self.agent_num) if i != self.agent_id]
+        
+        self.oppo_name = [self.agent_names[id] for id in oppo_id]
+        self.oppo_pronoun = "he"
+
         # self.debug = sampling_parameters.debug
         self.debug = True
         self.goal_location = None
@@ -838,6 +844,7 @@ class LLM_cobel:
             if len(grabbed_objects) == 2:
                 s = s[:-2] + f" and <{grabbed_objects[1]['class_name']}> ({grabbed_objects[1]['id']}). "
         s += f"I'm in the {current_room['class_name']}, where I found {sss[current_room['class_name']]}. "
+
         ### opponent modeling
         if not self.single:
             for agent_name,agent_grasp in enumerate(opponent_grabbed_objects).items():
@@ -854,6 +861,8 @@ class LLM_cobel:
                     s += f"I also see {self.oppo_name} here in the {current_room['class_name']}, {self.oppo_pronoun} is holding {ss}"
                 else:
                     s += f"Last time I saw {self.oppo_name} was in the {opponent_last_room[agent_name]['class_name']}, {self.oppo_pronoun} was holding {ss}"
+
+
 
         for room in self.rooms:
             if room == current_room['class_name']:

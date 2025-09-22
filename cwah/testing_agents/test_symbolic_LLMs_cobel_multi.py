@@ -87,7 +87,7 @@ if __name__ == '__main__':
                                max_episode_length=args.max_episode_length,
                                port_id=env_id,
                                env_task_set=env_task_set,
-                               agent_goals=['LLM', 'LLM'],
+                               agent_goals=['LLM', 'LLM',"LLM"],#need to hange when using different num of agents
                                observation_types=[args.obs_type for i in range(args.agent_num)],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
