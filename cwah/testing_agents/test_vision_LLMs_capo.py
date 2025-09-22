@@ -21,6 +21,37 @@ import logging
 from datetime import datetime
 import subprocess
 
+def kill_process_on_port(port):
+    try:
+        # 执行 lsof 命令获取占用指定端口的进程 PID
+        result = subprocess.run(
+            ['lsof', '-t', '-i', f':{port}'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+            return
+        
+        pids = result.stdout.strip().split('\n')
+        pids = [pid for pid in pids if pid]  # 过滤空行
+
+        if not pids:
+            print(f"没有找到占用端口 {port} 的进程。")
+            return
+
+        print(f"找到占用端口 {port} 的进程 PID: {pids}")
+
+        # 使用 kill -9 终止每个进程
+        for pid in pids:
+            subprocess.run(['kill', '-9', pid])
+            print(f"已终止 PID {pid} 的进程。")
+
+    except Exception as e:
+        print(f"发生错误: {e}")
+
 if __name__ == '__main__':
     args = get_args()
     env_task_set = pickle.load(open(args.dataset_path, 'rb'))
@@ -80,7 +111,7 @@ if __name__ == '__main__':
     }
 
     agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
-    arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+    #arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
     if args.num_per_task != 10:
@@ -98,10 +129,12 @@ if __name__ == '__main__':
 
 
 
-        
+        #print(args)
         for episode_id in test_episodes:
-            kill_process_on_port(6418)
-            kill_process_on_port(6418)
+            kill_process_on_port(args.base_port)
+            kill_process_on_port(args.base_port)
+            arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+
             arena.reset(episode_id)
             
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
@@ -180,6 +213,9 @@ if __name__ == '__main__':
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)
+            kill_process_on_port(args.base_port)
+            kill_process_on_port(args.base_port)
+            args.base_port += 1
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

@@ -782,6 +782,10 @@ class lm_agent_roco:
 
         if self.obs['status'] == 0: # ongoing
             return {'type': 'ongoing'}
+        else:
+            if obs["call_for"] == 1:
+                action = wait_for_disscussion()
+                return action
 
         self.get_new_object_list()
         #print(self.new_object_list)
@@ -814,11 +818,10 @@ class lm_agent_roco:
                     action = {'type':'waiting'}
                 return action
             
-
-
-
-
-
+        if self.num_frames > 2500 : 
+            if len(self.holding_objects_id) != 0:
+                plan = "transport objects I'm holding to the bed"
+                self.plan = plan
 
         action = None
         lm_times = 0

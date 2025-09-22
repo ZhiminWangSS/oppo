@@ -347,7 +347,10 @@ class Vision_Pipeline:
                         print('grab an object that is not in the object_info')
                     # Clear the pcd
             if 'put' in self.last_action:
-                self.with_character_id.remove(int(self.last_action.split(' ')[2][1: -1]))
+                try:
+                    self.with_character_id.remove(int(self.last_action.split(' ')[2][1: -1]))
+                except:
+                    pass
                 self.consider_upd.append(int(self.last_action.split(' ')[2][1: -1]))
             if 'putback' in self.last_action:
                 self.object_relation[(int(self.last_action.split(' ')[2][1: -1]), int(self.last_action.split(' ')[4][1: -1]))] = [1, 0, 1]
