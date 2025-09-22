@@ -840,19 +840,20 @@ class LLM_cobel:
         s += f"I'm in the {current_room['class_name']}, where I found {sss[current_room['class_name']]}. "
         ### opponent modeling
         if not self.single:
-            ss = ""
-            if len(opponent_grabbed_objects) == 0:
-                ss += "nothing. "
-            else:
-                ss += f"<{opponent_grabbed_objects[0]['class_name']}> ({opponent_grabbed_objects[0]['id']}). "
-                if len(opponent_grabbed_objects) == 2:
-                    ss = ss[:-2] + f" and <{opponent_grabbed_objects[1]['class_name']}> ({opponent_grabbed_objects[1]['id']}). "
-            if opponent_last_room['class_name'] is None:
-                s += f"I don't know where {self.oppo_name} is. "
-            elif opponent_last_room['class_name'] == current_room['class_name']:
-                s += f"I also see {self.oppo_name} here in the {current_room['class_name']}, {self.oppo_pronoun} is holding {ss}"
-            else:
-                s += f"Last time I saw {self.oppo_name} was in the {opponent_last_room['class_name']}, {self.oppo_pronoun} was holding {ss}"
+            for agent_name,agent_grasp in enumerate(opponent_grabbed_objects).items():
+                ss = ""
+                if len(agent_grasp) == 0:
+                    ss += "nothing. "
+                else:
+                    ss += f"<{agent_grasp[0]['class_name']}> ({agent_grasp[0]['id']}). "
+                    if len(agent_grasp) == 2:
+                        ss = ss[:-2] + f" and <{agent_grasp[1]['class_name']}> ({agent_grasp[1]['id']}). "
+                if opponent_last_room[agent_name]['class_name'] is None:
+                    s += f"I don't know where {self.oppo_name} is. "
+                elif opponent_last_room[agent_name]['class_name'] == current_room['class_name']:
+                    s += f"I also see {self.oppo_name} here in the {current_room['class_name']}, {self.oppo_pronoun} is holding {ss}"
+                else:
+                    s += f"Last time I saw {self.oppo_name} was in the {opponent_last_room[agent_name]['class_name']}, {self.oppo_pronoun} was holding {ss}"
 
         for room in self.rooms:
             if room == current_room['class_name']:

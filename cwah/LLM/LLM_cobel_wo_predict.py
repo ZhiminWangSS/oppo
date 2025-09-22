@@ -410,7 +410,7 @@ class LLM_cobel:
 
     def prediction_zero_order(self,my_progress):
         prompt = (
-            self.cobel_prompts_df["prompt"][3]
+            self.cobel_prompts_df["prompt"][2]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$MY_PROGRESS$", my_progress)
@@ -457,70 +457,18 @@ class LLM_cobel:
         # )
         return reason, my_subplan
 
-
-    def prediction_first_order(self,oppo_progress):
-        prompt = (
-            self.cobel_prompts_df["prompt"][2]
-            .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$OPPO_PROGRESS$", oppo_progress)
-            .replace("$GOAL$", self.goal_desc)
-        )
-        system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplans: \nsubplan1: \nsubplan2: \nsubplan3:"
-        chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
-        output, usage = self.generator(
-                    chat_prompt, self.sampling_params
-                ) # usage token cost
-        
-        # 记录token消耗
-        method_name = "prediction_first_order"
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        # 使用正则表达式提取 Updated Beliefs
-        pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape(f"subplans:") + r'|$)'
-        match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_beliefs:
-            raise ValueError("Failed to extract updated beliefs from output.")
-        reason = match_beliefs.group(1).strip()
-
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        pattern_subplan = rf"subplans:\s*(.*)"
-        match_subplan = re.search(pattern_subplan, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_subplan:
-            raise ValueError("Failed to extract opponent subplans from output.")
-        opponent_subplans = match_subplan.group(1).strip()
-        if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
-            print(f"=========predict_first=============: \n{output[0]}")
-
-
-        return reason, opponent_subplans
-
-
-
-    def coordination_aware(self,my_progress, oppo_progress, my_subplan, opponent_subplans):
+    def coordination_aware(self,my_progress, oppo_progress):
         
         oppo_progress_str = ""
         for agent_name, progress in oppo_progress.items():
             oppo_progress_str += f"{agent_name}'s progress: {progress}\n"
         oppo_progress_str = oppo_progress_str.strip()
-        opponent_subplans_str = ""
-        for agent_name, subplan in opponent_subplans.items():
-            opponent_subplans_str += f"{agent_name}'s subplan: {subplan}\n"
-        opponent_subplans_str = opponent_subplans_str.strip()
         prompt = (
-            self.cobel_prompts_df["prompt"][5]
+            self.cobel_prompts_df["prompt"][3]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$MY_PROPGRESS$", my_progress)
             .replace("$OPPO_PROGRESS$", oppo_progress_str)
-            .replace("$MY_SUBPLAN$", my_subplan)
-            .replace("$OPPO_SUBPLAN$", opponent_subplans_str)
         )
         system_prompt = "You MUST follow the output format strictly.Format: reasons:\nanswer:\nmisaligned information:\n"
         chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
@@ -572,67 +520,9 @@ class LLM_cobel:
         return answer, reason, difference
 
 
-
-    def passive_prediction_zero_order(self, my_progress, oppo_subplan):
-        
-        oppo_subplan_str = ""
-
-        for agent_name,agent_subplan in oppo_subplan.items():
-            oppo_subplan_str += f"{agent_name}'s subplan: "
-            oppo_subplan_str += agent_subplan
-
-        prompt = (
-            self.cobel_prompts_df["prompt"][4]
-            .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
-            .replace("$MY_PROGRESS$", my_progress)
-            .replace("$OPPO_SUBPLAN$", oppo_subplan_str)
-            .replace("$GOAL$", self.goal_desc)
-        )
-        system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplan:"
-        chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
-        # chat_prompt = [{"role": "user", "content": prompt}]
-        output, usage = self.generator(
-                    chat_prompt, self.sampling_params
-                ) # usage token cost
-        
-        # 记录token消耗
-        method_name = "prediction_zero_order"
-        prompt_tokens = usage[0]
-        completion_tokens = usage[1]
-        self.token_stats[method_name]["prompt"] += prompt_tokens
-        self.token_stats[method_name]["completion"] += completion_tokens
-        self.token_stats[method_name]["call_counts"] += 1
-
-        # 使用正则表达式提取 $OPPO_NAME$'s SubPlans
-        # 使用正则表达式提取 Updated Beliefs
-        # pattern_beliefs = r'updated zero order beliefs:\s*(.*?)(?=' + re.escape("reasons:") + r'|$)'
-        pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
-        match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_beliefs:
-            raise ValueError("Failed to extract updated beliefs from output.")
-        reason = match_beliefs.group(1).strip()
-
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        # pattern_subplan = r'reasons:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
-        pattern_subplan = rf"subplan:\s*(.*)"
-        match_subplan = re.search(pattern_subplan, output[0], re.IGNORECASE | re.DOTALL)
-        if not match_subplan:
-            raise ValueError("Failed to extract subplan from output.")
-        my_subplan = match_subplan.group(1).strip()
-        if self.belief_debug:
-            print(f"=========prompt===========: \n{prompt}")
-            print(f"=========predict_zero=============: \n{output[0]}")
-
-        # episode_logger.info(
-        #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
-        # )
-        return reason, my_subplan
-    
-
     def comm(self, difference, my_subplan):
         prompt = (
-            self.cobel_prompts_df["prompt"][6]
+            self.cobel_prompts_df["prompt"][4]
             .replace("$AGENT_NAME$", self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$MISALIGNED INFORMATION$", difference)
@@ -680,7 +570,7 @@ class LLM_cobel:
 
     
         prompt = (
-            self.cobel_prompts_df["prompt"][7]
+            self.cobel_prompts_df["prompt"][5]
             .replace('$AGENT_NAME$',self.agent_name)
             .replace("$OPPO_NAME$", self.oppo_name)
             .replace("$GOAL$", self.goal_desc)
@@ -991,7 +881,7 @@ class LLM_cobel:
 
             
     def get_my_progress(self, current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
-        #opponent_grabbed_objects, opponent_last_room -》 {name:[]}
+
         # goal_desc = self.goal2description(unsatisfied_goal, goal_location_room)
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)
         return progress_desc

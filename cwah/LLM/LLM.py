@@ -85,6 +85,31 @@ class LLM:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
+
+        elif self.source == "aliyun":
+            # DeepSeek模型初始化
+            client = OpenAI(
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
+            )
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
         elif source == 'huggingface':
             self.sampling_params = {
                 "max_new_tokens": sampling_parameters.max_tokens,
@@ -125,7 +150,7 @@ class LLM:
             @backoff.on_exception(backoff.expo, OpenAIError)
             def _generate(prompt, sampling_params):
                 usage = [0,0]
-                if source == 'openai':
+                if source == 'openai' or 'aliyun':
                     try:
                         if self.chat:
                             response = client.chat.completions.create(

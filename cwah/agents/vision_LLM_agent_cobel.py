@@ -32,7 +32,6 @@ class vision_LLM_agent_cobel:
         self.communication = args.communication
         self.cot = args.cot
         self.args = args
-        self.con = True
         self.LLM = LLM_cobel(self.source, self.lm_id, self.prompt_template_path, self.communication, self.cot, self.args, self.agent_id)
         self.action_history = []
         self.dialogue_history = []
@@ -58,6 +57,9 @@ class vision_LLM_agent_cobel:
         self.done_time = 0 
         self.satisfied = []
         self.reachable_objects = []
+        self.con =False 
+        if 'qwen' in self.lm_id:
+            self.con = False
         self.room_explored = {
             "livingroom": False,
             "kitchen": False,
@@ -220,6 +222,7 @@ class vision_LLM_agent_cobel:
         # if len(self.progress['goal_location_room']) > 1: # should be ruled out
         if len(self.grabbed_objects) == 0:
             self.plan = None
+            print("手上没东西")
             return None
         if type(self.id_inside_room[self.goal_location_id]) is list:
             if len(self.id_inside_room[self.goal_location_id]) == 0:
@@ -231,6 +234,7 @@ class vision_LLM_agent_cobel:
             if len(self.id_inside_room[self.goal_location_id]) > 1:
                 self.plan = f"[goexplore] <{target_room_name}> ({self.roomname2id[target_room_name]})"
                 self.room_explored[target_room_name] = True
+                print("无返回值")
                 return None
         else:
             target_room_name = self.id_inside_room[self.goal_location_id]
@@ -262,7 +266,7 @@ class vision_LLM_agent_cobel:
     def get_my_progress(self):
         
         # return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
-        return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
+        return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.room_explored)
     
     def get_oppo_progress(self): #zhe
         # print("=========================对手progress==")
@@ -312,6 +316,7 @@ class vision_LLM_agent_cobel:
         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} action_with_message_history:{self.action_history_w_mes}")
         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} action_history:{self.action_history}")
         action_history_desc = ", ".join(self.action_history)
+        print(available_plans)
         plan = self.LLM.intuitive_planning(self.my_subplan,
                                            action_history_desc,
                                            my_progress,
@@ -363,7 +368,7 @@ class vision_LLM_agent_cobel:
 
         satisfied, unsatisfied = self.check_progress(symbolic_obs, goal)
         self.observe_new = False
-        # print(f"satisfied: {satisfied}")
+        print(f"satisfied: {satisfied}")
         if self.satisfied != satisfied:
             self.observe_new = True
         # print(f"satisfied: {satisfied}")
@@ -440,6 +445,7 @@ class vision_LLM_agent_cobel:
         self.team_ungrasped_obj[self.agent_names[self.agent_id]][self.current_room['class_name']] = ungrabbed_objects[:]
         
         if self.ungrabbed_objects[self.current_room['class_name']] != ungrabbed_objects[:]: #新物体
+            print(self.ungrabbed_objects)
             self.observe_new = True
         
         self.ungrabbed_objects[self.current_room['class_name']] = ungrabbed_objects[:]
@@ -520,7 +526,7 @@ class vision_LLM_agent_cobel:
             
             #===========================结束=========================
             
-            if self.plan is None or self.observe_new: #or new obj or message
+            if (self.plan is None or self.observe_new) and (self.rotated == 0): #or new obj or message
                 if self.observe_new:
                     self.subplan = None
                     self.episode_logger.info("=======新物体=======")
@@ -529,8 +535,9 @@ class vision_LLM_agent_cobel:
                     print("=======没计划触发重新规划=======")
                     self.plan_logger.info("=======没计划触发重新规划=======")
                 # if LM_times > 0:
-                # if LM_times > 0:
-                #     print(info)
+                if LM_times > 10:
+                    print(info)
+                    break
                 plan = None
                 work_agents_name = []
                 for agent_name,agent_state in self.work_agents.items():
@@ -539,12 +546,12 @@ class vision_LLM_agent_cobel:
                 #measurement update
                 updated_zero_order_beliefs,updated_first_order_beliefs,self.opponent_subplans = self.LLM.update_beliefs(self.message_received,self.dialogue,work_agents_name)
 
-                print("=========updated_first_beliefs==========")
-                print(updated_first_order_beliefs)
-                print("=========updated_zero_beliefs==========")
-                print(updated_zero_order_beliefs)
+                # print("=========updated_first_beliefs==========")
+                # print(updated_first_order_beliefs)
+                # print("=========updated_zero_beliefs==========")
+                # print(updated_zero_order_beliefs)
                 if self.con == False:
-                    print("==============不带容器更新==============")
+                    # print("==============不带容器更新==============")
                     if updated_first_order_beliefs != {}:
                         self.parse_belief_line_con('first',updated_first_order_beliefs)
                     if updated_zero_order_beliefs != {}:
@@ -586,6 +593,7 @@ class vision_LLM_agent_cobel:
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_progress:{oppo_progress}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
+                    print(self.goal_objects_name)
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
 
                     #这个基本不可能到这
@@ -643,19 +651,12 @@ class vision_LLM_agent_cobel:
                 if plan is None:
                     plan = self.intuitive_planning()
 
-                self.plan_logger.info(
-                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
-                        )
                 
-                self.episode_logger.info(
-                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
-                        )
-
-                print(f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}")
                     
                 if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
                     self.my_subplan = None
-                    if self.done_time > 3:
+                    if self.done_time > 2:
+                        print("subplan done 太多次")
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
                         if filtered_plans == []:
@@ -667,8 +668,10 @@ class vision_LLM_agent_cobel:
                         self.plan = None
                         self.done_time += 1
                         # self.plan = None #其实不需要
+                        
                         continue
 
+                
 
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
@@ -676,10 +679,26 @@ class vision_LLM_agent_cobel:
 
                 if len(self.grabbed_objects) == 2:
                     self.subplan = None
+                    print("强制搬运")
+                    plan =  f"[goput] {self.goal_location}"
+                unsatisfied_num = sum(self.unsatisfied.values())
+                if len(self.grabbed_objects) == unsatisfied_num:
+                    print("最后几个直接放")
+                    self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
                     print("No more things to do!")
                     plan = f"[wait]"
+
+                self.plan_logger.info(
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
+                
+                self.episode_logger.info(
+                            f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}"
+                        )
+
+                print(f"\n{self.agent_names[self.agent_id]}: low-level-plan:{plan}")
 
                 
                 self.plan = plan
@@ -687,6 +706,8 @@ class vision_LLM_agent_cobel:
                 # a_info.update({"steps": self.steps})
                 # info.update({"LLM": a_info})
                 LM_times += 1
+
+                self.observe_new = False
             
             if self.plan.startswith('[goexplore]'):
                 action = self.goexplore()
@@ -695,6 +716,7 @@ class vision_LLM_agent_cobel:
             elif self.plan.startswith('[gograb]'):
                 action = self.gograb()
             elif self.plan.startswith('[goput]'):
+                print("goput动作")
                 action = self.goput()
             elif self.plan.startswith('[send_message]'):
                 action = self.plan[:]
@@ -704,7 +726,7 @@ class vision_LLM_agent_cobel:
                 
             else:
                 raise ValueError(f"unavailable plan {self.plan}")
-            
+        print("step+1 返回action")
         self.steps += 1
         info.update({"plan": self.plan,
                      })
@@ -717,6 +739,7 @@ class vision_LLM_agent_cobel:
         self.last_room = self.current_room
         if self.stuck > 20:
             print("Warning! stuck!")
+            self.plan_logger.info("Warning! stuck!")
             self.action_history[-1] += ' but unfinished'
             self.plan = None
             if type(self.id_inside_room[self.goal_location_id]) is list:
@@ -957,14 +980,14 @@ class vision_LLM_agent_cobel:
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})
                         formatted_beliefs.append(f"{subject.capitalize()} is holding {obj_name}")
                         
-                    if 'explore' in predicate:
-                        if self.parse_room(subject) is None:
-                            continue
-                        subject = self.parse_room(subject)
-                        if subject in self.rooms_name:
-                            if 'yes' in obj:
-                                self.team_explored_rooms[agent_name][subject] = 'all'
-                                formatted_beliefs.append(f"{subject} explored all")
+                    # if 'explore' in predicate:
+                    #     if self.parse_room(subject) is None:
+                    #         continue
+                    #     subject = self.parse_room(subject)
+                    #     if subject in self.rooms_name:
+                    #         if 'yes' in obj:
+                    #             self.team_explored_rooms[agent_name][subject] = 'all'
+                    #             formatted_beliefs.append(f"{subject} explored all")
 
                 else:
                     try:
@@ -1024,14 +1047,14 @@ class vision_LLM_agent_cobel:
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})
                         formatted_beliefs.append(f"{subject.capitalize()} is holding {obj_name}")  
                         
-                    if 'explore' in predicate:
-                        if self.parse_room(subject) is None:
-                            continue
-                        subject = self.parse_room(subject)
-                        if subject in self.rooms_name:
-                            if 'yes' in obj:
-                                self.team_explored_rooms[agent_name][subject] = 'all'
-                                formatted_beliefs.append(f"{subject} explored all")
+                    # if 'explore' in predicate:
+                    #     if self.parse_room(subject) is None:
+                    #         continue
+                    #     subject = self.parse_room(subject)
+                    #     if subject in self.rooms_name:
+                    #         if 'yes' in obj:
+                    #             self.team_explored_rooms[agent_name][subject] = 'all'
+                    #             formatted_beliefs.append(f"{subject} explored all")
             for room_name,room_con in self.team_unchecked_con[agent_name].items():
                 if room_name not in unchecked_container.keys():
                     continue
@@ -1112,14 +1135,14 @@ class vision_LLM_agent_cobel:
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                                #containers_name 有一个全局的容器信息
+                            # else:
+                            #     #检测到的肯定都是未完成的
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")     
+                            #     #containers_name 有一个全局的容器信息
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -1140,53 +1163,26 @@ class vision_LLM_agent_cobel:
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})
                         formatted_beliefs.append(f"{subject.capitalize()} is holding {obj_name}")
                         
-                    if 'explore' in predicate:
-                        if self.parse_room(subject) is None:
-                            continue
-                        subject = self.parse_room(subject)
-                        if subject in self.rooms_name:
-                            if 'yes' in obj:
-                                self.team_explored_rooms[agent_name][subject] = 'all'
-                                formatted_beliefs.append(f"{subject} explored all")
+                    # if 'explore' in predicate:
+                    #     if self.parse_room(subject) is None:
+                    #         continue
+                    #     subject = self.parse_room(subject)
+                    #     if subject in self.rooms_name:
+                    #         if 'yes' in obj:
+                    #             self.team_explored_rooms[agent_name][subject] = 'all'
+                    #             formatted_beliefs.append(f"{subject} explored all")
 
-                else:
-                    try:
-                        believe_idx = tokens.index('believe')  # 不区分大小写
-                    except ValueError:
-                        continue
-                    belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
 
-                    if len(belief_tokens) < 3:
-                        continue
-                    subject = belief_tokens[0]
-                    predicate = belief_tokens[1]
-                    obj = belief_tokens[2]
-                    if 'in' in predicate:
-                        if self.parse_room(obj) is None:
-                                continue
-                        obj = self.parse_room(obj)
-                        if obj in self.rooms_name:
-                            unchecked_container_room = []
-                            if self.parse_obj(subject) == None:
-                                continue
-                            obj_str,obj_name,obj_id = self.parse_obj(subject)
-                            if obj_name in self.goal_objects_name:
-                                #检查是否有了
-                                for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                    #room
-                                self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
-                                formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                                #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                #containers_name 有一个全局的容器信息
+
+                            # else:
+                            #     #检测到的肯定都是未完成的
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")  
+                            #     #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     #containers_name 有一个全局的容器信息
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1207,19 +1203,19 @@ class vision_LLM_agent_cobel:
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})
                         formatted_beliefs.append(f"{subject.capitalize()} is holding {obj_name}")  
                         
-                    if 'explore' in predicate:
-                        if self.parse_room(subject) is None:
-                            continue
-                        subject = self.parse_room(subject)
-                        if subject in self.rooms_name:
-                            if 'yes' in obj:
-                                self.team_explored_rooms[agent_name][subject] = 'all'
-                                formatted_beliefs.append(f"{subject} explored all")
-            for room_name,room_con in self.team_unchecked_con[agent_name].items():
-                if room_name not in unchecked_container.keys():
-                    continue
-                self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
-                formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
+                    # if 'explore' in predicate:
+                    #     if self.parse_room(subject) is None:
+                    #         continue
+                    #     subject = self.parse_room(subject)
+                    #     if subject in self.rooms_name:
+                    #         if 'yes' in obj:
+                    #             self.team_explored_rooms[agent_name][subject] = 'all'
+                    #             formatted_beliefs.append(f"{subject} explored all")
+            # for room_name,room_con in self.team_unchecked_con[agent_name].items():
+            #     if room_name not in unchecked_container.keys():
+            #         continue
+            #     self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
+            #     formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
             print(formatted_beliefs)
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
     def parse_obj(self, text):

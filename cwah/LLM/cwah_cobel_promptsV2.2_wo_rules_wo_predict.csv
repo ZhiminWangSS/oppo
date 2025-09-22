@@ -1,0 +1,117 @@
+type,prompt
+plan_zero,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together.
+
+First, please reason over my progress and dialogue history to answer the following question:
+What the possible locations of goal objects which haven't been found based on the room exploration state and unchecked containers?
+Such as: If a room is explored none OR a container is unchecked, the probability of the goal objects in this room OR container is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons. If you've found all the goal objects, just put them in goal location.
+
+
+Second, based on your reasoning, please generate ONLY one best subplan $AGENT_NAME$ will take to find and put goal objects as soon as possible.
+The generated subplan must meet following requirements:
+- This subplan can be broken down into 1 to 3 actions. 
+- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions.
+    1) 'go explore': explore a room for underlying target objects.
+    2) 'go grab': go to grab a specified target object.
+    3) 'go put': Put an object into/on the goal location. 
+    4) 'go check' Check an unchecked container to find if there is any objects in it.
+Here are some examples for you:
+Go explore a room and go check the unchecked containers.
+Go grab objects and go put them to goal location.
+If you want to go check or grab an object in another room, you should first go explore the room and check or grab.
+
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
+ 
+
+
+Notice: Represent objects,container and room strictly in the format <name> (id) like <table> (712). a <name> (id) represent a specific object, if the goal is to find two cupcakes, you need to find two cupcakes with different id.
+What I can do:
+I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free.
+
+Following are provided information for you:
+
+Goal: $GOAL$
+
+Progress: $MY_PROGRESS$
+
+Dialogue history: $DIALOGUE_HISTORY$
+
+Answer strictly in this format:
+reasoning:
+subplan:"
+
+coordination_aware,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+
+Please answer the following questions:
+1. Is there any potential miscoordination between between my progress and what $OPPO_NAME$ knows from the dialogue history? Please analyze the miscoordination in two aspects:
+(1) conflicting subplans: where my subplan and $OPPO_NAME$'s subplans may conflict in actions or locations.
+Such as my subplan is go to explore livingroom, while $OPPO_NAME$'s subplans include go to explore livingroom and check the unchecked there. This is a conflict because we may explore in the same room at the same time which leads to a waste of time.
+(2) important misaligned information: where some information my progress and $OPPO_NAME$'s progress may misaligned which may lead to miscoordination.
+
+Such as I know <kitchencabinet> (138), <kitchencabinet> (139), <kitchencabinet> (140) in the kitchen is checked, but $OPPO_NAME$ don't know this. So he may go to kitchen to explore it, which is a waste of time. 
+
+Give your analysis in at most three reasons.
+
+2. If there exists heavy miscoordination, please answer Yes; Otherwise, answer No. Allow for a certain degree of information misalignment which can not leads to heavy  miscoordination.
+
+3. If yes, then please find the misaligned information between $AGENT_NAME$'s progress and $OPPO_NAME$'s progress. Please list these misaligned pieces of information item by item. Just list what $AGENT_NAME$ know, don't need to list what $OPPO_NAME$ knows.
+
+4. If no miscoordination, just answer NO.
+
+Following are provided information for you:
+
+$AGENT_NAME$'s Progress: $MY_PROPGRESS$
+
+Dialogue history: $DIALOGUE_HISTORY$
+
+$AGENT_NAME$'s subplan: $MY_SUBPLAN$
+
+$OPPO_NAME$'s subplan: $OPPO_SUBPLAN$
+
+Answer in this format:
+reasons:
+answer:
+misaligned information:
+"
+communication,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+
+Please help me generate a concise and clear message to inform $OPPO_NAME$ of the misaligned information i know but he don't know and inform $OPPO_NAME$ of my subplan to achieve our shared goal collaboratively. The message should meet following requirements:
+
+1.The message has to be concise, reliable, and helpful for assisting $OPPO_NAME$ and me to make an efficient and consistent action plan, and transport as many objects to the bed as possible.
+Don't generate repetitive messages.
+2.The message must strictly contain two parts of contents : 1. information only $AGENT_NAME$ know and 2. my subplan
+
+Here is an example of generated massage for you:
+Example:
+Message:Hi $OPPO_NAME$, I' ve explored all of the kitchen and checked <kitchencabinet> (138), <kitchencabinet> (139), <kitchencabinet> (140) there and found <apple> (386). I'm holding <wine> (12234). My subplan is to grab the <wine> (12234) put holding things to the goal location.
+
+Just send what $AGENT_NAME$ know, don't need to send what $OPPO_NAME$ knows.
+
+Following are provided information for you:
+
+Misaligned information: $MISALIGNED INFORMATION$
+
+My subplan:  $MY_SUBPLAN$
+
+"
+parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
+
+Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.
+
+Please provide up to three reasons to support your answer.
+
+Following are provided information for you:
+
+Goal: $GOAL$
+
+My subplan: $MY_SUBPLAN$
+
+Previous action: $PREVIOUS_ACTIONS$
+
+Progress: $PROGRESS$
+
+Action list: $ACTION_LIST$
+
+You MUST choose one in the Action list, do not choose action not in the action list.
+Answer strictly in this format:
+reasons:
+answer: "

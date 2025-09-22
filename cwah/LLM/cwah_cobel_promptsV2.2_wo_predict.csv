@@ -65,47 +65,6 @@ $AGENT_NAME$ knows:
 zero order beliefs:
 $OPPO_NAME$'s plan:
 "
-plan_first,"I am $OPPO_NAME$. I'm in a hurry to finish the housework with my friend $AGENT_NAMEG$ together.
-
-First, please reason over my progress to answer the following question:
-What the possible locations of goal objects which haven't been found based on the room exploration state and unchecked containers?
-Such as: If a room is explored none OR a container is unchecked, the probability of the goal objects in this room OR container is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons. If you've found all the goal objects, just put them in goal location.
-
-Second, based on your reasoning, please generate the best three subplans $OPPO_NAME$ will take to find and put goal objects as soon as possible.
-The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
-- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions.
-    1) 'go explore': explore a room for underlying target objects.
-    2) 'go grab': go to grab a specified target object.
-    3) 'go put': Put an object into/on the goal location. 
-    4) 'go check' Check an unchecked container to find if there is any objects in it.
-Here are some examples for you:
-Go explore a room and go check the unchecked containers.
-Go grab objects and go put them to goal location.
-If you want to go check or grab an object in another room, you should first go explore the room and check or grab.
-
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
-
-
-
-Notice: Represent objects,container and room strictly in the format <name> (id) like <table> (712). You need to output best three subplans,use ""subplan1: subplan2: subplan3:"" to represent. 
-
-What I can do:
-I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free.
-
-Following are provided information for you:
-
-Goal: $GOAL$
-
-Progress: $OPPO_PROGRESS$
-
-Answer strictly in this format:
-reasoning:
-
-subplans: 
-subplan1: 
-subplan2: 
-subplan3:"
 plan_zero,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together.
 
 First, please reason over my progress to answer the following question:
@@ -124,13 +83,10 @@ The generated subplan must meet following requirements:
 Here are some examples for you:
 Go explore a room and go check the unchecked containers.
 Go grab objects and go put them to goal location.
-Go put objects.
-If you want to go check or grab an object in another room. If you are holding the last goal object, just go put it.
+If you want to go check or grab an object in another room, you should first go explore the room and check or grab.
 
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location. I can not grap the object already in other's hand.
+Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
  
-
-
 Notice: Represent objects,container and room strictly in the format <name> (id) like <table> (712). a <name> (id) represent a specific object, if the goal is to find two cupcakes, you need to find two cupcakes with different id.
 What I can do:
 I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free.
@@ -145,57 +101,11 @@ Answer strictly in this format:
 reasoning:
 subplan:"
 
-
-passive_plan,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together.
-
-First, please reason over my progress to answer the following question:
-What the possible locations of goal objects which haven't been found based on the room exploration state and unchecked containers?
-Such as: If a room is explored none OR a container is unchecked, the probability of the goal objects in this room OR container is high. Put your reasoning progress and results behind the reasoning:, you can provide at most three reasons. If you've found all the goal objects, just put them in goal location.
-
-
-Second, based on your reasoning, please generate ONLY one best subplan $AGENT_NAME$ will take to find and put goal objects as soon as possible. while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
-
-The generated subplan must meet following requirements:
-- This subplan can be broken down into 1 to 3 actions. 
-- There are 4 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions.
-    1) 'go explore': explore a room for underlying target objects.
-    2) 'go grab': go to grab a specified target object.
-    3) 'go put': Put an object into/on the goal location. 
-    4) 'go check' Check an unchecked container to find if there is any objects in it.
-Here are some examples for you:
-Here are some examples for you:
-Go explore a room and go check the unchecked containers.
-Go grab objects and go put them to goal location.
-Go put objects.
-If you want to go check or grab an object in another room. If you are holding the last goal object, just go put it.
-
-Actions take several steps to finish. It may be costly to go to another room, use these actions sparingly. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. It may be more efficient to hold two object and then go put to the goal location.
-
-
-
-Notice: Represent objects,container and room strictly in the format <name> (id) like <table> (712).
-What I can do:
-I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free.
-
-Following are provided information for you:
-
-Goal: $GOAL$
-
-$OPPO_NAME$'s subplan: $OPPO_SUBPLAN$
-
-Progress: $MY_PROGRESS$
-
-Answer strictly in this format:
-reasoning:
-subplan:"
-
 coordination_aware,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
 Please answer the following questions:
-1. Is there any potential miscoordination between my subplan and $OPPO_NAME$'s subplans or between zero_order_beliefs and first_order_beliefs? Please analyze the miscoordination in two aspects:
-(1) conflicting subplans: where my subplan and $OPPO_NAME$'s subplans may conflict in actions or locations.
-Such as my subplan is go to explore livingroom, while $OPPO_NAME$'s subplans include go to explore livingroom and check the unchecked there. This is a conflict because we may explore in the same room at the same time which leads to a waste of time.
-(2) important misaligned information: where some information my progress and $OPPO_NAME$'s progress may misaligned which may lead to miscoordination.
+1. Is there any potential miscoordination between between zero_order_beliefs and first_order_beliefs? Please analyze the miscoordination:
+important misaligned information: where some information my progress and $OPPO_NAME$'s progress may misaligned which may lead to miscoordination.
 
 Such as I know <kitchencabinet> (138), <kitchencabinet> (139), <kitchencabinet> (140) in the kitchen is checked, but $OPPO_NAME$ don't know this. So he may go to kitchen to explore it, which is a waste of time. 
 
@@ -209,13 +119,9 @@ Give your analysis in at most three reasons.
 
 Following are provided information for you:
 
-$AGENT_NAME$'s Progress: $MY_PROPGRESS$
+$AGENT_NAME$'s Progress(zero order beliefs): $MY_PROPGRESS$
 
-$OPPO_NAME$'s Progress: $OPPO_PROGRESS$
-
-$AGENT_NAME$'s subplan: $MY_SUBPLAN$
-
-$OPPO_NAME$'s subplan: $OPPO_SUBPLAN$
+$OPPO_NAME$'s Progress(first order beliefs): $OPPO_PROGRESS$
 
 Answer in this format:
 reasons:
@@ -245,7 +151,7 @@ My subplan:  $MY_SUBPLAN$
 "
 parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
-Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i can go grasp objects, just grasp objects i found ignoring my subplan.
+Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.
 
 Please provide up to three reasons to support your answer.
 

@@ -1,4 +1,4 @@
-from LLM.LLM_cobel import *
+from LLM.LLM_cobel_wo_predict import *
 import re
 class LLM_agent_cobel:
     """
@@ -46,12 +46,6 @@ class LLM_agent_cobel:
         self.id_inside_room = {}
         self.satisfied = []
         self.reachable_objects = []
-        self.room_explored = {
-            "livingroom": False,
-            "kitchen": False,
-            "bedroom": False,
-            "bathroom": False,
-        }
         self.unchecked_containers = {
             "livingroom": None,
             "kitchen": None,
@@ -510,22 +504,6 @@ class LLM_agent_cobel:
 
                 self.episode_logger.info(f"\nzero update:{updated_zero_order_beliefs}\nfirst update{updated_first_order_beliefs}")
 
-                if len(self.opponent_subplans) == len(self.work_agents) - 1: #说明所有智能体计划都知道
-                    my_progress = self.get_my_progress()
-                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
-                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
-                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                    self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                    print("=========被动更新==========")
-                    self.plan_logger.info("=========被动更新==========")
-                    print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
-                    # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
-                    self.action_history = []
-                    self.action_history_w_mes = []
-                    self.opponent_subplans = None
-
                 #===== 只在更新计划的时候走 =====
                 if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
                     # print("=============\n", self.LLM.token_stats)
@@ -537,50 +515,35 @@ class LLM_agent_cobel:
                     print("\n")
                     # print(oppo_progress)
                     #这个基本不可能到这
+                    zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress)
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
+                    self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
 
+                    total_progress = {}
+                    for agent_name in self.agent_names:
+                        if agent_name == self.agent_names[self.agent_id]:
+                            continue
+                        if agent_name not in self.opponent_subplans.keys() and self.work_agents[agent_name] == 1:
+                            oppo_progress = self.get_oppo_progress()
+                            total_progress.update({agent_name:oppo_progress})
 
-                    if self.opponent_subplans != {}: #说明消息发送了计划
-                        zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-
-
-                    else: #就主动
-                        zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress)
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-
-                        total_progress = {}
-                        for agent_name in self.agent_names:
-                            if agent_name == self.agent_names[self.agent_id]:
-                                continue
-                            if agent_name not in self.opponent_subplans.keys() and self.work_agents[agent_name] == 1:
-                                oppo_progress = self.get_oppo_progress()
-                                first_reason, oppo_subplan = self.LLM.prediction_first_order(oppo_progress)
-                                self.opponent_subplans.update({agent_name:oppo_subplan})
-                                self.episode_logger.info(f"\n{agent_name} predict_first:{first_reason}")
-                                self.episode_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
-                                self.plan_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
-                                total_progress.update({agent_name:oppo_progress})
-
-                            # print("=========主动更新==========")
-                            self.plan_logger.info("=========主动更新==========")
-                        print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
-                        # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
-                        answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress,self.my_subplan,self.opponent_subplans)
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
-                        self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
-                        self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} difference:{difference}")
-                        #有必要就更新
-                        if "YES" in answer.upper() and self.message_time < self.max_message_time:
-                            message = self.LLM.comm(difference,self.my_subplan)
-                            plan =  "[send_message]" + "<" + message + ">"
-                            self.comm_counts += 1
-                            self.comm_chars += len(message)
-                            self.message_time += 1
+                        # print("=========主动更新==========")
+                        self.plan_logger.info("=========主动更新==========")
+                    print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
+                    # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                    answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress)
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
+                    self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
+                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} difference:{difference}")
+                    #有必要就更新
+                    if "YES" in answer.upper() and self.message_time < self.max_message_time:
+                        message = self.LLM.comm(difference,self.my_subplan)
+                        plan =  "[send_message]" + "<" + message + ">"
+                        self.comm_counts += 1
+                        self.comm_chars += len(message)
+                        self.message_time += 1
 
                     #subplan更新后清空
                     self.action_history = [] #COBEL clean the action history
@@ -628,6 +591,7 @@ class LLM_agent_cobel:
                     print("手满了强制去放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
+
                 unsatisfied_num = sum(self.unsatisfied.values())
                 print(self.unsatisfied)
                 if len(self.grabbed_objects) == unsatisfied_num:
@@ -1058,14 +1022,14 @@ class LLM_agent_cobel:
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                                #containers_name 有一个全局的容器信息
+                            # else:
+                            #     #检测到的肯定都是未完成的
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")     
+                            #     #containers_name 有一个全局的容器信息
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -1124,15 +1088,15 @@ class LLM_agent_cobel:
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            else:
-                                #检测到的肯定都是未完成的容器
-                                for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                                    if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
-                                formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                                #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                #containers_name 有一个全局的容器信息
+                            # else:
+                            #     #检测到的肯定都是未完成的容器
+                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
+                            #         if obj_dict['id'] == obj_id:
+                            #             continue #有了就跳出
+                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
+                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")  
+                            #     #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                            #     #containers_name 有一个全局的容器信息
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1161,11 +1125,11 @@ class LLM_agent_cobel:
             #                 if 'yes' in obj:
             #                     self.team_explored_rooms[agent_name][subject] = 'all'
             #                     formatted_beliefs.append(f"{subject} explored all")
-            for room_name,room_con in self.team_unchecked_con[agent_name].items():
-                if room_name not in unchecked_container.keys():
-                    continue
-                self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
-                formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
+            # for room_name,room_con in self.team_unchecked_con[agent_name].items():
+            #     if room_name not in unchecked_container.keys():
+            #         continue
+            #     self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
+            #     formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
             print(formatted_beliefs)
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
     def parse_obj(self, text):

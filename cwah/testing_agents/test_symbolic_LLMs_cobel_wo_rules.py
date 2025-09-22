@@ -2,7 +2,6 @@ import sys
 import os
 curr_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(f'{curr_dir}/..')
-import ipdb
 import pickle
 import json
 import random
@@ -10,51 +9,11 @@ import numpy as np
 from pathlib import Path
 
 from envs.unity_environment import UnityEnvironment
-# from agents import vision_LLM_agent
-from arguments import get_args
-from algos.arena_mp2 import ArenaMP
-from envs.unity_environment_capo import UnityEnvironment_capo##TODO:change the env engine
 from agents import LLM_agent
-from agents.LLM_capo_agent import capo_agent
-from agents.vision_LLM_agent_capo import vision_LLM_agent
-import logging
-from datetime import datetime
-import subprocess
+from agents.LLM_agent_cobel_wo_rules import LLM_agent_cobel
+from arguments import get_args
+from cwah.algos.arena_mp2_cobel import ArenaMP
 
-
-
-
-# kill the process
-def kill_process_on_port(port):
-    try:
-        # 执行 lsof 命令获取占用指定端口的进程 PID
-        result = subprocess.run(
-            ['lsof', '-t', '-i', f':{port}'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        if result.returncode != 0:
-            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
-            return
-        
-        pids = result.stdout.strip().split('\n')
-        pids = [pid for pid in pids if pid]  # 过滤空行
-
-        if not pids:
-            print(f"没有找到占用端口 {port} 的进程。")
-            return
-
-        print(f"找到占用端口 {port} 的进程 PID: {pids}")
-
-        # 使用 kill -9 终止每个进程
-        for pid in pids:
-            subprocess.run(['kill', '-9', pid])
-            print(f"已终止 PID {pid} 的进程。")
-
-    except Exception as e:
-        print(f"发生错误: {e}")
 
 if __name__ == '__main__':
     args = get_args()
@@ -62,17 +21,17 @@ if __name__ == '__main__':
     # with open("test_env.json", "w") as f:
     #     json.dump(env_task_set, f, indent=4)
 
-    args.record_dir = f'./test_results/{args.mode}' # set the record_dir right!
+    args.record_dir = f'../test_results/{args.mode}' # set the record_dir right!
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
-        os.system("Xvfb :98 & export DISPLAY=:98")
+        os.system("Xvfb :101 & export DISPLAY=:101")
         import time
         time.sleep(3) # ensure Xvfb is open
         os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
         executable_args = {
                         'file_name': args.executable_file,
-                        'x_display': '98',
+                        'x_display': '101',
                         'no_graphics': False,
                         'timeout_wait': 5000,
         }
@@ -92,7 +51,7 @@ if __name__ == '__main__':
 
 
     def env_fn(env_id):
-        return UnityEnvironment_capo(num_agents=2,
+        return UnityEnvironment(num_agents=2,
                                max_episode_length=args.max_episode_length,
                                port_id=env_id,
                                env_task_set=env_task_set,
@@ -100,8 +59,7 @@ if __name__ == '__main__':
                                observation_types=[args.obs_type, args.obs_type],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
-                               base_port=args.base_port,
-                               save_image=True)
+                               base_port=args.base_port)
 
     args_agent1 = {
         'agent_id': 1,
@@ -114,7 +72,7 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
+    agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2)]
     arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
@@ -130,15 +88,23 @@ if __name__ == '__main__':
             test_results = pickle.load(open(args.record_dir + '/results.pik', 'rb'))
 
         current_tried = iter_id
+        #COBEL
+        #countting for every iter
+        #COBEL
+        total_0_comm_chars = 0
+        total_1_comm_chars = 0
+        total_0_com = 0
+        total_1_com = 0
+        total_0_api = 0
+        total_1_api = 0
+        total_0_tokens = 0
+        total_1_tokens = 0
+        total_0_total_tokens = 0
+        total_1_total_tokens = 0
+        total_0_comm_tokens = 0
+        total_1_comm_tokens = 0
 
-
-
-        
         for episode_id in test_episodes:
-            kill_process_on_port(6418)
-            kill_process_on_port(6418)
-            arena.reset(episode_id)
-            
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
@@ -165,14 +131,15 @@ if __name__ == '__main__':
             arena.reset(episode_id)
             success, steps, saved_info = arena.run()
 
-
-
-            episode_0_com_count = arena.agents[0].get_comm_counts()
-            episode_1_com_count = arena.agents[1].get_comm_counts()
+            #COBEL episode count
+            episode_0_comm_chars = arena.agents[0].comm_chars
+            episode_1_comm_chars = arena.agents[1].comm_chars
+            episode_0_com = arena.agents[0].comm_counts
+            episode_1_com = arena.agents[1].comm_counts
             episode_0_api = arena.agents[0].get_api_num()
             episode_1_api = arena.agents[1].get_api_num()
-            episode_0_token_stats = arena.agents[0].get_tokens()
-            episode_1_token_stats = arena.agents[1].get_tokens()
+            episode_0_token_stats = arena.agents[0].get_token_stats()
+            episode_1_token_stats = arena.agents[1].get_token_stats()
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -201,10 +168,11 @@ if __name__ == '__main__':
 
             result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
-                                        'vision_capo': {
-                        
-                                            'episode_0_com_count': episode_0_com_count,
-                                            'episode_1_com_count': episode_1_com_count,
+                                        'COBEL': {
+                                            'episode_0_comm_chars': episode_0_comm_chars,
+                                            'episode_1_comm_chars': episode_1_comm_chars,
+                                            'episode_0_com': episode_0_com,
+                                            'episode_1_com': episode_1_com,
                                             'episode_0_api': episode_0_api,
                                             'episode_1_api': episode_1_api,
                                             'episode_0_tokens': episode_0_token_stats,
@@ -215,9 +183,8 @@ if __name__ == '__main__':
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)
+
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))
-
-
 

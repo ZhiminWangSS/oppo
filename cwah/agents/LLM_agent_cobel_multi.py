@@ -7,10 +7,10 @@ class LLM_agent_cobel:
     def __init__(self, agent_id, char_index, args):
         self.debug = args.debug
         self.agent_type = 'LLM'
-        self.agent_names = ["Zero", "Alice", "Bob"]
-        self.work_agents = {"Zero":0, "Alice":1, "Bob":1}
+        self.agent_names = ["Zero", "Alice", "Bob", "Tom"]
+        self.work_agents = {"Zero":1, "Alice":1, "Bob":1, "Tom":0},
         self.agent_id = agent_id
-        self.opponent_agent_id = 3 - agent_id
+        # self.opponent_agent_id = 4 - agent_id
         self.source = args.source
         self.lm_id = args.lm_id
         self.prompt_template_path = args.prompt_template_path
@@ -38,7 +38,7 @@ class LLM_agent_cobel:
         self.done_time = 0
         self.last_room = None
         self.grabbed_objects = None #应该是列表 放的id 最后通过id2node变成用于提取progress的列表
-        self.opponent_grabbed_objects = [] #
+        self.opponent_grabbed_objects = [[],[],[],[]] #
         self.goal_location = None
         self.goal_location_id = None
         self.last_action = None
@@ -226,21 +226,21 @@ class LLM_agent_cobel:
         return f"{action} <{x['class_name']}> ({x['id']}) <{y['class_name']}> ({y['id']})"
 
 
-    def get_my_progress(self):
+    def get_my_progress(self,oppo_id):
         
         # return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
-        return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
+        return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]], self.team_current_room[self.agent_names[self.agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
     
-    def get_oppo_progress(self):
+    def get_oppo_progress(self,oppo_id):
         
         # return self.LLM.get_my_progress(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
-        return self.LLM.get_oppo_progress(self.team_current_room[self.agent_names[self.opponent_agent_id]][self.agent_names[self.opponent_agent_id]], self.team_grasped_obj[self.agent_names[self.opponent_agent_id]][self.agent_names[self.opponent_agent_id]], self.satisfied, self.team_unchecked_con[self.agent_names[self.opponent_agent_id]], self.team_ungrasped_obj[self.agent_names[self.opponent_agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.opponent_agent_id]][self.agent_names[self.agent_id]], self.team_current_room[self.agent_names[self.opponent_agent_id]][self.agent_names[self.agent_id]],self.team_explored_rooms[self.agent_names[self.opponent_agent_id]])
+        return self.LLM.get_oppo_progress(self.team_current_room[self.agent_names[oppo_id]][self.agent_names[oppo_id]], self.team_grasped_obj[self.agent_names[oppo_id]][self.agent_names[oppo_id]], self.satisfied, self.team_unchecked_con[self.agent_names[oppo_id]], self.team_ungrasped_obj[self.agent_names[oppo_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[oppo_id]][self.agent_names[self.agent_id]], self.team_current_room[self.agent_names[oppo_id]][self.agent_names[self.agent_id]],self.team_explored_rooms[self.agent_names[oppo_id]])
 
 
 
     def get_available_plan(self):
         
-        return self.LLM.get_available_plans(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
+        return self.LLM.get_available_plans(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, None, None)
         # return self.LLM.get_available_plans(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
     
     def check_progress(self, state, goal_spec):
@@ -310,13 +310,13 @@ class LLM_agent_cobel:
             for i in range(len(observation["messages"])):
                 if observation["messages"][i] is not None:
                     #why i+1? TODO because zero is None
-                    self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")#改成多人
+                    self.dialogue_history.append(f"{self.agent_names[i]}: {observation['messages'][i]}")#改成多人
                     self.dialogue.update(
-                        {self.agent_names[i + 1]: observation['messages'][i]}
+                        {self.agent_names[i]: observation['messages'][i]}
                         )
-                    if (i+1) != self.agent_id:
+                    if i != self.agent_id:
                         self.message_received.update(
-                            {self.agent_names[i + 1]: observation['messages'][i]} #改成字典
+                            {self.agent_names[i]: observation['messages'][i]} #改成字典
                         )
                     #####
         satisfied, unsatisfied = self.check_progress(observation, goal)
@@ -331,15 +331,15 @@ class LLM_agent_cobel:
         obs = self.filter_graph(observation)
         self.grabbed_objects = []
         self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.agent_id]] = []
-        opponent_grabbed_objects = []
+        opponent_grabbed_objects = [[],[],[],[]]
         self.reachable_objects = []
         self.id2node = {x['id']: x for x in obs['nodes']}
         #自己的状态
         for e in obs['edges']:
             x, r, y = e['from_id'], e['relation_type'], e['to_id']
-            if x == self.opponent_agent_id:
+            if x != self.agent_id: ##别人的位置
                 if r == 'INSIDE':
-                    self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]] = self.id2node[y]
+                    self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[x]] = self.id2node[y]
             if x == self.agent_id:
                 if r == 'INSIDE':
                     self.current_room = self.id2node[y] #id2node返回那个大字典
@@ -353,13 +353,12 @@ class LLM_agent_cobel:
                 elif r == 'CLOSE':
                     y = self.id2node[y] #用来做gograsp的
                     self.reachable_objects.append(f"<{y['class_name']}> ({y['id']})")
-            elif x == self.opponent_agent_id and r in ['HOLDS_RH', 'HOLDS_LH']:
+            elif x != self.agent_id and r in ['HOLDS_RH', 'HOLDS_LH']:
                 #后面改成多人的
-                #####
-                #绝对准的，不需要去检索替换
-                opponent_grabbed_objects.append(self.id2node[y])
-        if opponent_grabbed_objects != []:
-            self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]] = opponent_grabbed_objects
+                opponent_grabbed_objects[x].append(self.id2node[y])
+        for a_id,oppo_single_grasp in enumerate(opponent_grabbed_objects):
+            if oppo_single_grasp != []:
+                self.team_grasped_obj[self.agent_names[self.agent_id]][a_id] = oppo_single_grasp
         unchecked_containers = []
         ungrabbed_objects = []
         for x in obs['nodes']:
@@ -529,12 +528,9 @@ class LLM_agent_cobel:
                 #===== 只在更新计划的时候走 =====
                 if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
                     # print("=============\n", self.LLM.token_stats)
-                    oppo_progress = self.get_oppo_progress()
                     my_progress = self.get_my_progress()
-                    self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_progress:{oppo_progress}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    print("\n")
                     # print(oppo_progress)
                     #这个基本不可能到这
 
@@ -553,11 +549,11 @@ class LLM_agent_cobel:
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
 
                         total_progress = {}
-                        for agent_name in self.agent_names:
+                        for a_id,agent_name in enumerate(self.agent_names):
                             if agent_name == self.agent_names[self.agent_id]:
                                 continue
                             if agent_name not in self.opponent_subplans.keys() and self.work_agents[agent_name] == 1:
-                                oppo_progress = self.get_oppo_progress()
+                                oppo_progress = self.get_oppo_progress(a_id)
                                 first_reason, oppo_subplan = self.LLM.prediction_first_order(oppo_progress)
                                 self.opponent_subplans.update({agent_name:oppo_subplan})
                                 self.episode_logger.info(f"\n{agent_name} predict_first:{first_reason}")
