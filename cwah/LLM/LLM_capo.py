@@ -94,6 +94,31 @@ class LLM_capo(LLM):
                 'do_sample': True,
                 'early_stopping': True,
             }
+        elif self.source == 'aliyun':
+            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("CHATANYWHERE_API_KEY")
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("CHATANYWHERE_URL")
+            client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+            )
+            print(f"loading openai model =============={lm_id}")
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
         elif source == "debug":
             self.sampling_params = sampling_parameters
         else:
@@ -123,7 +148,7 @@ class LLM_capo(LLM):
             @backoff.on_exception(backoff.expo, OpenAIError)
             def _generate(prompt, sampling_params):
                 usage = 0
-                if source == 'openai':
+                if source == 'openai' or source == "aliyun":
                     try:
                         if self.chat:
                             response = client.chat.completions.create(

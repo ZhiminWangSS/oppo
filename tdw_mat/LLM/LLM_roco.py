@@ -56,8 +56,8 @@ class LLM_roco:
         self.available_actions = None
         
         if self.source == "openai":
-            api_key="sk-f1ecd804555a430c97c553d228c9b9ba"#os.environ.get("CHATANYWHERE_API_KEY")
-            base_url="https://api.deepseek.com"#os.environ.get("CHATANYWHERE_URL")
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
