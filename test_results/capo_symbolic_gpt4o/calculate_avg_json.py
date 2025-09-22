@@ -80,7 +80,7 @@ def recursively_calculate_averages(data_list):
 
 def main():
     # 读取所有 JSON 文件
-    json_data_list = load_json_files('test_results/coela_symbolic_gpt4o_v2/')
+    json_data_list = load_json_files('test_results/capo_symbolic_gpt4o/')
     print(f"Loaded {len(json_data_list)} JSON files.")
 
     if not json_data_list:
@@ -95,7 +95,7 @@ def main():
         return
 
     # 保存到新文件
-    output_filename = 'test_results/coela_symbolic_gpt4o_v2/averaged_results.json'
+    output_filename = 'test_results/capo_symbolic_gpt4o/averaged_results.json'
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(averaged_data, f, indent=4, ensure_ascii=False)
 

@@ -32,7 +32,7 @@ class vision_LLM_agent_cobel:
         self.communication = args.communication
         self.cot = args.cot
         self.args = args
-        self.con = False
+        self.con = True
         self.LLM = LLM_cobel(self.source, self.lm_id, self.prompt_template_path, self.communication, self.cot, self.args, self.agent_id)
         self.action_history = []
         self.dialogue_history = []
@@ -273,8 +273,11 @@ class vision_LLM_agent_cobel:
 
 
     def get_available_plan(self):
+
         
-        return self.LLM.get_available_plans(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id])
+        return self.LLM.get_available_plans(
+            self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.unchecked_containers, self.ungrabbed_objects, self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.opponent_grabbed_objects, self.id_inside_room[self.opponent_agent_id], self.room_explored
+        )
         # return self.LLM.get_available_plans(self.current_room, [self.id2node[x] for x in self.grabbed_objects], self.satisfied, self.team_unchecked_con[self.agent_names[self.agent_id]], self.team_ungrasped_obj[self.agent_names[self.agent_id]], self.id_inside_room[self.goal_location_id], self.action_history, self.dialogue_history, self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]], self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]],self.team_explored_rooms[self.agent_names[self.agent_id]])
     
 
@@ -522,8 +525,13 @@ class vision_LLM_agent_cobel:
                     self.subplan = None
                     self.episode_logger.info("=======新物体=======")
                     self.plan_logger.info("=======新物体=======")
+                if self.plan == None:
+                    print("=======没计划触发重新规划=======")
+                    self.plan_logger.info("=======没计划触发重新规划=======")
+                # if LM_times > 0:
                 # if LM_times > 0:
                 #     print(info)
+                plan = None
                 work_agents_name = []
                 for agent_name,agent_state in self.work_agents.items():
                     if agent_state == 1:
@@ -567,7 +575,7 @@ class vision_LLM_agent_cobel:
                     print("=========被动更新==========")
                     self.plan_logger.info("=========被动更新==========")
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
-                    print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                    # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     self.action_history = []
                     self.action_history_w_mes = []
                     self.opponent_subplans = None
@@ -739,6 +747,7 @@ class vision_LLM_agent_cobel:
         self.goal_location = list(goal.keys())[0].split('_')[-1]
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
         self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None}
+        self.done_time = 0
         self.task_id = task_id
         self.unchecked_containers = {
             "livingroom": None,
@@ -760,6 +769,15 @@ class vision_LLM_agent_cobel:
             "bedroom": False,
             "bathroom": False,
         }
+        self.task_id = task_id
+
+        self.current_room = self.vision_pipeline.object_info[obs['current_room']]
+        self.plan = None
+        self.action_history = [f"[goto] <{self.current_room['class_name']}> ({self.current_room['id']})"]
+        self.dialogue_history = []
+        self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
+        self.episode_logger = episode_logger
+
         self.location = obs['location']
         self.last_location = [0, 0, 0]
         self.last_action = None
@@ -827,14 +845,7 @@ class vision_LLM_agent_cobel:
         self.message_received = {}
         self.my_subplan = None
         self.message_time = 0
-        self.task_id = task_id
-
-        self.current_room = self.vision_pipeline.object_info[obs['current_room']]
-        self.plan = None
-        self.action_history = [f"[goto] <{self.current_room['class_name']}> ({self.current_room['id']})"]
-        self.dialogue_history = []
-        self.LLM.reset(self.rooms_name, self.roomname2id, self.goal_location, self.unsatisfied)
-        self.episode_logger = episode_logger
+        
 
     def get_api_num(self):
         return self.LLM.api_num
