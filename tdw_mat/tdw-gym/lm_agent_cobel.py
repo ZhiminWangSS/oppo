@@ -518,7 +518,7 @@ class lm_agent_cobel:
         # COBEL detect new exploration extend 
         self.new_room_explored = {} 
         self.done_time = 0
-
+        self.hold_goal_obj = []
         self.obj_known_first = []
         self.obj_known = []
         self.oppo_object_per_room = {room: {0: [], 1: [], 2: []} for room in self.rooms_name}
@@ -1022,12 +1022,14 @@ class lm_agent_cobel:
                 self.agent_id
             )  # DWH: buggy env, need to solve later.
         self.holding_objects_id = []
+        self.hold_goal_obj_id = []
         self.with_oppo = []
         self.oppo_holding_objects_id = []
         hand = 0
         for x in self.obs["held_objects"]:
             if x["type"] == 0:
                 self.holding_objects_id.append(x["id"])
+                self.hold_goal_obj_id.append(x["id"])
                 if x["id"] not in self.with_character:
                     self.with_character.append(
                         x["id"]
@@ -1491,8 +1493,7 @@ class lm_agent_cobel:
                     self.plan_logger.info("No more things to do!")
                     plan = f"[wait]"
 
-                self.plan = plan
-
+            
                 if not plan.startswith('send a message:'):
                     self.action_history.append(
                         f"{plan} at step {self.num_frames}"
@@ -1500,6 +1501,9 @@ class lm_agent_cobel:
                     self.message_time = 0
                 self.action_history_w_mes.append(f"{'send a message' if plan.startswith('send a message:') else plan}")
                 lm_times += 1
+            
+            if self.num_frames > 2500 and self.hold_goal_obj != []:
+                self.plan = "transport"
             if self.plan.startswith("go to"):
                 action = self.gotoroom()
             elif self.plan.startswith("explore"):

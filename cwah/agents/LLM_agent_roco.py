@@ -552,7 +552,7 @@ class LLM_agent:
 	
 	def get_api_num(self):
 		return self.LLM.api
-	def get_tokens(self):
+	def get_token_stats(self):
 		return(self.LLM.prompt_tokens,self.LLM.completion_tokens)
 	def get_comm_counts(self):
 		return self.comm_counts

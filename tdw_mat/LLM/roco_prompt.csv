@@ -5,7 +5,7 @@ Current observation:$current_observation$
 Previous actions:$previous_actions$
 [Action Options]:$available_actions$
 Dialogue history:$dialogue history$
-You are disscussing with $OPPO_NAME$, the dialogue history is your previous discussion, you should think carefully about the task, previous actions and others' response. Carefully check and make advice to achieve better collaboration. 
+You are discussing with $OPPO_NAME$, the dialogue history is your previous discussion, you should think carefully about the task, previous actions and others' response. Carefully check and make advice to achieve better collaboration. 
 
 When you respond, tell others about your plan and your condition. Respond very concisely but informatively, and do not repeat what others have said.
 Discuss together to come up with the best plan to complete the goal. Never forget you are $AGENT_NAME$! 

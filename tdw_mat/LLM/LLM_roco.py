@@ -56,8 +56,8 @@ class LLM_roco:
         self.available_actions = None
         
         if self.source == "openai":
-            api_key="sk-f1ecd804555a430c97c553d228c9b9ba"#os.environ.get("CHATANYWHERE_API_KEY")
-            base_url="https://api.deepseek.com"#os.environ.get("CHATANYWHERE_URL")
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
@@ -71,6 +71,31 @@ class LLM_roco:
                 }
             else:
                 self.sampling_params = {
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
+
+        elif self.source == "aliyun":
+            # DeepSeek模型初始化
+            client = OpenAI(
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
+            )
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
                     "max_tokens": sampling_parameters.max_tokens,
                     "temperature": sampling_parameters.t,
                     "top_p": sampling_parameters.top_p,

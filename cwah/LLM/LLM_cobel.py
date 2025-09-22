@@ -83,31 +83,6 @@ class LLM_cobel:
                     "logprobs": sampling_parameters.logprobs,
                     "echo": sampling_parameters.echo,
                 }
-
-        elif self.source == "aliyun":
-            # DeepSeek模型初始化
-            client = OpenAI(
-                api_key=os.environ.get("ALIYUN_API_KEY"),
-                base_url=os.environ.get("ALIYUN_URL"),
-            )
-            if self.chat:
-                self.sampling_params = {
-                    "enable_thinking": False,
-                    "max_tokens": sampling_parameters.max_tokens,
-                    "temperature": sampling_parameters.t,
-                    "top_p": sampling_parameters.top_p,
-                    "n": sampling_parameters.n,
-                }
-            else:
-                self.sampling_params = {
-                    "enable_thinking": False,
-                    "max_tokens": sampling_parameters.max_tokens,
-                    "temperature": sampling_parameters.t,
-                    "top_p": sampling_parameters.top_p,
-                    "n": sampling_parameters.n,
-                    "logprobs": sampling_parameters.logprobs,
-                    "echo": sampling_parameters.echo,
-                }
         elif source == 'huggingface':
             self.sampling_params = {
                 "max_new_tokens": sampling_parameters.max_tokens,
@@ -120,6 +95,29 @@ class LLM_cobel:
                 'do_sample': True,
                 'early_stopping': True,
             }
+        elif self.source == "aliyun":
+            client = OpenAI(
+                api_key=os.environ.get("ALIYUN_API_KEY"),
+                base_url=os.environ.get("ALIYUN_URL"),
+            )
+            if self.chat:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                }
+            else:
+                self.sampling_params = {
+                    "extra_body": {"enable_thinking": False},
+                    "max_tokens": sampling_parameters.max_tokens,
+                    "temperature": sampling_parameters.t,
+                    "top_p": sampling_parameters.top_p,
+                    "n": sampling_parameters.n,
+                    "logprobs": sampling_parameters.logprobs,
+                    "echo": sampling_parameters.echo,
+                }
         elif source == "debug":
             self.sampling_params = sampling_parameters
         else:
@@ -149,7 +147,7 @@ class LLM_cobel:
             def _generate(prompt, sampling_params):
                 usage = [0,0]
                 if source == 'openai' or source == 'aliyun':
-                    for attempt in range(5):
+                    for attempt in range(3):
                         try:
                             if self.chat:
                                 response = client.chat.completions.create(
@@ -190,7 +188,7 @@ class LLM_cobel:
                                 raise ValueError(f"{lm_id} not available!")
                             return generated_samples, usage
                         except OpenAIError as e:
-                            if attempt == 5:
+                            if attempt == 2:
                                 print(e)
                                 raise e
                 elif source == 'huggingface':
@@ -418,6 +416,7 @@ class LLM_cobel:
             .replace("$MY_PROGRESS$", my_progress)
             .replace("$GOAL$", self.goal_desc)
         )
+        print(self.goal_desc)
         system_prompt = "You MUST follow the output format strictly.Format: reasoning:\nsubplan:"
         chat_prompt = [{"role":"system","content":system_prompt},{"role": "user", "content": prompt}]
         # chat_prompt = [{"role": "user", "content": prompt}]
@@ -992,7 +991,7 @@ class LLM_cobel:
 
             
     def get_my_progress(self, current_room, grabbed_objects, satisfied, unchecked_containers, ungrabbed_objects, goal_location_room, action_history, dialogue_history, opponent_grabbed_objects, opponent_last_room, room_explored = None):
-
+        #opponent_grabbed_objects, opponent_last_room -》 {name:[]}
         # goal_desc = self.goal2description(unsatisfied_goal, goal_location_room)
         progress_desc = self.progress2text(current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored)
         return progress_desc

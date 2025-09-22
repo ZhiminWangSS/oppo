@@ -19,7 +19,7 @@ import re
 class UnityEnvironment(BaseUnityEnvironment):
 
 	def __init__(self,
-				 num_agents=2,
+				 num_agents=3,
 				 max_episode_length=200,
 				 env_task_set=None,
 				 observation_types=None,
@@ -86,7 +86,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.detection_name_id_map = {name:  (i + 1) * 10 for i, name in enumerate(self.detection_all_object)}
 		self.location = None
 		self.keep_move_steps = None
- 
+		self.agent_num = num_agents
 	def reward(self):
 		reward = 0.
 		done = True
@@ -315,7 +315,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		print("Resetting... Envid: {}. Taskid: {}. Index: {}".format(self.env_id, self.task_id, task_id))
 
 		# TODO: in the future we may want different goals
-		self.goal_spec = {agent_id: self.get_goal(self.task_goal[agent_id], self.agent_goals[agent_id])
+		self.goal_spec = {agent_id: self.get_goal(self.task_goal[0], self.agent_goals[0])
 						  for agent_id in range(self.num_agents)}
 
 		if False:  # old_env_id == self.env_id:
@@ -749,7 +749,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 			assert (self.num_static_cameras != None and self.num_camera_per_agent != None and self.CAMERA_NUM != None)
 			camera_ids = [self.num_static_cameras + agent_id * self.num_camera_per_agent + self.CAMERA_NUM]
 			image_width, image_height = self.default_image_width, self.default_image_height
-			# All the types are "normal", "seg_inst", "seg_class", "depth", "flow", "albedo", "illumination", "surf_normals"
+			# All the types are "normal", "seg_inst", "seg_class", "depth", "flow", "albedo", "illumination", "surf_normals" #
 			s, bgr_images = self.comm.camera_image(camera_ids, mode='normal', image_width=image_width, image_height=image_height)
 			s, depth_images = self.comm.camera_image(camera_ids, mode='depth', image_width=image_width, image_height=image_height)
 			s, camera_info = self.comm.camera_data(camera_ids)
