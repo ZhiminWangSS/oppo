@@ -90,6 +90,7 @@ class TDW(Env):
         self.turn = 0
         self.disscuss_status = [0,0]
         self.calls = []
+        self.call_for = 0
         rgb_space = gym.spaces.Box(0, 256,
                                  (3,
                                   self.screen_size,
@@ -139,7 +140,8 @@ class TDW(Env):
             'current_frames': gym.spaces.Discrete(30),
             "disscuss":gym.spaces.Discrete(2),
             "turns":gym.spaces.Box(0,3,(1,),dtype=np.int8),
-            "call":gym.spaces.Box(0,2,(1,),dtype=np.int8)
+            "call":gym.spaces.Box(0,2,(1,),dtype=np.int8),
+            "call_for":gym.spaces.Discrete(2)
 
         })
 
@@ -286,6 +288,7 @@ class TDW(Env):
         self.turn = 0
         self.disscuss_status = [0,0]
         self.calls = []
+        self.call_for = 0
         self.segmentation_colors = {}
         self.object_names = {}
         self.object_ids = {}
@@ -607,6 +610,8 @@ class TDW(Env):
             obs[id]["disscuss"] = self.disscuss
             obs[id]["turns"] = self.turn
             obs[id]["call"] = self.call
+            obs[id]["call_for"] = self.call_for
+
         return obs
 
     def get_info(self):
@@ -663,6 +668,7 @@ class TDW(Env):
             #special type for roco
             elif action['type'] == "wait_for_disscussion":
                 self.disscuss_status[replicant_id] = 1
+                self.call_for = 1
             elif action["type"] == "waiting":
                 continue
             else:
@@ -768,6 +774,7 @@ class TDW(Env):
             self.turn = 0
             self.call = 0
             self.disscuss_status = [0,0]
+            self.call_for = 0
 #TODO: check the logic
 
 
@@ -807,6 +814,7 @@ class TDW(Env):
             obs[str(replicant_id)]['disscuss'] = self.disscuss
             obs[str(replicant_id)]['turns'] = self.turn
             obs[str(replicant_id)]['call'] = self.call
+            obs[str(replicant_id)]["call_for"] = self.call_for
 
         info = self.get_info()
         info['done'] = done

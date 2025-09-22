@@ -2,6 +2,7 @@ import sys
 import os
 curr_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(f'{curr_dir}/..')
+import ipdb
 import pickle
 import json
 import random
@@ -9,9 +10,9 @@ import numpy as np
 from pathlib import Path
 
 from envs.unity_environment_roco import UnityEnvironment
-from agents.LLM_agent_roco import LLM_agent
+from agents.vision_LLM_agent_roco import vision_LLM_agent
 from arguments import get_args
-from cwah.algos.arena_mp2_roco import ArenaMP
+from algos.arena_mp2 import ArenaMP
 import subprocess
 
 def kill_process_on_port(port):
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     # with open("test_env.json", "w") as f:
     #     json.dump(env_task_set, f, indent=4)
 
-    args.record_dir = f'../test_results/{args.mode}' # set the record_dir right!
+    args.record_dir = f'./results/{args.mode}' # set the record_dir right!
     Path(args.record_dir).mkdir(parents=True, exist_ok=True)
 
     if "image" in args.obs_type:
@@ -89,7 +90,8 @@ if __name__ == '__main__':
                                observation_types=[args.obs_type, args.obs_type],
                                use_editor=args.use_editor,
                                executable_args=executable_args,
-                               base_port=args.base_port)
+                               base_port=args.base_port,
+                               save_image=True)
 
     args_agent1 = {
         'agent_id': 1,
@@ -102,7 +104,7 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    agents = [lambda x, y: LLM_agent(**args_agent1), lambda x, y: LLM_agent(**args_agent2)]
+    agents = [lambda x, y: vision_LLM_agent(**args_agent1), lambda x, y: vision_LLM_agent(**args_agent2)]
     
 
     # copy the code below to record results
@@ -112,9 +114,6 @@ if __name__ == '__main__':
         test_episodes = episode_ids
     for iter_id in range(num_tries):
         steps_list, failed_tasks = [], []
-        total_tokens = {}
-        total_comm_counts = {}
-        total_comm_chars = {}
         if not os.path.isfile(args.record_dir + '/results.pik'):
             test_results = {}
         else:
@@ -125,7 +124,10 @@ if __name__ == '__main__':
         for episode_id in test_episodes:
             kill_process_on_port(args.base_port)
             kill_process_on_port(args.base_port)
+
             arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
+            arena.reset(episode_id)
+            
             curr_log_file_name = args.record_dir + '/logs_agent_{}_{}_{}.pik'.format(
                 env_task_set[episode_id]['task_id'],
                 env_task_set[episode_id]['task_name'],
@@ -152,18 +154,14 @@ if __name__ == '__main__':
             arena.reset(episode_id)
             success, steps, saved_info = arena.run()
 
-            for agent_id,agent in enumerate(agents):
-                total_tokens[agent_id] = arena.agents[agent_id].get_tokens()
-                total_comm_counts[agent_id] = arena.agents[agent_id].get_comm_counts()
-                total_comm_chars[agent_id] = arena.agents[agent_id].get_comm_chars()
+            episode_0_com_count = arena.agents[0].get_comm_counts()
+            episode_1_com_count = arena.agents[1].get_comm_counts()
+            episode_0_api = arena.agents[0].get_api_num()
+            episode_1_api = arena.agents[1].get_api_num()
+            episode_0_token_stats = arena.agents[0].get_tokens()
+            episode_1_token_stats = arena.agents[1].get_tokens()
 
-            average_calls_per_discussion = 0
-
-            for call in arena.get_calls():
-                average_calls_per_discussion += (call)
-
-            average_calls_per_discussion /= len(arena.get_calls())
-            
+           
             print('-------------------------------------')
             print('success' if success else 'failure')
             print('steps:', steps)
@@ -189,28 +187,24 @@ if __name__ == '__main__':
             S[episode_id].append(is_finished)
             L[episode_id].append(steps)
 
-
             result_dic = {'S': S[episode_id],
                                         'L': L[episode_id],
-                                        'symboli_roco': {
-                                            'episode_0_comm_chars': total_comm_chars[0],
-                                            'episode_1_comm_chars': total_comm_chars[1],
-                                            'episode_0_com': total_comm_counts[0],
-                                            'episode_1_com': total_comm_counts[1],
-                                            'episode_0_api': arena.agents[0].get_api_num(),
-                                            'episode_1_api': arena.agents[0].get_api_num(),
-                                            'episode_0_tokens': {"prompt":total_tokens[0][0],"completion":total_tokens[0][1]},
-                                            'episode_1_tokens': {"prompt":total_tokens[1][0],"completion":total_tokens[1][1]},
-                                            "average_call":average_calls_per_discussion
+                                        'vision_roco': {
+                                            'episode_0_com': episode_0_com_count,
+                                            'episode_1_com': episode_1_com_count,
+                                            'episode_0_api': episode_0_api,
+                                            'episode_1_api': episode_1_api,
+                                            'episode_0_tokens': {"prompt_tokens":episode_0_token_stats[0],"completion_tokens":episode_0_token_stats[1]},
+                                            'episode_1_tokens': {"prompt_tokens":episode_1_token_stats[0],"completion_tokens":episode_1_token_stats[1]},
                                         }}
             test_results[episode_id] = result_dic
             # 保存为json
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)
-        kill_process_on_port(args.base_port)
-        kill_process_on_port(args.base_port)
-        args.base_port += 1
+            kill_process_on_port(args.base_port)
+            kill_process_on_port(args.base_port)
+            args.base_port += 1
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))
