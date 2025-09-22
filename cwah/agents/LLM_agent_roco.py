@@ -551,7 +551,7 @@ class LLM_agent:
         return action, info
     
     def get_api_num(self):
-        return self.LLM.api_num
+        return self.LLM.api
 
 
     def get_comm_tokens(self):
