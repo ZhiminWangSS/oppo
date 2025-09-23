@@ -353,7 +353,7 @@ class LLM_agent_cobel:
                     # print("oppoid",x)
                     # print(self.team_current_room)
                     # print(self.agent_id)
-                    self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[x]] = self.id2node[y]
+                    self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[x-1]] = self.id2node[y]
             if x == self.agent_id+1:
                 if r == 'INSIDE':
                     self.current_room = self.id2node[y] #id2node返回那个大字典
