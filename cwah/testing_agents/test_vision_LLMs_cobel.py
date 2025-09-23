@@ -49,7 +49,7 @@ if __name__ == '__main__':
     S = [[] for _ in range(len(episode_ids))]
     L = [[] for _ in range(len(episode_ids))]
 
-
+    os.makedirs('./visual',exist_ok=True)
     def env_fn(env_id):
         return UnityEnvironment(num_agents=2,
                                max_episode_length=args.max_episode_length,
@@ -60,7 +60,14 @@ if __name__ == '__main__':
                                use_editor=args.use_editor,
                                executable_args=executable_args,
                                base_port=args.base_port,
-                               save_image=True)
+                               save_image=False,
+                               recording_options={'recording': True,
+									'output_folder': "./visual",
+									'file_name_prefix': None,
+									'cameras': 'PERSON_FROM_BACK',
+									'modality': 'normal'},
+                                data_collection=False
+                                )
 
     args_agent1 = {
         'agent_id': 1,

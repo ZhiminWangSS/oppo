@@ -19,7 +19,7 @@ import re
 class UnityEnvironment(BaseUnityEnvironment):
 
 	def __init__(self,
-				 num_agents=3,
+				 num_agents=2,
 				 max_episode_length=200,
 				 env_task_set=None,
 				 observation_types=None,
@@ -86,7 +86,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.detection_name_id_map = {name:  (i + 1) * 10 for i, name in enumerate(self.detection_all_object)}
 		self.location = None
 		self.keep_move_steps = None
-		self.agent_num = num_agents
+		self.num_agents = num_agents
 	def reward(self):
 		reward = 0.
 		done = True
@@ -445,9 +445,13 @@ class UnityEnvironment(BaseUnityEnvironment):
 														   recording=True,
 														   # gen_vid=False,
 														   skip_animation=False,
-														   camera_mode=self.recording_options['cameras'],
+														   output_folder=self.recording_options['output_folder'],
+														   camera_mode=[self.recording_options['cameras']],
 														   file_name_prefix='task_{}'.format(self.task_id),
-														   image_synthesis=self.recording_optios['modality'])
+														   image_synthesis=[self.recording_options['modality']],
+														   save_pose_data=True,
+														   image_width=640,
+														   image_height=640)
 			else:
 				individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
 				for i in range(len(individual_script)):# no time delay!!!
