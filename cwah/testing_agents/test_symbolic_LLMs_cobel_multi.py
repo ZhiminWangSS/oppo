@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     #这里目前给到了3个 后面跑四个再改
     
-    agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2),lambda x, y: LLM_agent_cobel(**args_agent3),lambda x, y: LLM_agent_cobel(**args_agent4)]
+    agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2),lambda x, y: LLM_agent_cobel(**args_agent3)]
     arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
 
     # copy the code below to record results
