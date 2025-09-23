@@ -77,6 +77,11 @@ Second, based on your reasoning, please generate the best three subplans $OPPO_N
 The generated subplan must meet following requirements:
 - This subplan can be broken down into 1 to 3 actions. 
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to a room and explore to grasp objects.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
 Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time.
 It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object.Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport.
@@ -108,8 +113,13 @@ Such as: If a room is explored none, the probability of the goal objects in this
 
 Second, based on your reasoning, please generate one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible.
 The generated subplan must meet following requirements:
-- This subplan is composed 1 to 3 steps. 
+- This subplan contains 1 to 3 actions. 
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to a room and explore to grasp objects.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
 
 Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time. It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport. If there are no more than 500 steps, just transport the objects. The total time is at most 3000 steps.
@@ -144,8 +154,13 @@ Such as: If a room is explored none, the probability of the goal objects in this
 Second, based on your reasoning and the $OPPO_NAME$'s subplan, please generate one best subplan $AGENT_NAME$ will take to transport goal objects as soon as possible while avoiding conflicts with $OPPO_NAME$'s plan. My subplan should collaborate with $OPPO_NAME$ to maximize execution efficiency.
 
 The generated subplan must meet following requirements:
-- This subplan is composed 1 to 3 steps. 
+- This subplan contains 1 to 3 actions.  
 - There are 5 allowed actions you can use to construct the subplan. The subplan should composed of 1-3 actions. 1) ‘go to’: move to a specified room. 2) ’explore current room <room>(id)’: explore current room(is not fully explored) for underlying target objects. 3) ‘go grasp’: go to grasp a specified target object. 4) ‘put’: Place an object into a specified container. 5) ’transport’: Transport holding objects or containers to the bed and drop them on the bed.
+Here are some examples for you:
+Go to a room and explore to grasp objects.
+Explore current room and grasp the objects here.
+Go grasp objects and transport them to the bed if hand is full.
+Go grasp objects and put them into holding container.
 
 Actions take several steps to finish. It may be costly to go to another room or transport to the bed, use these actions sparingly. I can grasp containers and put objects into them to hold more objects at a time. It may be more efficient to use a container to hold more objects objects and transport to bed at a time. If i'm holding nothing, just grasp an object i found and then keep on exploring or grasping another object. Avoid transport only one object to bed which cost more time to transport all objects except no more goal objects need to transport.
 

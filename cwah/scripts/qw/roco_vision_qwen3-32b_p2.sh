@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6714)
 python testing_agents/test_vision_LLMs_roco.py \
---mode roco_vision_qwen3-32b\
+--mode roco_vision_qwen3-32b \
 --communication \
 --prompt_template_path LLM/prompt_roco.csv \
 --obs_type normal_image \
