@@ -1,0 +1,22 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        90
+    ],
+    "symbolic_roco": {
+        "episode_0_com": 69,
+        "episode_1_com": 46,
+        "episode_0_api": 69,
+        "episode_1_api": 46,
+        "episode_0_tokens": {
+            "prompt_tokens": 58896,
+            "completion_tokens": 3677
+        },
+        "episode_1_tokens": {
+            "prompt_tokens": 38146,
+            "completion_tokens": 2713
+        }
+    }
+}

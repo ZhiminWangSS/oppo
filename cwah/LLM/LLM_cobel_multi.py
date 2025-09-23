@@ -326,7 +326,7 @@ class LLM_cobel:
                         .replace("$MESSAGE$", my_oppo_dialogue)
                         .replace("$RULE$", first_order_belief_rules)
                     )
-                    system_prompt = "You MUST answer strictly in this format:\n$OPPO_NAME$ knows:\nfirst order beliefs\n$OPPO_NAME$'s plan:".replace("$OPPO_NAME$", self.oppo_name)
+                    system_prompt = "You MUST answer strictly in this format:\n$OPPO_NAME$ knows:\nfirst order beliefs\n$OPPO_NAME$'s plan:".replace("$OPPO_NAME$", agent_name)
                     chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
                     # chat_prompt = [{"role": "user", "content": prompt}]
                     first_output, usage = self.generator(
@@ -347,7 +347,7 @@ class LLM_cobel:
                         print(f"=========prompt===========: \n{prompt}")
                         print(f"=========updated_first_beliefs=============: \nfirst:{first_output[0]}")
 
-                    pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
+                    pattern_first = rf"first order beliefs:\s*(.*?)\s*(?={re.escape(agent_name)}'s plan:)"
                     first_match = re.search(pattern_first, first_output[0], re.IGNORECASE | re.DOTALL)
                     if not first_match:
                         continue
@@ -371,7 +371,7 @@ class LLM_cobel:
                         .replace("$RULE$", zero_order_belief_rules)
                     )
                     #zero
-                    system_prompt = "You MUST answer strictly in this format:\n$AGENT_NAME$ knows:\nzero order beliefs:\n$OPPO_NAME$'s plan:".replace("$AGENT_NAME$", self.agent_name).replace("$OPPO_NAME$", self.oppo_name)
+                    system_prompt = "You MUST answer strictly in this format:\n$AGENT_NAME$ knows:\nzero order beliefs:\n$OPPO_NAME$'s plan:".replace("$AGENT_NAME$", self.agent_name).replace("$OPPO_NAME$", agent_name)
                     chat_prompt = [{"role": "system", "content": system_prompt},{"role": "user", "content": prompt}]
 
                     zero_output, usage = self.generator(
@@ -388,12 +388,12 @@ class LLM_cobel:
                     self.token_stats[method_name]["call_counts"] += 1
                     # pattern_zero = r'zero.*?:\s*(.*?)(?=first.*?:|$)'
                     
-                    pattern_zero = rf"zero order beliefs:\s*(.*?)\s*(?={re.escape(self.oppo_name)}'s plan:)"
+                    pattern_zero = rf"zero order beliefs:\s*(.*?)\s*(?={re.escape(agent_name)}'s plan:)"
                     zero_match = re.search(pattern_zero, zero_output[0], re.IGNORECASE | re.DOTALL)
 
 
 
-                    pattern_plan = rf"{re.escape(self.oppo_name)}'s plan:\s*(.*)"
+                    pattern_plan = rf"{re.escape(agent_name)}'s plan:\s*(.*)"
                     plan_match = re.search(pattern_plan, zero_output[0], re.IGNORECASE | re.DOTALL)
 
                     
@@ -415,10 +415,15 @@ class LLM_cobel:
         return updated_zero_order_beliefs, updated_first_order_beliefs , oppo_subplans
 
     def prediction_zero_order(self,my_progress):
+        oppo_name_str = ""
+        for a_name in self.oppo_name:
+            oppo_name_str += a_name
+            oppo_name_str += ','
+        print(oppo_name_str)
         prompt = (
             self.cobel_prompts_df["prompt"][3]
             .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name_str)
             .replace("$MY_PROGRESS$", my_progress)
             .replace("$GOAL$", self.goal_desc)
         )
@@ -464,11 +469,11 @@ class LLM_cobel:
         return reason, my_subplan
 
 
-    def prediction_first_order(self,oppo_progress):
+    def prediction_first_order(self,oppo_progress,oppo_name):
         prompt = (
             self.cobel_prompts_df["prompt"][2]
             .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name)
             .replace("$OPPO_PROGRESS$", oppo_progress)
             .replace("$GOAL$", self.goal_desc)
         )
@@ -519,10 +524,14 @@ class LLM_cobel:
         for agent_name, subplan in opponent_subplans.items():
             opponent_subplans_str += f"{agent_name}'s subplan: {subplan}\n"
         opponent_subplans_str = opponent_subplans_str.strip()
+        oppo_name_str = ""
+        for a_name in self.oppo_name:
+            oppo_name_str += a_name
+            oppo_name_str += ','
         prompt = (
             self.cobel_prompts_df["prompt"][5]
             .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name_str)
             .replace("$MY_PROPGRESS$", my_progress)
             .replace("$OPPO_PROGRESS$", oppo_progress_str)
             .replace("$MY_SUBPLAN$", my_subplan)
@@ -581,6 +590,11 @@ class LLM_cobel:
 
     def passive_prediction_zero_order(self, my_progress, oppo_subplan):
         
+        oppo_name_str = ""
+        for a_name in self.oppo_name:
+            oppo_name_str += a_name
+            oppo_name_str += ','    
+
         oppo_subplan_str = ""
 
         for agent_name,agent_subplan in oppo_subplan.items():
@@ -590,7 +604,7 @@ class LLM_cobel:
         prompt = (
             self.cobel_prompts_df["prompt"][4]
             .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name_str)
             .replace("$MY_PROGRESS$", my_progress)
             .replace("$OPPO_SUBPLAN$", oppo_subplan_str)
             .replace("$GOAL$", self.goal_desc)
@@ -637,10 +651,14 @@ class LLM_cobel:
     
 
     def comm(self, difference, my_subplan):
+        oppo_name_str = ""
+        for a_name in self.oppo_name:
+            oppo_name_str += a_name
+            oppo_name_str += ','
         prompt = (
             self.cobel_prompts_df["prompt"][6]
             .replace("$AGENT_NAME$", self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name_str)
             .replace("$MISALIGNED INFORMATION$", difference)
             .replace("$MY_SUBPLAN$", my_subplan)
         )
@@ -683,12 +701,15 @@ class LLM_cobel:
                            episode_logger = None, 
                            
                            ):
-
+        oppo_name_str = ""
+        for a_name in self.oppo_name:
+            oppo_name_str += a_name
+            oppo_name_str += ','
     
         prompt = (
             self.cobel_prompts_df["prompt"][7]
             .replace('$AGENT_NAME$',self.agent_name)
-            .replace("$OPPO_NAME$", self.oppo_name)
+            .replace("$OPPO_NAME$", oppo_name_str)
             .replace("$GOAL$", self.goal_desc)
             .replace('$MY_SUBPLAN$',my_subplan)
             .replace('$PREVIOUS_ACTIONS$',action_history)
@@ -847,7 +868,8 @@ class LLM_cobel:
 
         ### opponent modeling
         if not self.single:
-            for agent_name,agent_grasp in enumerate(opponent_grabbed_objects).items():
+            print(opponent_grabbed_objects)
+            for agent_name,agent_grasp in opponent_grabbed_objects.items():
                 ss = ""
                 if len(agent_grasp) == 0:
                     ss += "nothing. "
@@ -855,7 +877,7 @@ class LLM_cobel:
                     ss += f"<{agent_grasp[0]['class_name']}> ({agent_grasp[0]['id']}). "
                     if len(agent_grasp) == 2:
                         ss = ss[:-2] + f" and <{agent_grasp[1]['class_name']}> ({agent_grasp[1]['id']}). "
-                if opponent_last_room[agent_name]['class_name'] is None:
+                if opponent_last_room[agent_name] is None:
                     s += f"I don't know where {self.oppo_name} is. "
                 elif opponent_last_room[agent_name]['class_name'] == current_room['class_name']:
                     s += f"I also see {self.oppo_name} here in the {current_room['class_name']}, {self.oppo_pronoun} is holding {ss}"

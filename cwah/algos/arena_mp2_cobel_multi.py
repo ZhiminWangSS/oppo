@@ -136,10 +136,10 @@ class ArenaMP(object):
         # pdb.set_trace()
         for it, agent in enumerate(self.agents):
             if self.task_goal is None:
-                goal_spec = self.env.get_goal(self.env.task_goal[it], self.env.agent_goals[it])
+                goal_spec = self.env.get_goal(self.env.task_goal[0], self.env.agent_goals[0])
 
             else:
-                goal_spec = self.env.get_goal(self.task_goal[it], self.env.agent_goals[it])
+                goal_spec = self.env.get_goal(self.task_goal[0], self.env.agent_goals[0])
             
             if agent.agent_type in ['MCTS', 'Random', 'MCTS_vision']:
                 opponent_subgoal = None
@@ -456,17 +456,17 @@ class ArenaMP(object):
                       'task_name': self.env.task_name,
                       'gt_goals': self.env.task_goal[0],
                       'goals': self.task_goal,
-                      'action': {0: [], 1: []},
-                      'plan': {0: [], 1: []},
-                      'subgoals': {0: [], 1: []},
+                      'action': {0: [], 1: [], 2: [], 3: []},
+                      'plan': {0: [], 1: [], 2: [], 3: []},
+                      'subgoals': {0: [], 1: [], 2: [], 3: []},
                       'finished': None,
                       'init_unity_graph': self.env.init_graph,
                       'goals_finished': [],
                       'belief': {0: [], 1: []},
                       'belief_graph': {0: [], 1: []},
-                      'obs': {0: [], 1: []},
-                      'LLM': {0: [], 1: []},
-                      'graph': {0: [], 1: []},
+                      'obs': {0: [], 1: [], 2: [], 3: []},
+                      'LLM': {0: [], 1: [], 2: [], 3: []},
+                      'graph': {0: [], 1: [], 2: [], 3: []},
                       'progress': [],
                     }
         success = False
