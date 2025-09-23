@@ -698,12 +698,21 @@ class TDW(Env):
                         delay_frame_count[replicant_id] = max((len(self.messages[replicant_id]) - 1) // self.message_per_frame, 0)
             if finish: break
             data = self.controller.communicate([])
-            for i in range(len(data) - 1):
-                r_id = OutputData.get_data_type_id(data[i])
-                if r_id == 'imag':
-                    images = Images(data[i])
-                    if images.get_avatar_id() == "a" and (self.num_frames + num_frames) % 1 == 0:
-                        TDWUtils.save_images(images=images, filename= f"{self.num_frames + num_frames:05d}", output_directory = os.path.join(self.save_dir, 'top_down_image'))
+            x1,y1,z1 = self.controller.replicants[0].dynamic.transform.position
+            x2,y2,z2 = self.controller.replicants[1].dynamic.transform.position
+            room1 = self.belongs_to_which_room((x1,y1,z1))
+            room2 = self.belongs_to_which_room((x2,y2,z2))
+            
+
+
+            print(room1,room2)
+            if room1 == room2 or self.num_frames % 50 ==0:
+                for i in range(len(data) - 1):
+                    r_id = OutputData.get_data_type_id(data[i])
+                    if r_id == 'imag':
+                        images = Images(data[i])
+                        if images.get_avatar_id() == "a" and (self.num_frames + num_frames) % 1 == 0:
+                            TDWUtils.save_images(images=images,resize_to=(1024,1024) ,filename= f"{self.num_frames + num_frames:05d}", output_directory = os.path.join(self.save_dir, 'top_down_image'))
             num_frames += 1
 
         self.num_frames += num_frames
