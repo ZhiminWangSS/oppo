@@ -1,5 +1,6 @@
 from LLM.LLM_cobel_multi import LLM_cobel
 import re
+import random
 class LLM_agent_cobel:
     """
     LLM agent class
@@ -344,15 +345,16 @@ class LLM_agent_cobel:
         self.reachable_objects = []
         self.id2node = {x['id']: x for x in obs['nodes']}
         #自己的状态
+        # print(obs['edges'])
         for e in obs['edges']:
             x, r, y = e['from_id'], e['relation_type'], e['to_id']
-            if x in range(self.agent_num) and x!= self.agent_id: ##别人的位置
+            if x in range(self.agent_num+1) and x!= self.agent_id+1: ##别人的位置
                 if r == 'INSIDE':
-                    print("oppoid",x)
-                    print(self.team_current_room)
-                    print(self.agent_id)
+                    # print("oppoid",x)
+                    # print(self.team_current_room)
+                    # print(self.agent_id)
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[x]] = self.id2node[y]
-            if x == self.agent_id:
+            if x == self.agent_id+1:
                 if r == 'INSIDE':
                     self.current_room = self.id2node[y] #id2node返回那个大字典
                     print(self.agent_id)
@@ -366,12 +368,12 @@ class LLM_agent_cobel:
                 elif r == 'CLOSE':
                     y = self.id2node[y] #用来做gograsp的
                     self.reachable_objects.append(f"<{y['class_name']}> ({y['id']})")
-            elif x != self.agent_id and r in ['HOLDS_RH', 'HOLDS_LH']:
+            elif x != self.agent_id+1 and r in ['HOLDS_RH', 'HOLDS_LH']:
                 #后面改成多人的
-                opponent_grabbed_objects[x].append(self.id2node[y])
+                opponent_grabbed_objects[x-1].append(self.id2node[y])
         for a_id,oppo_single_grasp in enumerate(opponent_grabbed_objects):
             if oppo_single_grasp != []:
-                self.team_grasped_obj[self.agent_names[self.agent_id]][a_id] = oppo_single_grasp
+                self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[a_id]] = oppo_single_grasp
         unchecked_containers = []
         ungrabbed_objects = []
         for x in obs['nodes']:
@@ -388,7 +390,11 @@ class LLM_agent_cobel:
             self.id_inside_room[x['id']] = self.current_room['class_name'] #如果看到目标物体了
             if x['class_name'] in self.containers_name and 'CLOSED' in x['states'] and x['id'] != self.goal_location_id:
                 unchecked_containers.append(x)
-            if any([x['class_name'] == g.split('_')[1] for g in self.unsatisfied]) and all([x['id'] != y['id'] for y in self.satisfied]) and 'GRABBABLE' in x['properties'] and x['id'] not in self.grabbed_objects and x['id'] not in [w['id'] for w in opponent_grabbed_objects]:
+            oppo_grab_all_obj = []
+            for agent_grab in opponent_grabbed_objects:
+                for grab in agent_grab:
+                    oppo_grab_all_obj.append(grab)
+            if any([x['class_name'] == g.split('_')[1] for g in self.unsatisfied]) and all([x['id'] != y['id'] for y in self.satisfied]) and 'GRABBABLE' in x['properties'] and x['id'] not in self.grabbed_objects and x['id'] not in [w['id'] for w in oppo_grab_all_obj]:
                 ungrabbed_objects.append(x)
 
         if type(self.id_inside_room[self.goal_location_id]) is list and self.current_room['class_name'] in self.id_inside_room[self.goal_location_id]:
@@ -424,6 +430,8 @@ class LLM_agent_cobel:
                         },
                 }
         for id in range(len(self.opponent_agent_id)):
+            # print(self.id_inside_room)
+            print(opponent_grabbed_objects)
             if self.id_inside_room[self.opponent_agent_id[id]+1] == self.current_room['class_name']:
                 self.opponent_grabbed_objects[id] = opponent_grabbed_objects[id]
         action = None
@@ -438,6 +446,7 @@ class LLM_agent_cobel:
                     for agent_name, agent_graped in agents_graped.items(): #各自对彼此
                         for hand_id, hand_obj in enumerate(agent_graped): #手
                             if obj['id'] == agent_graped[hand_id]['id']: #[{},{}]
+                                print(agent_name_host)
                                 self.team_grasped_obj[agent_name_host][agent_name][hand_id] = {
                                     'id': None, 'class_name':None
                                 }
@@ -542,8 +551,6 @@ class LLM_agent_cobel:
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
-                    # print(oppo_progress)
-                    #这个基本不可能到这
 
 
                     if self.opponent_subplans != {}: #说明消息发送了计划
@@ -565,7 +572,7 @@ class LLM_agent_cobel:
                                 continue
                             if agent_name not in self.opponent_subplans.keys() and self.work_agents[agent_name] == 1:
                                 oppo_progress = self.get_oppo_progress(a_id)
-                                first_reason, oppo_subplan = self.LLM.prediction_first_order(oppo_progress)
+                                first_reason, oppo_subplan = self.LLM.prediction_first_order(oppo_progress,agent_name)
                                 self.opponent_subplans.update({agent_name:oppo_subplan})
                                 self.episode_logger.info(f"\n{agent_name} predict_first:{first_reason}")
                                 self.episode_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
@@ -575,7 +582,7 @@ class LLM_agent_cobel:
                             # print("=========主动更新==========")
                             # self.plan_logger.info("=========主动更新==========")
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
-                        # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
+                        print(f"total_progress:{total_progress}")
                         answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress,self.my_subplan,self.opponent_subplans)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
@@ -708,7 +715,7 @@ class LLM_agent_cobel:
         for i in range(self.agent_num):
             if self.agent_id == i:
                 continue
-            self.id_inside_room.update({i:None})
+            self.id_inside_room.update({i+1:None})
         self.done_time = 0
         self.task_id = task_id
         self.unchecked_containers = {
@@ -858,8 +865,8 @@ class LLM_agent_cobel:
                     if second_believe_idx == 0:
                         continue  # 不可能，但安全检查
                     
-                    if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                    # if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
+                    #     continue  # 不匹配 oppo_name
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:

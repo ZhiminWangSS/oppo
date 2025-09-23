@@ -315,7 +315,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 		print("Resetting... Envid: {}. Taskid: {}. Index: {}".format(self.env_id, self.task_id, task_id))
 
 		# TODO: in the future we may want different goals
-		self.goal_spec = {agent_id: self.get_goal(self.task_goal[agent_id], self.agent_goals[agent_id])
+		self.goal_spec = {agent_id: self.get_goal(self.task_goal[0], self.agent_goals[0])
 						  for agent_id in range(self.num_agents)}
 
 		if False:  # old_env_id == self.env_id:
@@ -426,6 +426,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 					assert False, "Error: Object already open"
 			# Add randomness on 'walktowards' action, since the env's walktowards action might stuck
 			if action == 'walktowards' and self.keep_move_steps[i] > 4:
+				print("随机移动")
 				if self.range_distance(self.location[i][max(0, self.steps - 4) : self.steps + 1]) < 0.5:
 					random_place = self.rooms[np.random.randint(0, len(self.rooms) - 1)]
 					action_dict_tobe_changed[i] = '[walktowards] <{}> ({})'.format(random_place[0], random_place[1])

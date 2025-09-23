@@ -1,0 +1,25 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        82
+    ],
+    "symboli_roco": {
+        "episode_0_comm_chars": 41731,
+        "episode_1_comm_chars": 30001,
+        "episode_0_com": 139,
+        "episode_1_com": 92,
+        "episode_0_api": 139,
+        "episode_1_api": 139,
+        "episode_0_tokens": {
+            "prompt": 139389,
+            "completion": 11054
+        },
+        "episode_1_tokens": {
+            "prompt": 87193,
+            "completion": 7482
+        },
+        "average_call": 0.06896551724137931
+    }
+}

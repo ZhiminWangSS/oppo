@@ -1,0 +1,90 @@
+{
+    "S": [
+        1
+    ],
+    "L": [
+        75
+    ],
+    "COBEL": {
+        "episode_0_comm_chars": 0,
+        "episode_1_comm_chars": 0,
+        "episode_0_com": 0,
+        "episode_1_com": 0,
+        "episode_0_api": 45,
+        "episode_1_api": 54,
+        "episode_0_tokens": {
+            "total": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "update_beliefs": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "prediction_zero_order": {
+                "prompt": 7808,
+                "completion": 2215,
+                "call_counts": 12
+            },
+            "prediction_first_order": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "intuitive_planning": {
+                "prompt": 21257,
+                "completion": 4173,
+                "call_counts": 33
+            },
+            "cooradination_aware": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "communication": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
+        },
+        "episode_1_tokens": {
+            "total": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "update_beliefs": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "prediction_zero_order": {
+                "prompt": 8926,
+                "completion": 2336,
+                "call_counts": 14
+            },
+            "prediction_first_order": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "intuitive_planning": {
+                "prompt": 23885,
+                "completion": 4985,
+                "call_counts": 40
+            },
+            "cooradination_aware": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            },
+            "communication": {
+                "prompt": 0,
+                "completion": 0,
+                "call_counts": 0
+            }
+        }
+    }
+}

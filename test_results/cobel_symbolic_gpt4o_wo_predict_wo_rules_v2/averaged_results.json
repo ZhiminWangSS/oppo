@@ -1,0 +1,90 @@
+{
+    "L": [
+        52.1
+    ],
+    "COBEL": {
+        "episode_1_api": 35.1,
+        "episode_0_com": 1.0,
+        "episode_1_com": 0.0,
+        "episode_1_comm_chars": 0.0,
+        "episode_1_tokens": {
+            "total": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "prediction_zero_order": {
+                "call_counts": 9.6,
+                "completion": 1810.9,
+                "prompt": 6624.1
+            },
+            "prediction_first_order": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "intuitive_planning": {
+                "call_counts": 25.2,
+                "completion": 2966.8,
+                "prompt": 17673.3
+            },
+            "cooradination_aware": {
+                "call_counts": 0.3,
+                "completion": 56.7,
+                "prompt": 246.3
+            },
+            "update_beliefs": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "communication": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            }
+        },
+        "episode_0_tokens": {
+            "total": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "prediction_zero_order": {
+                "call_counts": 12.5,
+                "completion": 2348.6,
+                "prompt": 9329.4
+            },
+            "prediction_first_order": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "intuitive_planning": {
+                "call_counts": 28.0,
+                "completion": 3281.3,
+                "prompt": 19258.9
+            },
+            "cooradination_aware": {
+                "call_counts": 2.8,
+                "completion": 578.7,
+                "prompt": 2601.1
+            },
+            "update_beliefs": {
+                "call_counts": 0.0,
+                "completion": 0.0,
+                "prompt": 0.0
+            },
+            "communication": {
+                "call_counts": 0.2,
+                "completion": 21.0,
+                "prompt": 117.9
+            }
+        },
+        "episode_0_api": 43.5,
+        "episode_0_comm_chars": 443.8
+    },
+    "S": [
+        1.0
+    ]
+}

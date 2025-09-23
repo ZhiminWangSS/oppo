@@ -8,7 +8,7 @@ import random
 import numpy as np
 from pathlib import Path
 
-from envs.unity_environment import UnityEnvironment
+from envs.unity_environment_multi import UnityEnvironment
 from agents import LLM_agent
 from agents.LLM_agent_cobel_multi import LLM_agent_cobel
 from arguments import get_args
