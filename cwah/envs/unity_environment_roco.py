@@ -493,23 +493,27 @@ class UnityEnvironment(BaseUnityEnvironment):
 														   recording=True,
 														   # gen_vid=False,
 														   skip_animation=False,
-														   camera_mode=self.recording_options['cameras'],
+														   output_folder=self.recording_options['output_folder'],
+														   camera_mode=[self.recording_options['cameras']],
 														   file_name_prefix='task_{}'.format(self.task_id),
-														   image_synthesis=self.recording_optios['modality'])
+														   image_synthesis=[self.recording_options['modality']],
+														   save_pose_data=True,
+														   )
 			else:
-				individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
-				for i in range(len(individual_script)):# no time delay!!!
-					success, message = self.comm.render_script([individual_script[i]],
-														   recording=False,
-														   image_synthesis=[],
-														   # gen_vid=False,
-														   skip_animation=True)
-					if not success:
-						print("NO SUCCESS")
-						print(message, script_list)
-						failed_execution = True
-					else:
-						self.changed_graph = True
+				# individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
+				# for i in range(len(individual_script)):# no time delay!!!
+				# 	success, message = self.comm.render_script([individual_script[i]],
+				# 										   recording=False,
+				# 										   image_synthesis=[],
+				# 										   # gen_vid=False,
+				# 										   skip_animation=True)
+				# 	if not success:
+				# 		print("NO SUCCESS")
+				# 		print(message, script_list)
+				# 		failed_execution = True
+				# 	else:
+				# 		self.changed_graph = True
+				print("unsuccess")
 
 		# Obtain reward
 		reward, done, info = self.reward()
@@ -533,10 +537,10 @@ class UnityEnvironment(BaseUnityEnvironment):
 		messages = saying
 		self.message_said = saying		
 
-		if len(script_list[0]) == 0 and say == False and self.data_collection == True:
-			#stacked, recollect data	
-			print("Stacked")
-			done = True
+		# if len(script_list[0]) == 0 and say == False and self.data_collection == True:
+		# 	#stacked, recollect data	
+		# 	print("Stacked")
+		# 	done = True
 
 		return obs, reward, done, info, messages
 
@@ -588,8 +592,8 @@ class UnityEnvironment(BaseUnityEnvironment):
 					for i in range(len(camera_ids)):
 						rot_seg_inst = np.rot90(seg_inst[i], axes = (0, 1))
 						rot_colorids = np.rot90(colorids[i], axes = (0, 1))
-						cv2.imwrite(os.path.join('saved_images', f"{agent_id}_{self.steps:03}_seg.png"), rot_seg_inst)
-						cv2.imwrite(os.path.join('saved_images', f"{agent_id}_{self.steps:03}_seg_reference.png"), rot_colorids)
+						cv2.imwrite(os.path.join(self.data_collection_dir, f"{agent_id}_{self.steps:03}_seg.png"), rot_seg_inst)
+						cv2.imwrite(os.path.join(self.data_collection_dir, f"{agent_id}_{self.steps:03}_seg_reference.png"), rot_colorids)
 			dict_observations[agent_id] = self.get_observation(agent_id, obs_type)
 			self.location[agent_id].append(dict_observations[agent_id]['location'])
 			if self.data_collection:
@@ -626,14 +630,14 @@ class UnityEnvironment(BaseUnityEnvironment):
 				if 'bgr' not in dict_observations[agent_id].keys():
 					s, dict_observations[agent_id]['bgr'] = self.comm.camera_image(camera_ids, mode='normal', image_width=image_width,
 													 image_height=image_height)
-				if os.path.exists(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/') == False:
-					os.mkdir(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/')
+				# if os.path.exists(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/') == False:
+				# 	os.mkdir(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/')
 				import cv2
 				for t in range(len(camera_ids)):
-					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_instance.png', ids_instance[t])
-					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_color_ids_instance.png', color_id_instance[t])
-					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_class.png', ids_class[t])
-					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_rgb.png', dict_observations[agent_id]['bgr'][t])
+					# cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_instance.png', ids_instance[t])
+					# cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_color_ids_instance.png', color_id_instance[t])
+					# cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_class.png', ids_class[t])
+					cv2.imwrite(os.path.join(self.data_collection_dir,str(self.global_episode_id) + '_' + str(self.env_id) +  str(self.steps) + '_' + str(agent_id) + '_rgb.png'), dict_observations[agent_id]['bgr'][t])
 			dict_observations[agent_id]["disscuss"] = self.disscuss
 			dict_observations[agent_id]["call"] = self.call
 			dict_observations[agent_id]["turns"] = self.turns
@@ -810,8 +814,8 @@ class UnityEnvironment(BaseUnityEnvironment):
 				for i in range(len(camera_ids)):
 					rot_bgr = np.rot90(bgr_images[i], axes = (0, 1))
 					rot_depth = np.rot90(depth_images[i], axes = (0, 1))
-					cv2.imwrite(os.path.join('saved_images', f"{agent_id}_{self.steps:03}_img.png"), rot_bgr)
-					cv2.imwrite(os.path.join('saved_images', f"{agent_id}_{self.steps:03}_depth.png"), 50 / rot_depth) # for visualization
+					cv2.imwrite(os.path.join(self.data_collection_dir, f"{agent_id}_{self.steps:03}_img.png"), rot_bgr)
+					cv2.imwrite(os.path.join(self.data_collection_dir, f"{agent_id}_{self.steps:03}_depth.png"), 50 / rot_depth) # for visualization
 			if not s:
 				pdb.set_trace()
 			if not self.gt_seg:
