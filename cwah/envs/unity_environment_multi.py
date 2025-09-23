@@ -403,7 +403,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 	def step(self, action_dict):##TODO:need to change the action list
 		if self.steps > 245:
 			print("Warning: too many steps")
-		K = 500
+		K = 1000
 		actions = [utils.get_action_name(x) for x in action_dict.values()]# actions name
 		action_dict_verbose = copy.deepcopy(action_dict)
 		action_dict_tobe_changed = copy.deepcopy(action_dict)
