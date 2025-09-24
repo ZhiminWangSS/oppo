@@ -60,13 +60,14 @@ if __name__ == '__main__':
                                use_editor=args.use_editor,
                                executable_args=executable_args,
                                base_port=args.base_port,
-                               save_image=False,
-                               recording_options={'recording': True,
-									'output_folder': "./visual",
-									'file_name_prefix': None,
-									'cameras': 'PERSON_FROM_BACK',
-									'modality': 'normal'},
-                                data_collection=False
+                               save_image=True,
+                            #    recording_options={'recording': True,
+							# 		'output_folder': "./visual_cobel",
+							# 		'file_name_prefix': None,
+							# 		'cameras': 'PERSON_FROM_BACK',
+							# 		'modality': 'normal'},
+                                data_collection=True,
+                                data_collection_dir='./first_cobel_img'
                                 )
 
     args_agent1 = {

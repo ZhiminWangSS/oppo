@@ -236,7 +236,7 @@ My subplan:  $MY_SUBPLAN$
 "
 parsing_module,"I am $AGENT_NAME$. I'm in a hurry to finish the housework with my friend $OPPO_NAME$ together. I can hold two objects at a time and there are no costs for holding objects. I can check the container when at least one hand is free. Note that I can hold two objects at a time and there are no costs for holding objects.
 
-Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly. If i can go grasp objects, just grasp objects i found ignoring my subplan.
+Assume that you are an expert decision maker. Given our shared goal, my subplan, my progress, and previous actions, please analyze the previous action and subplan, observe whether the subplan has been completed, and if so, respond with ""SUBPLAN DONE"". If subplan not be completed, please help me choose the best available action to achieve the goal as soon as possible.  Note that I can hold two objects at a time and there are no costs for holding objects. All objects are denoted as <name> (id), such as <table> (712). Actions take several steps to finish. It may be costly to go explore another room, use these actions sparingly.
 
 Please provide up to three reasons to support your answer.
 
@@ -252,7 +252,7 @@ Progress: $PROGRESS$
 
 Action list: $ACTION_LIST$
 
-You MUST choose one in the Action list, do not choose action not in the action list.
+You MUST choose one in the Action list, do not choose action not in the action list. If i can go grasp objects, just grasp objects i found ignoring my subplan.
 Answer strictly in this format:
 reasons:
 answer: "

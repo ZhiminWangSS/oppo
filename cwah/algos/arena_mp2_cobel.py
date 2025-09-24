@@ -418,8 +418,8 @@ class ArenaMP(object):
         if self.env.steps == 0:
             pass
             #self.env.changed_graph = True
-        obs = self.env.get_observations()
-        action_space = self.env.get_action_space()
+        obs = self.env.get_observations() #
+        action_space = self.env.get_action_space() #get obervation
         dict_actions, dict_info = self.get_actions(obs, action_space, true_graph=true_graph)
         for i in range(len(dict_info)):
             if len(dict_info) > 1 and 'subgoals' in dict_info[i]:
@@ -428,7 +428,7 @@ class ArenaMP(object):
                 if i == 0 and 'subgoals' in dict_info[i + 1].keys() and dict_info[i]['subgoals'] == dict_info[i + 1]['subgoals']:
                     self.cnt_duplicate_subgoal += 1
         try:
-            step_info = self.env.step(dict_actions)
+            step_info = self.env.step(dict_actions) #这里保存第三人称
         except Exception as e:
             print("Exception occurs when performing action: ", dict_actions)
             raise Exception
@@ -441,7 +441,7 @@ class ArenaMP(object):
         """
         self.task_goal = copy.deepcopy(self.env.task_goal)
         if random_goal:
-            for predicate in self.env.task_goal[0]:
+              for predicate in self.env.task_goal[0]:
                 u = random.choice([0, 1, 2])
                 self.task_goal[0][predicate] = u
                 self.task_goal[1][predicate] = u

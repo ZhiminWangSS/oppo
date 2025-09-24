@@ -149,23 +149,24 @@ class LLM_capo(LLM):
             def _generate(prompt, sampling_params):
                 usage = 0
                 if source == 'openai' or source == "aliyun":
-                    try:
-                        if self.chat:
-                            response = client.chat.completions.create(
-                                model=lm_id, messages=prompt, **sampling_params
-                            )
-                            self.completion_tokens += response.usage.completion_tokens
-                            self.api_num += 1
-                            self.total_tokens += response.usage.total_tokens
-                            usage = response.usage.completion_tokens#for comm counting
-                            if self.debug:
-                                with open(f"LLM/chat_raw.json", 'a') as f:
-                                    f.write(json.dumps(response.to_dict(), indent=4))
-                                    f.write('\n')
-                            generated_samples = [
-                                choice.message.content 
-                                for choice in response.choices 
-                            ]
+                    for attempt in range(10):
+                        try:
+                            if self.chat:
+                                response = client.chat.completions.create(
+                                    model=lm_id, messages=prompt, **sampling_params
+                                )
+                                self.completion_tokens += response.usage.completion_tokens
+                                self.api_num += 1
+                                self.total_tokens += response.usage.total_tokens
+                                usage = response.usage.completion_tokens#for comm counting
+                                if self.debug:
+                                    with open(f"LLM/chat_raw.json", 'a') as f:
+                                        f.write(json.dumps(response.to_dict(), indent=4))
+                                        f.write('\n')
+                                generated_samples = [
+                                    choice.message.content 
+                                    for choice in response.choices 
+                                ]
 
                                 self.api_num += 1
                                 #COBEL usage = completion token

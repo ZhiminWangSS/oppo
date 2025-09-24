@@ -62,8 +62,8 @@ class UnityEnvironment(BaseUnityEnvironment):
 		self.CAMERA_NUM = 8 
 		self.default_image_width = 512
 		if self.observation_types[0] == 'full_image':
-			self.default_image_width = 1024		
-		self.default_image_height = 256
+			self.default_image_width = 512		
+		self.default_image_height = 512
 		self.message_said = [None for _ in range(num_agents)]
 		self.gt_seg = gt_seg
 		self.save_image = save_image
@@ -437,21 +437,66 @@ class UnityEnvironment(BaseUnityEnvironment):
 		script_list_verbose = utils.convert_action(action_dict_verbose)
 		failed_execution = False
 		print(f"Step {self.steps}, Executing script: {script_list_verbose}")
-
+		print("record", self.recording_options['recording'])
 		if len(script_list[0]) > 0:
 			if self.recording_options['recording']:
 				# assert False, "Recording not supported"
-				success, message = self.comm.render_script(script_list,
-														   recording=True,
-														   # gen_vid=False,
-														   skip_animation=False,
-														   output_folder=self.recording_options['output_folder'],
-														   camera_mode=[self.recording_options['cameras']],
-														   file_name_prefix='task_{}'.format(self.task_id),
-														   image_synthesis=[self.recording_options['modality']],
-														   save_pose_data=True,
-														   image_width=640,
-														   image_height=640)
+				# success, message = self.comm.render_script(script_list,
+				# 										   recording=True,
+				# 										   # gen_vid=False,
+				# 										   skip_animation=False,
+				# 										   camera_mode=self.recording_options['cameras'],
+				# 										   file_name_prefix='task_{}'.format(self.task_id),
+				# 										   image_synthesis=self.recording_options['modality']
+				# 										   )
+				# individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
+				# individual_script = script_list[0].split('|')
+				# for individual_action in individual_script:# no time delay!!!
+				# 	if "walktowards" in individual_action:
+				# 		continue
+				# 	print("=====no walk so rendor======")
+				# 	success, message = self.comm.render_script([individual_script[i]],
+				# 										   recording=True,
+				# 										   # gen_vid=False,
+				# 										   skip_animation=True,
+				# 										   output_folder=self.recording_options['output_folder'],
+				# 										   camera_mode=[self.recording_options['cameras']],
+				# 										   file_name_prefix='task_{}'.format(self.task_id),
+				# 										   image_synthesis=[self.recording_options['modality']],
+				# 										   save_pose_data=False,
+				# 										   image_width=256,
+				# 										   image_height=256)
+				# if self.steps // 5 == 0:
+				if self.steps >= 0:
+					individual_script = script_list[0].split('|')
+					walk_count = 0
+					for individual_action in individual_script:
+						if "walktowards" in individual_action:
+							walk_count += 1
+							print("走路了 ")
+					if walk_count < 2:
+						print("开始渲染")
+						success, message = self.comm.render_script(script_list,
+																recording=True,
+																# gen_vid=False,
+																skip_animation=False,
+																output_folder=self.recording_options['output_folder'],
+																camera_mode=[self.recording_options['cameras']],
+																file_name_prefix='task_{}'.format(self.task_id),
+																frame_rate = 5,
+																time_scale = 3.0,
+																image_synthesis=[self.recording_options['modality']],
+																save_pose_data=True,
+																image_width=256,
+																image_height=256)
+						print("渲染图片")
+					else:
+						for i in range(len(individual_script)):
+							success, message = self.comm.render_script([individual_script[i]],
+															recording=False,
+															image_synthesis=[],
+															# gen_vid=False,
+															skip_animation=False)
 			else:
 				individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
 				for i in range(len(individual_script)):# no time delay!!!
@@ -459,7 +504,18 @@ class UnityEnvironment(BaseUnityEnvironment):
 														   recording=False,
 														   image_synthesis=[],
 														   # gen_vid=False,
-														   skip_animation=True)
+														   skip_animation=False)
+					# success, message = self.comm.render_script([individual_script[i]],
+					# 									   recording=True,
+					# 									   # gen_vid=False,
+					# 									   skip_animation=False,
+					# 									   output_folder=self.recording_options['output_folder'],
+					# 									   camera_mode=[self.recording_options['cameras']],
+					# 									   file_name_prefix='task_{}'.format(self.task_id),
+					# 									   image_synthesis=[self.recording_options['modality']],
+					# 									   save_pose_data=True,
+					# 									   image_width=512,
+					# 									   image_height=512)
 					if not success:
 						print("NO SUCCESS")
 						print(message, script_list)
@@ -469,7 +525,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 
 		# Obtain reward
 		reward, done, info = self.reward()
-
+		print(reward)
 		graph = self.get_graph()
 		self.steps += 1
 
@@ -586,6 +642,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 					os.mkdir(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/')
 				import cv2
 				for t in range(len(camera_ids)):
+					print("保存collection data")
 					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_instance.png', ids_instance[t])
 					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_color_ids_instance.png', color_id_instance[t])
 					cv2.imwrite(self.data_collection_dir + str(self.global_episode_id) + '_' + str(self.env_id) + '/' + str(self.steps) + '_' + str(agent_id) + '_ids_class.png', ids_class[t])
@@ -750,6 +807,8 @@ class UnityEnvironment(BaseUnityEnvironment):
 
 		elif 'image' in obs_type:
 			#we have 'full_image' and 'normal_image'
+
+			print("====================走了get observation")
 			assert (self.num_static_cameras != None and self.num_camera_per_agent != None and self.CAMERA_NUM != None)
 			camera_ids = [self.num_static_cameras + agent_id * self.num_camera_per_agent + self.CAMERA_NUM]
 			image_width, image_height = self.default_image_width, self.default_image_height
@@ -758,8 +817,10 @@ class UnityEnvironment(BaseUnityEnvironment):
 			s, depth_images = self.comm.camera_image(camera_ids, mode='depth', image_width=image_width, image_height=image_height)
 			s, camera_info = self.comm.camera_data(camera_ids)
 			if self.save_image:
+				
 				import cv2
 				for i in range(len(camera_ids)):
+					print("保存图片")
 					rot_bgr = np.rot90(bgr_images[i], axes = (0, 1))
 					rot_depth = np.rot90(depth_images[i], axes = (0, 1))
 					cv2.imwrite(os.path.join('saved_images', f"{agent_id}_{self.steps:03}_img.png"), rot_bgr)

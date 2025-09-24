@@ -9,7 +9,7 @@ python testing_agents/test_vision_LLMs_cobel.py \
 --lm_id gpt-4o-ca \
 --source openai \
 --t 0.7 \
---max_tokens 1024 \
+--max_tokens 512 \
 --num_runs 1 \
 --num-per-task 2 \
---debug
+--test_task 40

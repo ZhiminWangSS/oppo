@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument(
         '--cuda-deterministic',
         action='store_true',
-        default=False,
+        default=True,
         help="sets flags for determinism when using CUDA (potentially slow!)")
 
     parser.add_argument(

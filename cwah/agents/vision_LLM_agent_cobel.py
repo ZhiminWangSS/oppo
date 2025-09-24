@@ -655,7 +655,7 @@ class vision_LLM_agent_cobel:
                     
                 if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
                     self.my_subplan = None
-                    if self.done_time > 2:
+                    if self.done_time > 1:
                         print("subplan done 太多次")
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
@@ -679,11 +679,11 @@ class vision_LLM_agent_cobel:
 
                 if len(self.grabbed_objects) == 2:
                     self.subplan = None
-                    print("强制搬运")
+                    # print("强制搬运")
                     plan =  f"[goput] {self.goal_location}"
                 unsatisfied_num = sum(self.unsatisfied.values())
                 if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
+                    # print("最后几个直接放")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!

@@ -147,7 +147,7 @@ class LLM_cobel:
             def _generate(prompt, sampling_params):
                 usage = [0,0]
                 if source == 'openai' or source == 'aliyun':
-                    for attempt in range(3):
+                    for attempt in range(6):
                         try:
                             if self.chat:
                                 response = client.chat.completions.create(
@@ -188,7 +188,7 @@ class LLM_cobel:
                                 raise ValueError(f"{lm_id} not available!")
                             return generated_samples, usage
                         except OpenAIError as e:
-                            if attempt == 2:
+                            if attempt == 5:
                                 print(e)
                                 raise e
                 elif source == 'huggingface':
@@ -784,13 +784,16 @@ class LLM_cobel:
 
     def progress2text(self, current_room, grabbed_objects, unchecked_containers, ungrabbed_objects, goal_location_room, satisfied, opponent_grabbed_objects, opponent_last_room, room_explored):
         sss = {}
+        print("ungrab",ungrabbed_objects)
         for room, objs in ungrabbed_objects.items():
             cons = unchecked_containers[room]
             extra_obj = None
             if type(goal_location_room) is not list and goal_location_room == room:
                 extra_obj = self.goal_location#目标物体
             #没有物体在这个房间 这个房间也没有目标物体 并且 没有记录
-            if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
+            if objs == [] and extra_obj is None and (room_explored is None or not room_explored[room]):
+                if objs == []:
+                    print("empty",objs)
                 sss[room] = f"The {room} is unexplored. "
                 continue
             s = ""
