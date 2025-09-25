@@ -3,7 +3,8 @@ init,"You are Alice, you and Bob are constructing beliefs rules to denote the ze
 
 Belief symbolic language:$Belief_language$
 
-Task decription:$Task_description$
+Task description:$Task_description$
+Note that the zeroth-order belief denote my knowledge of the world, first-order belief denote my knowledge of others belief.
 
 DO NOT generate beliefs that go beyond the information specified in the task description.
 Consider ONLY zeroth-order and first-order beliefs.
@@ -20,12 +21,13 @@ Missing logical relationships among key beliefs, such as omitting the agent's be
 Formatting errors, failing to comply with the prescribed format of the belief language.
 
 Belief symbolic language:$Belief_language$
-Task decription:$Task_description$
+Task description:$Task_description$
 Alice content:$Alice_content$
 Check if alice' construction satisfy the need.
-
+Make deletion advice when occuring repeat syntagma.
 DO NOT provide suggestions that go beyond the information specified in the task description.
 Consider ONLY zeroth-order and first-order beliefs.
+Note that the zeroth-order belief denote my knowledge of the world, first-order belief denote my knowledge of others belief.
 
 You should output strictly in the format of the following structure:
 Reasoning:
@@ -40,7 +42,7 @@ Bob's suggestions:$suggestions$
 
 DO NOT generate beliefs that go beyond the information specified in the task description.
 Consider ONLY zeroth-order and first-order beliefs.
-
+Note that the zeroth-order belief denote my knowledge of the world, first-order belief denote my knowledge of others belief.
 Now try to refine your previous output according to Bob's suggestions.
 The belief rules should be in syntax formatwith entity represented with a ? prefix, and without any additional comment and analysis and explanation:
 You should output strictly in the format of the following structure:

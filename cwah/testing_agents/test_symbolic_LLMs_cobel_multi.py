@@ -17,7 +17,7 @@ import subprocess
 
 def kill_process_on_port(port):
     try:
-        # 执行 lsof 命令获取占用指定端口的进程 PID
+       
         result = subprocess.run(
             ['lsof', '-t', '-i', f':{port}'],
             stdout=subprocess.PIPE,
@@ -26,25 +26,25 @@ def kill_process_on_port(port):
         )
         
         if result.returncode != 0:
-            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+           
             return
         
         pids = result.stdout.strip().split('\n')
-        pids = [pid for pid in pids if pid]  # 过滤空行
+        pids = [pid for pid in pids if pid] 
 
         if not pids:
-            print(f"没有找到占用端口 {port} 的进程。")
+           
             return
 
-        print(f"找到占用端口 {port} 的进程 PID: {pids}")
 
-        # 使用 kill -9 终止每个进程
+
+
         for pid in pids:
             subprocess.run(['kill', '-9', pid])
-            print(f"已终止 PID {pid} 的进程。")
+     
 
     except Exception as e:
-        print(f"发生错误: {e}")
+        print(f" {e}")
 
 
 if __name__ == '__main__':
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         'args': args,
     }
 
-    #这里目前给到了3个 后面跑四个再改
+
     
     agents = [lambda x, y: LLM_agent_cobel(**args_agent1), lambda x, y: LLM_agent_cobel(**args_agent2),lambda x, y: LLM_agent_cobel(**args_agent3),lambda x, y: LLM_agent_cobel(**args_agent4)]
     arena = ArenaMP(args.max_episode_length, id_run, env_fn, agents, args.record_dir, args.debug)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
                                             'episode_1_tokens': episode_1_token_stats,
                                         }}
             test_results[episode_id] = result_dic
-            # 保存为json
+            
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)

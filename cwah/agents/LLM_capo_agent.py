@@ -402,7 +402,7 @@ class capo_agent(LLM_agent):
         self.rooms_name = rooms_name
         self.roomname2id = {x['class_name']: x['id'] for x in room_info}
         self.id2node = {x['id']: x for x in obs['nodes']}
-        print("==================观测=======\n")
+        print("==================obs=======\n")
         print(self.id2node)
         self.stuck = 0
         self.last_room = None
@@ -410,7 +410,7 @@ class capo_agent(LLM_agent):
         self.satisfied = []
         self.goal_location = list(goal.keys())[0].split('_')[-1]
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
-        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None} #初始化
+        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None} 
         self.comm_chars = 0
         self.comm_num = 0
         self.task_id = task_id

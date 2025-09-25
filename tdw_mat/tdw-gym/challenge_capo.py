@@ -17,15 +17,12 @@ from lm_agent_oppo import lm_agent_oppo
 from lm_agent import lm_agent
 from lm_agent_capo import lm_agent_capo
 
-# 注册测试环境
+
 gym.envs.registration.register(id="transport_challenge_MA", entry_point="tdw_gym_capo:TDW")
 
 
 class Challenge_capo:
-    """
-    多智能体运输挑战环境管理类
-    用于管理环境、执行评估和记录结果
-    """
+
 
     def __init__(
         self,
@@ -42,22 +39,7 @@ class Challenge_capo:
         gt_mask=True,
         save_img=True,
     ):
-        """
-        初始化挑战环境
-
-        参数:
-            logger: 日志记录器
-            port: 环境端口号
-            data_path: 数据文件路径
-            output_dir: 输出目录
-            number_of_agents: 智能体数量（默认2个）
-            max_frames: 最大帧数（默认3000）
-            launch_build: 是否启动构建（默认True）
-            screen_size: 屏幕大小（默认512）
-            data_prefix: 数据集前缀路径
-            gt_mask: 是否使用真实掩码（默认True）
-            save_img: 是否保存图像（默认True）
-        """
+        
         self.env = gym.make(
             "transport_challenge_MA",
             port=port,
@@ -81,23 +63,12 @@ class Challenge_capo:
         self.logger.info("done")
 
     def submit(self, agents, logger, eval_episodes):
-        """
-        执行智能体评估过程
-
-        参数:
-            agents: 智能体列表
-            logger: 日志记录器
-            eval_episodes: 要评估的回合列表
-
-        返回:
-            float: 平均完成率
-        """
-
+        
         total_finish = 0.0
         if eval_episodes[0] == -1:
             eval_episodes = range(len(self.data))
         num_eval_episodes = len(eval_episodes)
-        # 无循环部分
+      
         start = time.time()
         results = {}
         #COBEL
@@ -129,10 +100,10 @@ class Challenge_capo:
             episode_1_api = 0
             episode_0_tokens = 0
             episode_1_tokens = 0
-            print(f"当前执行的episode为：{episode}")
+           
             start_time = time.time()
 
-            # 检查是否已经评估过该回合
+         
             if os.path.exists(
                 os.path.join(self.output_dir, str(episode), "result_episode.json")
             ):
@@ -146,7 +117,7 @@ class Challenge_capo:
                 continue
             # The episode has been evaluated before
 
-            # 创建输出目录
+         
             if not os.path.exists(os.path.join(self.output_dir, str(episode))):
                 os.makedirs(os.path.join(self.output_dir, str(episode)))
             self.logger.info(
@@ -154,14 +125,14 @@ class Challenge_capo:
             )
             self.logger.info(f"Resetting Environment ... data is {self.data[episode]}")
 
-            # 重置环境
+           
             state, info, env_api = self.env.reset(
                 seed=self.data[episode]["seed"],
                 options=self.data[episode],
                 output_dir=os.path.join(self.output_dir, str(episode)),
             )
 
-            # 重置每个智能体
+            
             for id, agent in enumerate(agents):
                 if type(env_api) == list:
                     curr_api = env_api[id]
@@ -223,9 +194,9 @@ class Challenge_capo:
                     agent.reset(output_dir=os.path.join(self.output_dir, str(episode)))
             self.logger.info(f"Environment Reset. Took {time.time() - start_time} secs")
 
-            # 执行评估过程
-            episode_start_time = time.time()  # 记录本episode总计时
-            act_total_time = 0.0  # 记录act方法总时间
+      
+            episode_start_time = time.time()  
+            act_total_time = 0.0 
             act_num = 0
             ## check1 tickle
             local_finish = self.env.check_goal()
@@ -238,8 +209,7 @@ class Challenge_capo:
                 step_num += 1
                 actions = {}
                 llm_info = {}
-                # 保存图片
-                #print("是否保存图片",self.save_img)
+               
                 if self.save_img:
                     self.env.save_images(
                         os.path.join(self.output_dir, str(episode), "Images")
@@ -266,7 +236,7 @@ class Challenge_capo:
             episode_1_com = agents[1].get_com_counts()
             episode_0_tokens = agents[0].get_tokens()
             episode_1_tokens = agents[1].get_tokens()
-            # 记录结果
+           
             #COBEL - TODO
             total_finish += local_finish[0] / local_finish[1]
             result = {
@@ -288,7 +258,7 @@ class Challenge_capo:
                 json.dump(result, f)
             results[episode] = result
 
-        # 计算并保存最终结果
+        
         avg_finish = total_finish / num_eval_episodes
         results = {"episode_results": results, 
                    "avg_finish": avg_finish}
@@ -303,9 +273,7 @@ class Challenge_capo:
         return avg_finish
 
     def close(self):
-        """
-        关闭环境，释放资源
-        """
+      
         self.env.close()
 
 
@@ -314,7 +282,7 @@ def init_logs(output_dir, name="simple_example"):
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(os.path.join(output_dir, "output.log"))
     fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler() # 控制台输出
+    ch = logging.StreamHandler() 
     ch.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
@@ -325,7 +293,7 @@ def init_logs(output_dir, name="simple_example"):
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    # 新增一个logger用于记录时间信息
+    
     time_logger = logging.getLogger(f"{name}_time")
     time_logger.setLevel(logging.DEBUG)
     time_fh = logging.FileHandler(os.path.join(output_dir, "time.log"))
@@ -341,9 +309,7 @@ def init_logs(output_dir, name="simple_example"):
     return logger, time_logger
 
 def init_episode_logs(output_dir, episode):##logger
-    """
-    初始化每个episode的日志记录器
-    """
+    
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
@@ -427,7 +393,7 @@ def main():
     args.output_dir = os.path.join(args.output_dir, args.run_id)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    logger,time_logger = init_logs(args.output_dir) #不包含episode的路径
+    logger,time_logger = init_logs(args.output_dir) 
 
     challenge = Challenge_capo(
         logger,
@@ -460,7 +426,7 @@ def main():
             pass
     try:
         challenge.submit(agents, logger, args.eval_episodes)
-        # 提交进入chanllenge遍历执行
+      
     finally:
         challenge.close()
 

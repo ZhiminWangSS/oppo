@@ -33,7 +33,7 @@ class Challenge:
         self.logger.info("done")
 
 
-        #COBEL
+   
     def submit(self, agents, logger, eval_episodes):
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -43,19 +43,7 @@ class Challenge:
         start = time.time()
         results = {}
         
-        #COBEL
-        total_0_comm_chars = 0
-        total_1_comm_chars = 0
-        total_0_com = 0
-        total_1_com = 0
-        total_0_api = 0
-        total_1_api = 0
-        total_0_tokens = 0
-        total_1_tokens = 0
-        total_0_total_tokens = 0
-        total_1_total_tokens = 0
-        total_0_comm_tokens = 0
-        total_1_comm_tokens = 0
+        
         for i, episode in enumerate(eval_episodes):
             episode_logger = init_episode_logs(self.output_dir, episode)
 
@@ -106,17 +94,16 @@ class Challenge:
                 self.logger.info(f"Executing step {step_num} for episode: {episode}, actions: {actions}, finish: {local_finish}, frame: {self.env.num_frames}")
                 if done:
                     break
-            #COBEL episode count
+     
             episode_total_time = time.time() - start_time
-            #COBEL episode count
+          
             episode_0_comm_chars = agents[0].comm_chars
             episode_1_comm_chars = agents[1].comm_chars
             episode_0_com = agents[0].get_com_counts()
             episode_1_com = agents[1].get_com_counts()
             episode_0_tokens = agents[0].get_tokens()
             episode_1_tokens = agents[1].get_tokens()
-            # 记录结果
-            #COBEL - TODO
+          
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
@@ -164,9 +151,7 @@ def init_logs(output_dir, name = 'simple_example'):
     return logger
 
 def init_episode_logs(output_dir, episode):##logger
-    """
-    初始化每个episode的日志记录器
-    """
+  
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     

@@ -535,9 +535,9 @@ class UnityEnvironment_capo(BaseUnityEnvironment):
 						failed_execution = True
 					else:
 						self.changed_graph = True
-		for action in actions:#TODO:check the step updating policy
-			if action == "send_message2":
-				self.steps += 1#one round for one step
+		# for action in actions:#TODO:check the step updating policy
+		# 	if action == "send_message2":
+		# 		self.steps += 1#one round for one step
 		if self.disscusion_status[0] == 1 and self.disscusion_status[1] == 1:
 			self.disscusion_status = [0,0]
 			self.disscussion = 1

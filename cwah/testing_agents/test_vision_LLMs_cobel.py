@@ -61,13 +61,13 @@ if __name__ == '__main__':
                                executable_args=executable_args,
                                base_port=args.base_port,
                                save_image=False,
-                            #    recording_options={'recording': True,
-							# 		'output_folder': "./visual_cobel",
-							# 		'file_name_prefix': None,
-							# 		'cameras': 'PERSON_FROM_BACK',
-							# 		'modality': 'normal'},
-                                data_collection=False,
-                                data_collection_dir='./first_cobel_img'
+                               recording_options={'recording': False,
+									'output_folder': "./visual",
+									'file_name_prefix': None,
+									'cameras': 'PERSON_FROM_BACK',
+									'modality': 'normal'},
+                                data_collection=False
+
                                 )
 
     args_agent1 = {
@@ -194,7 +194,7 @@ if __name__ == '__main__':
                                             'episode_1_tokens': episode_1_token_stats,
                                         }}
             test_results[episode_id] = result_dic
-            # 保存为json
+            
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)

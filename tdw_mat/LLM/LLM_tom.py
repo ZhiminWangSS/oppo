@@ -25,15 +25,7 @@ from datetime import datetime
 
 
 class LLM_tom:
-    """
-    大语言模型接口类
-    主要功能：
-    1. 支持多种大语言模型（OpenAI、DeepSeek、HuggingFace）
-    2. 处理提示词模板
-    3. 生成和执行规划
-    4. 管理对话历史
-    """
-
+   
     def __init__(
         self,
         source,  # 'huggingface' or 'openai'
@@ -44,33 +36,22 @@ class LLM_tom:
         sampling_parameters,
         agent_id,
     ):
-        """
-        初始化大语言模型接口
-
-        参数:
-            source: 模型来源 ('huggingface', 'openai', 'deepseek')
-            lm_id: 模型ID
-            prompt_template_path: 提示词模板路径
-            communication: 是否启用通信
-            cot: 是否使用思维链
-            sampling_parameters: 采样参数
-            agent_id: 智能体ID
-        """
-        # 智能体基本信息
-        self.rooms_explored = None  # 已探索的房间
-        self.goal_desc = None  # 目标描述
-        self.agent_id = agent_id  # 智能体ID
-        self.agent_name = "Alice" if agent_id == 0 else "Bob"  # 智能体名称
-        self.oppo_name = "Alice" if agent_id == 1 else "Bob"  # 对手名称
-        self.oppo_pronoun = "she" if agent_id == 1 else "he"  # 对手代词
+        
+    
+        self.rooms_explored = None  
+        self.goal_desc = None  
+        self.agent_id = agent_id  
+        self.agent_name = "Alice" if agent_id == 0 else "Bob"  
+        self.oppo_name = "Alice" if agent_id == 1 else "Bob"  
+        self.oppo_pronoun = "she" if agent_id == 1 else "he"  
         self.characters = 0
         self.tokens = 0
         self.api = 0
-        # 调试和配置
-        self.debug = sampling_parameters.debug  # 调试模式
-        self.rooms = []  # 房间列表
+       
+        self.debug = sampling_parameters.debug 
+        self.rooms = [] 
 
-        # 提示词模板相关
+      
         self.prompt_template_path = prompt_template_path
         self.single = "single" in self.prompt_template_path
         df = pd.read_csv(self.prompt_template_path)
@@ -88,25 +69,25 @@ class LLM_tom:
         else:
             self.generator_prompt_template = None
 
-        # 模型配置
-        self.communication = communication  # 是否启用通信
-        self.cot = cot  # 是否使用思维链
-        self.source = source  # 模型来源
-        self.model = None  # 模型实例
-        self.tokenizer = None  # 分词器
-        self.lm_id = lm_id  # 模型ID
+     
+        self.communication = communication  
+        self.cot = cot  #
+        self.source = source  
+        self.model = None  
+        self.tokenizer = None  
+        self.lm_id = lm_id  
         self.chat = (
             "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "deepseek" in lm_id
-        )  # 是否为聊天模型
-        self.OPENAI_KEY = None  # OpenAI API密钥
-        self.total_cost = 0  # 总花费
-        self.communication_cost = 0  # 通信花费
-        # 根据不同来源初始化模型
+        )  
+        self.OPENAI_KEY = None  
+        self.total_cost = 0  
+        self.communication_cost = 0  
+        
         if self.source == "openai":
-            # OpenAI模型初始化
+         
             client = OpenAI(
-                api_key="sk-57d87ae693d94216971bc2905b0a2647",
-                base_url="https://api.deepseek.com",
+                api_key=os.getenv(),
+                base_url=os.getenv(),
             )
             if self.chat:
                 self.sampling_params = {
@@ -125,10 +106,10 @@ class LLM_tom:
                     "echo": sampling_parameters.echo,
                 }
         elif self.source == "deepseek":
-            # DeepSeek模型初始化
+            
             client = OpenAI(
-                api_key="sk-57d87ae693d94216971bc2905b0a2647",
-                base_url="https://api.deepseek.com",
+                api_key=os.getenv(),
+                base_url=os.getenv(),
             )
             if self.chat:
                 self.sampling_params = {
@@ -147,7 +128,7 @@ class LLM_tom:
                     "echo": sampling_parameters.echo,
                 }
         elif self.source == "hf":
-            # HuggingFace模型初始化
+        
             self.tokenizer = LlamaTokenizer.from_pretrained(self.lm_id, use_fast=True)
             self.model = LlamaForCausalLM.from_pretrained(
                 self.lm_id, device_map="auto", load_in_4bit=True
@@ -314,13 +295,7 @@ class LLM_tom:
         self.obj_per_room = None
 
     def reset(self, rooms_name, goal_objects):
-        """
-        重置模型状态
-
-        参数:
-            rooms_name: 房间名称列表
-            goal_objects: 目标物体
-        """
+        
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
         self.tokens = 0
@@ -328,15 +303,7 @@ class LLM_tom:
         self.api = 0
         self.total_cost = 0
     def goal2description(self, goals):  # {predicate: count}
-        """
-        将目标转换为描述文本
-
-        参数:
-            goals: 目标字典 {predicate: count}
-
-        返回:
-            目标描述文本
-        """
+        
         s = "Transport "
         r = None
         for object_name, count in goals.items():
@@ -346,16 +313,7 @@ class LLM_tom:
         return s
 
     def parse_answer(self, available_actions, text):
-        """
-        解析模型回答
-
-        参数:
-            available_actions: 可用动作列表
-            text: 模型生成的文本
-
-        返回:
-            解析后的动作
-        """
+       
         flags = "AC"
         for i in range(len(available_actions)):
             action = available_actions[i]
@@ -454,18 +412,7 @@ class LLM_tom:
         opponent_grabbed_objects,
         opponent_last_room,
     ):
-        """
-        将进度转换为文本描述
-
-        参数:
-            current_step: 当前步骤
-            satisfied: 已完成的物体
-            opponent_grabbed_objects: 对手抓取的物体
-            opponent_last_room: 对手最后所在的房间
-
-        返回:
-            进度描述文本
-        """
+        
         s = f"I've taken {current_step}/3000 steps. "
 
         sss = {}
@@ -626,15 +573,7 @@ class LLM_tom:
         return s
 
     def get_available_plans(self, message):#plans according to the state
-        """
-        获取可用的规划
-
-        参数:
-            message: 消息文本
-
-        返回:
-            可用规划列表
-        """
+        
         """
         go to room {}
         explore current room {}
@@ -717,28 +656,10 @@ class LLM_tom:
         opponent_grabbed_objects=None,
         opponent_last_room=None,
     ):
-        """
-        运行模型生成规划
-
-        参数:
-            current_step: 当前步骤
-            current_room: 当前房间
-            rooms_explored: 已探索的房间
-            holding_objects: 持有的物体
-            satisfied: 已完成的物体
-            object_list: 物体列表
-            obj_per_room: 每个房间的物体
-            action_history: 动作历史
-            dialogue_history: 对话历史
-            opponent_grabbed_objects: 对手抓取的物体
-            opponent_last_room: 对手最后所在的房间
-
-        返回:
-            生成的规划和相关信息
-        """
+       
         info = {}
         print("current_step", current_step)
-        # llm_logger.info(f"当前步骤: {current_step}")
+     
         self.current_room = current_room
         self.rooms_explored = rooms_explored
         self.holding_objects = holding_objects
@@ -787,7 +708,7 @@ class LLM_tom:
                     print(f"prompt_comm:\n{gen_prompt}")
                 print(f"output_comm:\n{message}")
 
-        available_plans, num, available_plans_list = self.get_available_plans(message) #因为要传入消息,only for message in the available plans
+        available_plans, num, available_plans_list = self.get_available_plans(message) 
         if num == 0 or (message is not None and num == 1):
             print("Warning! No available plans!")
             plan = None
@@ -852,15 +773,11 @@ class LLM_tom:
                 print(f"output_plan_stage_1:\n{output}")
             
         plan, flags = self.parse_answer(available_plans_list, output)
-        #这里plan就是包含消息的动作
+      
         if flags == "COMMUNICATION":
             self.communication_cost += 1
             self.characters += len(plan.split(" ")) #send a message: "xxxxx" character
-            # # 新增：记录通信内容
-            # if plan.startswith("send a message:"):
-            #     message_content = plan[len("send a message:"):].strip()
-                # llm_logger.info(f"{self.agent_name} 发送消息内容: {message_content}\n当前通信次数{self.communication_cost}")
-            # llm_logger.info(f"{self.agent_name}:当前计划:\n{plan}")
+            
         if self.debug:
             print(f"plan: {plan}\n")
         info.update(

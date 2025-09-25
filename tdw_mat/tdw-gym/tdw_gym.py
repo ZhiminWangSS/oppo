@@ -276,6 +276,7 @@ class TDW(Env):
         self.object_categories = {}
         self.target_object_ids = self.controller.state.target_object_ids
         self.container_ids = self.controller.state.container_ids
+        #print(self.controller.state)
         self.replicant_ids = [self.controller.replicants[i].static.replicant_id for i in range(self.number_of_agents)]
         
         for i in range(len(data) - 1):
@@ -291,6 +292,7 @@ class TDW(Env):
                     self.object_categories[object_id] = segm.get_object_category(j)
                     if self.object_categories[object_id] == 'bed':
                         self.goal_position_id = object_id
+        self.container_names = [self.object_names[i] for i in self.container_ids]
         
         self.replicant_colors ={i: self.controller.replicants[i].static.segmentation_color for i in range(self.number_of_agents)}
 
@@ -697,22 +699,25 @@ class TDW(Env):
                         self.messages[replicant_id] = copy.deepcopy(curr_action['message'])
                         delay_frame_count[replicant_id] = max((len(self.messages[replicant_id]) - 1) // self.message_per_frame, 0)
             if finish: break
-            data = self.controller.communicate([])
-            x1,y1,z1 = self.controller.replicants[0].dynamic.transform.position
-            x2,y2,z2 = self.controller.replicants[1].dynamic.transform.position
-            room1 = self.belongs_to_which_room((x1,y1,z1))
-            room2 = self.belongs_to_which_room((x2,y2,z2))
-            
+            try:
+                data = self.controller.communicate([])
+                x1,y1,z1 = self.controller.replicants[0].dynamic.transform.position
+                x2,y2,z2 = self.controller.replicants[1].dynamic.transform.position
+                room1 = self.belongs_to_which_room((x1,y1,z1))
+                room2 = self.belongs_to_which_room((x2,y2,z2))
+                
 
 
-            print(room1,room2)
-            if room1 == room2 or self.num_frames % 50 ==0:
-                for i in range(len(data) - 1):
-                    r_id = OutputData.get_data_type_id(data[i])
-                    if r_id == 'imag':
-                        images = Images(data[i])
-                        if images.get_avatar_id() == "a" and (self.num_frames + num_frames) % 1 == 0:
-                            TDWUtils.save_images(images=images,resize_to=(1024,1024) ,filename= f"{self.num_frames + num_frames:05d}", output_directory = os.path.join(self.save_dir, 'top_down_image'))
+                print(room1,room2)
+                if room1 == room2 or self.num_frames % 50 ==0:
+                    for i in range(len(data) - 1):
+                        r_id = OutputData.get_data_type_id(data[i])
+                        if r_id == 'imag':
+                            images = Images(data[i])
+                            if images.get_avatar_id() == "a" and (self.num_frames + num_frames) % 1 == 0:
+                                TDWUtils.save_images(images=images,resize_to=(1024,1024) ,filename= f"{self.num_frames + num_frames:05d}", output_directory = os.path.join(self.save_dir, 'top_down_image'))
+            except:
+                pass
             num_frames += 1
 
         self.num_frames += num_frames

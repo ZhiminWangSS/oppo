@@ -95,8 +95,8 @@ class LLM_capo(LLM):
                 'early_stopping': True,
             }
         elif self.source == 'aliyun':
-            api_key="sk-b09c374d8bd2478fa94697ae79dad1bd"#os.environ.get("CHATANYWHERE_API_KEY")
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"#os.environ.get("CHATANYWHERE_URL")
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
@@ -168,26 +168,26 @@ class LLM_capo(LLM):
                                     for choice in response.choices 
                                 ]
 
-                                self.api_num += 1
-                                #COBEL usage = completion token
-                                usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
-                            elif "text-" in lm_id:
-                                response = openai.Completion.create(model=lm_id, prompt=prompt, **sampling_params)
-                                if self.debug:
-                                    with open(f"LLM/raw.json", 'a') as f:
-                                        f.write(json.dumps(response, indent=4))
-                                        f.write('\n')
-                                generated_samples = [
-                                    choice.message.content 
-                                    for choice in response.choices  # 直接遍历 choices 对象
-                                ]
-                            else:
-                                raise ValueError(f"{lm_id} not available!")
-                            return generated_samples, usage
-                        except OpenAIError as e:
-                            if attempt == 5:
-                                print(e)
-                                raise e
+                            self.api_num += 1
+                                    #COBEL usage = completion token
+                            usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
+                        elif "text-" in lm_id:
+                            response = openai.Completion.create(model=lm_id, prompt=prompt, **sampling_params)
+                            if self.debug:
+                                with open(f"LLM/raw.json", 'a') as f:
+                                    f.write(json.dumps(response, indent=4))
+                                    f.write('\n')
+                            generated_samples = [
+                                choice.message.content 
+                                for choice in response.choices  
+                            ]
+                        else:
+                            raise ValueError(f"{lm_id} not available!")
+                        return generated_samples, usage
+                    except OpenAIError as e:
+                        if attempt == 5:
+                            print(e)
+                            raise e
                 elif source == 'huggingface':
                     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
                     prompt_len = input_ids.shape[-1]
@@ -269,7 +269,7 @@ class LLM_capo(LLM):
         output,usage = self.generator(chat_prompt,self.sampling_params)
         meta_plan = output[0]
         method_name = "meta-plan"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+       
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -296,7 +296,7 @@ class LLM_capo(LLM):
         output,usage = self.generator(chat_prompt,self.sampling_params)
         message = output[0],usage
         method_name = "communication"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+      
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -320,7 +320,7 @@ class LLM_capo(LLM):
         output,usage = self.generator(chat_prompt,self.sampling_params)
         output = output[0]
         method_name = "parsing"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+       
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens

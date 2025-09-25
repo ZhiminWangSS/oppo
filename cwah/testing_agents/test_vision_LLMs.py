@@ -61,14 +61,8 @@ if __name__ == '__main__':
                                executable_args=executable_args,
                                base_port=args.base_port,
                                save_image=True,
-                            #    recording_options={'recording': True,
-							# 		'output_folder': "./visual_coela1",
-							# 		'file_name_prefix': None,
-							# 		'cameras': 'PERSON_FROM_BACK',
-							# 		'modality': 'normal'},
-                                data_collection=True,
-                                data_collection_dir='./first_cobel_img'
-                            )
+
+                               data_collection=True)
 
     args_agent1 = {
         'agent_id': 1,
@@ -193,7 +187,7 @@ if __name__ == '__main__':
                                             'episode_1_tokens': episode_1_token_stats,
                                         }}
             test_results[episode_id] = result_dic
-            # 保存为json
+
             json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")
             with open(json_path, "w") as f_json:
                 json.dump(result_dic, f_json, indent=4)
