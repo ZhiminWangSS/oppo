@@ -143,7 +143,7 @@ class LLM:
                                     f.write('\n')
                             generated_samples = [
                                 choice.message.content 
-                                for choice in response.choices  # 直接遍历 choices 对象
+                                for choice in response.choices 
                             ]
                             self.completion_tokens += response.usage.completion_tokens
                             self.total_tokens += response.usage.total_tokens
@@ -165,7 +165,7 @@ class LLM:
                                     f.write('\n')
                             generated_samples = [
                                 choice.message.content 
-                                for choice in response.choices  # 直接遍历 choices 对象
+                                for choice in response.choices  
                             ]
                         # mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
                         # 			  range(sampling_params['n'])]
@@ -305,7 +305,7 @@ class LLM:
             cons = unchecked_containers[room]
             extra_obj = None 
             if type(goal_location_room) is not list and goal_location_room == room:
-                extra_obj = self.goal_location #extra_obj == 目标物体
+                extra_obj = self.goal_location 
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
                 continue
@@ -425,7 +425,7 @@ class LLM:
                 message = outputs[0]
 
                 method_name = "communication"
-                # 使用usage.prompt_tokens和usage.completion_tokens
+               
                 prompt_tokens = usage[0]
                 completion_tokens = usage[1]
                 self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -479,7 +479,7 @@ class LLM:
             output = outputs[0]
 
             method_name = "planning"
-            # 使用usage.prompt_tokens和usage.completion_tokens
+           
             prompt_tokens = usage[0]
             completion_tokens = usage[1]
             self.token_stats[method_name]["prompt"] += prompt_tokens

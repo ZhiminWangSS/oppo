@@ -23,15 +23,12 @@ from lm_agent_cobel import lm_agent_cobel
 from datetime import datetime
 
 BeliefBuilder = belief_builder.BeliefBuilder
-# 注册测试环境
+
 gym.envs.registration.register(id="transport_challenge_MA", entry_point="tdw_gym:TDW")
 
 
 class Challenge:
-    """
-    多智能体运输挑战环境管理类
-    用于管理环境、执行评估和记录结果
-    """
+  
 
     def __init__(
         self,
@@ -48,22 +45,7 @@ class Challenge:
         gt_mask=True,
         save_img=True,
     ):
-        """
-        初始化挑战环境
-
-        参数:
-            logger: 日志记录器
-            port: 环境端口号
-            data_path: 数据文件路径
-            output_dir: 输出目录
-            number_of_agents: 智能体数量（默认2个）
-            max_frames: 最大帧数（默认3000）
-            launch_build: 是否启动构建（默认True）
-            screen_size: 屏幕大小（默认512）
-            data_prefix: 数据集前缀路径
-            gt_mask: 是否使用真实掩码（默认True）
-            save_img: 是否保存图像（默认True）
-        """
+        
         self.env = gym.make(
             "transport_challenge_MA",
             port=port,
@@ -106,36 +88,25 @@ class Challenge:
 
 
     def submit(self, agents, logger, eval_episodes):
-        """
-        执行智能体评估过程
-
-        参数:   
-            agents: 智能体列表
-            logger: 日志记录器
-            eval_episodes: 要评估的回合列表
-
-        返回:
-            float: 平均完成率
-        """
-        ##COBEL init the rules builder
-        # self.rules_builder() #COBEL - zhimin 暂时不用
+      
+       
 
         total_finish = 0.0
         if eval_episodes[0] == -1:
             eval_episodes = range(len(self.data))
         num_eval_episodes = len(eval_episodes)
-        # 无循环部分
+     
         start = time.time()
         results = {}
         total_tokens = {}
         total_com_counts = {}
         for i, episode in enumerate(eval_episodes):
-            #COBEL belief info logger
+            
             episode_logger = init_episode_logs(self.output_dir, episode)
             plan_logger = init_plan_logs(self.output_dir, episode)
-            print(f"当前执行的episode为：{episode}")
+           
             start_time = time.time()
-            # 检查是否已经评估过该回合
+           
             if os.path.exists(
                 os.path.join(self.output_dir, str(episode), "result_episode.json")
             ):
@@ -149,7 +120,7 @@ class Challenge:
                 continue
             # The episode has been evaluated before
 
-            # 创建输出目录
+          
             if not os.path.exists(os.path.join(self.output_dir, str(episode))):
                 os.makedirs(os.path.join(self.output_dir, str(episode)))
             self.logger.info(
@@ -157,14 +128,13 @@ class Challenge:
             )
             self.logger.info(f"Resetting Environment ... data is {self.data[episode]}")
 
-            # 重置环境
+           
             state, info, env_api = self.env.reset(
                 seed=self.data[episode]["seed"],
                 options=self.data[episode],
                 output_dir=os.path.join(self.output_dir, str(episode)),
             )
 
-            # 重置每个智能体
             for id, agent in enumerate(agents):
                 if type(env_api) == list:
                     curr_api = env_api[id]
@@ -213,7 +183,7 @@ class Challenge:
                     agent.reset(output_dir=os.path.join(self.output_dir, str(episode)))
             self.logger.info(f"Environment Reset. Took {time.time() - start_time} secs")
 
-            # 执行评估过程
+       
             local_finish = self.env.check_goal()
             done = False
             step_num = 0
@@ -221,16 +191,16 @@ class Challenge:
             while not done:
                 step_num += 1
                 actions = {}
-                # 保存图片
+              
                 if self.save_img:
                     self.env.save_images(
                         os.path.join(self.output_dir, str(episode), "Images")
                     )
                 for agent_id, agent in enumerate(agents):
                     
-                    # print(f"agent状态：{state[str(agent_id)]}")
+                 
                     actions[str(agent_id)] = agent.act_cobel(state[str(agent_id)])
-                    # 执行大模型推理获得动作
+    
                     print(f"agent_id:{agent_id}\ntoken_cost:{agent.get_tokens()}")
                 state, reward, done, info = self.env.step(actions)
                 local_reward += reward
@@ -246,8 +216,7 @@ class Challenge:
                 #         print("Communication action taken by agent:", agent_id)
             episode_time = time.time() - start_time
 
-            # 记录结果
-            #COBEL - TODO
+         
             for agent_id,agent in enumerate(agents):
                 total_com_counts[agent_id] = agent.get_com_counts()
                 total_tokens[agent_id] = agent.get_tokens()
@@ -272,7 +241,7 @@ class Challenge:
                 json.dump(result, f)
             results[episode] = result
 
-        # 计算并保存最终结果
+       
         avg_finish = total_finish / num_eval_episodes
         results = {"episode_results": results, "avg_finish": avg_finish}
         with open(os.path.join(self.output_dir, "eval_result.json"), "w") as f:
@@ -282,18 +251,15 @@ class Challenge:
         return avg_finish
 
     def close(self):
-        """
-        关闭环境，释放资源
-        """
+        
         self.env.close()
 
-#COBEL basic logger for llm 
 def init_logs(output_dir, name="simple_example"):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(os.path.join(output_dir, "output.log"))
     fh.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler() # 控制台输出
+    ch = logging.StreamHandler() 
     ch.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
@@ -304,7 +270,7 @@ def init_logs(output_dir, name="simple_example"):
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    # 新增一个logger用于记录时间信息
+    
     time_logger = logging.getLogger(f"{name}_time")
     time_logger.setLevel(logging.DEBUG)
     time_fh = logging.FileHandler(os.path.join(output_dir, "time.log"))
@@ -321,9 +287,7 @@ def init_logs(output_dir, name="simple_example"):
 
 #COBEL logger only for belief and observation
 def init_episode_logs(output_dir, episode):
-    """
-    初始化每个episode的日志记录器
-    """
+    
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
@@ -343,9 +307,7 @@ def init_episode_logs(output_dir, episode):
     return episode_logger
 
 def init_plan_logs(output_dir, episode):
-    """
-    初始化每个episode的日志记录器
-    """
+   
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
@@ -430,13 +392,12 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
 
-    # 自动推导 run_id
+    
     if args.run_id is None or args.run_id == "0":
-        # 根据当前时间生成 run_id，格式为 run_YYYYMMDD_HHMM
+    
         now = datetime.now()
         args.run_id = f"run_{now.strftime('%Y%m%d_%H%M')}"
     else:
-        # 如果用户手动指定了 run_id，但不满足 run_x 格式，也允许
         pass
 
 
@@ -478,7 +439,7 @@ def main():
     try:
         print("yes")
         challenge.submit(agents, logger, args.eval_episodes)
-        # 提交进入chanllenge遍历执行
+      
     finally:
         challenge.close()
 

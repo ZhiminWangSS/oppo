@@ -18,33 +18,18 @@ ANGLE = 15
 import logging
 
 class lm_agent:
-    """
-    大模型驱动的智能体类
-    主要功能：
-    1. 使用大模型进行决策规划
-    2. 处理环境观察和状态
-    3. 执行导航和物体操作
-    4. 管理智能体记忆和状态
-    """
+   
 
     def __init__(self, agent_id, logger, max_frames, args, output_dir="results"):
-        """
-        初始化大模型智能体
+        
 
-        参数:
-            agent_id: 智能体ID
-            logger: 日志记录器
-            max_frames: 最大帧数
-            args: 配置参数
-            output_dir: 输出目录
-        """
-                #counting
+               
         self.characters = 0 # model-generated-characters
         self.comm_num = 0 # agent-communication-times
-                # 环境状态相关变量
-        self.with_oppo = None  # 对手持有的物体
-        self.oppo_pos = None  # 对手位置
-        self.with_character = None  # 角色持有的物体
+               
+        self.with_oppo = None  
+        self.oppo_pos = None  
+        self.with_character = None  
         self.color2id = None  # 颜色到ID的映射
         self.satisfied = None  # 已完成的物体
         self.object_list = None  # 物体列表

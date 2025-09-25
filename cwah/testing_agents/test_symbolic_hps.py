@@ -162,8 +162,16 @@ if __name__ == '__main__':
             cnt_subgoal[episode_id].append([saved_info['cnt_duplicate_subgoal'], saved_info['cnt_nouse_subgoal']])
             test_results[episode_id] = {'S': S[episode_id],
                                         'L': L[episode_id],
-                                        'cnt_subgoal': cnt_subgoal[episode_id]}
-                                        
+                                        'cnt_subgoal': cnt_subgoal[episode_id],
+                                        'steps':steps}
+            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")                           
+            with open(json_path, "w") as f_json:
+                json.dump( test_results[episode_id], f_json, indent=4)
+
+                
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
+        
+
+        
         print('failed_tasks:', failed_tasks)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))

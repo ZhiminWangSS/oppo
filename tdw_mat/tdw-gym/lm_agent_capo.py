@@ -18,93 +18,76 @@ ANGLE = 15
 import logging
 
 class lm_agent_capo:
-    """
-    大模型驱动的智能体类
-    主要功能：
-    1. 使用大模型进行决策规划
-    2. 处理环境观察和状态
-    3. 执行导航和物体操作
-    4. 管理智能体记忆和状态
-    """
+    
 
     def __init__(self, agent_id, logger, max_frames, args, output_dir="results"):
-        """
-        初始化大模型智能体
+        
 
-        参数:
-            agent_id: 智能体ID
-            logger: 日志记录器
-            max_frames: 最大帧数
-            args: 配置参数
-            output_dir: 输出目录
-        """
-
-        # 环境状态相关变量
-        self.with_oppo = None  # 对手持有的物体
-        self.oppo_pos = None  # 对手位置
-        self.with_character = None  # 角色持有的物体
-        self.color2id = None  # 颜色到ID的映射
-        self.satisfied = None  # 已完成的物体
-        self.object_list = None  # 物体列表
-        self.container_held = None  # 持有的容器
-        self.gt_mask = None  # 是否使用真实掩码
+     
+        self.with_oppo = None 
+        self.oppo_pos = None  
+        self.with_character = None  
+        self.color2id = None  
+        self.satisfied = None  
+        self.object_list = None  
+        self.container_held = None  
+        self.gt_mask = None 
         self.episode = None
         
         self.meta_plan = None
-        # 物体信息存储
+   
         self.object_info = (
             {}
-        )  # 物体详细信息 {id: {id: xx, type: 0/1/2, name: sss, position: x,y,z}}
+        ) 
         self.object_per_room = (
             {}
-        )  # 每个房间的物体 {room_name: {0/1/2: [{id: xx, type: 0/1/2, name: sss, position: x,y,z}]}}
+        )  
 
-        # 地图相关
-        self.id_map = None  # ID地图
-        self.object_map = None  # 物体地图
+        
+        self.id_map = None  
+        self.object_map = None  
 
-        # 智能体基本信息
+
         self.agent_id = agent_id
         self.host = 1-agent_id
         self.agent_type = "lm_agent_capo"
         self.agent_names = ["Alice", "Bob"]
         self.opponent_agent_id = 1 - agent_id
         self.oppo_progress = ""
-
-        # 环境配置
+        
         self.env_api = None
         self.max_frames = max_frames
         self.output_dir = output_dir
         self.map_size = (240, 130)
         self.save_img = True
 
-        # 场景边界
+        
         self._scene_bounds = {"x_min": -15, "x_max": 15, "z_min": -7.5, "z_max": 7.5}
 
-        # 导航参数
+    
         self.max_nav_steps = 80
         self.max_move_steps = 150
         self.logger = logger
         random.seed(1024)
         self.debug = True
 
-        # 观察和状态相关
-        self.new_object_list = None  # 新发现的物体
-        self.visible_objects = None  # 可见物体
-        self.num_frames = None  # 当前帧数
-        self.steps = None  # 步数
-        self.obs = None  # 当前观察
-        self.local_step = 0  # 局部步数
+  
+        self.new_object_list = None 
+        self.visible_objects = None 
+        self.num_frames = None  
+        self.steps = None 
+        self.obs = None 
+        self.local_step = 0  
 
-        # 动作历史
-        self.last_action = None  # 上一个动作
-        self.pre_action = None  # 前一个动作
+      
+        self.last_action = None  
+        self.pre_action = None  
 
-        # 目标相关
-        self.goal_objects = None  # 目标物体
-        self.dropping_object = None  # 正在放置的物体
+        
+        self.goal_objects = None  
+        self.dropping_object = None  
 
-        # 大模型配置
+      
         self.source = args.source
         self.lm_id = args.lm_id
         self.prompt_template_path = args.prompt_template_path
@@ -129,28 +112,28 @@ class lm_agent_capo:
             self.args,
             self.agent_id,
         )
-        self.action_history = []  # 动作历史
-        self.dialogue_history = []  # 对话历史
-        self.plan = None  # 当前计划
+        self.action_history = [] 
+        self.dialogue_history = [] 
+        self.plan = None  
 
-        # 房间和位置相关
-        self.rooms_name = None  # 房间名称
-        self.rooms_explored = {}  # 已探索的房间
-        self.position = None  # 当前位置
-        self.forward = None  # 朝向
-        self.current_room = None  # 当前房间
-        self.holding_objects_id = None  # 持有的物体ID
-        self.oppo_holding_objects_id = None  # 对手持有的物体ID
-        self.oppo_last_room = None  # 对手最后所在的房间
-        self.rotated = None  # 旋转状态
-        self.navigation_threshold = 5  # 导航阈值
-        self.detection_threshold = 5  # 检测阈值
+        
+        self.rooms_name = None  
+        self.rooms_explored = {}  
+        self.position = None 
+        self.forward = None 
+        self.current_room = None 
+        self.holding_objects_id = None  
+        self.oppo_holding_objects_id = None 
+        self.oppo_last_room = None  
+        self.rotated = None  
+        self.navigation_threshold = 5 
+        self.detection_threshold = 5 
         self.sub_plan = None
-        # 通信相关配置
-        self.communication = args.communication  # 是否启用通信功能
-        # print(f"是否启用通信：{self.communication}")
-        self.dialogue_history = []  # 存储对话历史记录，用于记录智能体之间的通信内容
-        self.episode_logger = None  # 记录当前episode的日志
+   
+        self.communication = args.communication  
+  
+        self.dialogue_history = []  
+        self.episode_logger = None  
         self.comm_chars = 0
         self.comm_counts = 0
 
@@ -165,15 +148,7 @@ class lm_agent_capo:
         return x, z
 
     def get_pc(self, color):
-        """
-        获取指定颜色的点云数据
-
-        参数:
-            color: 目标颜色
-
-        返回:
-            点云数据
-        """
+       
         depth = self.obs["depth"].copy()
         for i in range(len(self.obs["seg_mask"])):
             for j in range(len(self.obs["seg_mask"][0])):
@@ -212,15 +187,7 @@ class lm_agent_capo:
         return rpc[:3]
 
     def cal_object_position(self, o_dict):
-        """
-        计算物体位置
-
-        参数:
-            o_dict: 物体信息字典
-
-        返回:
-            物体位置坐标
-        """
+        
         pc = self.get_pc(o_dict["seg_color"])
         if pc.shape[1] < 5:
             return None
@@ -352,7 +319,7 @@ class lm_agent_capo:
 
 
 
-        # 配置日志
+        
     
 
     def reset(
@@ -559,13 +526,7 @@ class lm_agent_capo:
         return action
 
     def detect(self):
-        """
-        执行目标检测
-
-        返回:
-            obj_infos: 检测到的物体信息
-            curr_seg_mask: 分割掩码
-        """
+        
         detect_result = self.detection_model(self.obs["rgb"][..., [2, 1, 0]])[
             "predictions"
         ][0]
@@ -594,20 +555,8 @@ class lm_agent_capo:
         return obj_infos, curr_seg_mask
 
     def LLM_plan(self):
-        """
-        使用大模型进行规划，包括通信决策
-
-        返回:
-            plan: 规划结果，可能包含通信动作
-            a_info: 规划信息
-        """
-        # # 可视化并保存当前obs的rgb为jpg图片
-        # if "rgb" in self.obs and self.obs["rgb"] is not None:
-        #     img = Image.fromarray(self.obs["rgb"].astype(np.uint8))
-        #     os.makedirs(self.output_dir, exist_ok=True)
-        #     img.save(os.path.join(self.output_dir,f"obs_rgb_{self.num_frames}.jpg"))
-        # # 将对话历史作为上下文输入传递给大模型
-        # # 这样大模型可以根据历史对话内容做出更合理的决策
+        
+        
         return self.LLM.run(
             self.num_frames,
             self.current_room,
@@ -617,7 +566,7 @@ class lm_agent_capo:
             self.object_list,
             self.object_per_room,
             self.action_history,
-            self.dialogue_history,  # 对话历史作为上下文输入
+            self.dialogue_history,  
             self.obs["oppo_held_objects"],
             self.oppo_last_room,
         )
@@ -684,29 +633,18 @@ class lm_agent_capo:
         return output
     
     def act_capo(self, obs):
-        """
-        执行动作
-
-        参数:
-            obs: 环境观察
-
-        返回:
-            action: 要执行的动作
-        """
-        ##meta_plan init
-        if obs["ep_id"] == 0 : #这里的判断不太对
+        
+        if obs["ep_id"] == 0 : 
             if self.host:
                 meta_plan = self.LLM_meta_plan_init()
                 self.meta_plan = meta_plan
                 action = {
-                        "type": 6,  # 动作类型6表示发送消息
+                        "type": 6,  
                         "message": meta_plan,
                         "turns":"init",
                         "des":"metaplan"
                     }
-                # self.action_history.append(
-                #         f"{'init the meta_plan'} at step {self.num_frames}"
-                #     )
+                
                 return action
             else:
                 return {"type":"waiting"}
@@ -727,16 +665,10 @@ class lm_agent_capo:
                 self.satisfied.append(self.last_action["object"])
             self.invalid_count += 1
             self.plan = None
-            #assert self.invalid_count < 10, "invalid action for 10 times"
-
-        # print(f"是否启用通信：{self.communication}")
-        # 处理通信消息
-     
-        # 遍历所有接收到的消息
+           
         for i in range(len(obs["messages"])):
             if obs["messages"][i] is not None:
-                # 将消息添加到对话历史中，格式为"智能体名称: 消息内容"
-                # 使用copy.deepcopy确保消息内容不会被意外修改
+               
                 self.dialogue_history.append(
                     f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
                 )
@@ -744,10 +676,10 @@ class lm_agent_capo:
 
         #receive the oppo_progress
         if obs["progress"][1-self.agent_id] is not None:
-            self.oppo_progress = obs["progress"][1-self.agent_id]#TODO:adding inthe env
+            self.oppo_progress = obs["progress"][1-self.agent_id]
 
         if not self.host and obs["metaplan"][0] is not None:
-            self.meta_plan = obs["metaplan"][0] # TODO:mentor change? A: the mentor will not change
+            self.meta_plan = obs["metaplan"][0] 
         #print(self.meta_plan)
 
         self.position = self.obs["agent"][:3]
@@ -887,7 +819,7 @@ class lm_agent_capo:
         if self.obs["disscussion"] == 1 and self.obs["turns"] == 0 :
                 progress = self.LLM_send_progress()
                 action = {
-                        "type": 6,  # 动作类型6表示发送消息
+                        "type": 6, 
                         "message": progress,
                         "turns":0,
                         "des":"progress"
@@ -904,7 +836,7 @@ class lm_agent_capo:
                 )
                 self.meta_plan = meta_plan
                 action = {
-                        "type": 6,  # 动作类型6表示发送消息
+                        "type": 6,  
                         "message":self.meta_plan,
                         "turns":1,
                         "des":"metaplan"
@@ -920,7 +852,7 @@ class lm_agent_capo:
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM host_message: {message} at frame {self.num_frames}, step {self.steps}"
                 )
                 action = {
-                        "type": 6,  # 动作类型6表示发送消息
+                        "type": 6, 
                         "message":message,
                         "turns":2,
                         "des":"messages"
@@ -936,7 +868,7 @@ class lm_agent_capo:
                     f"agent_name: {self.agent_names[self.agent_id]}:LLM teammate_message: {message} at frame {self.num_frames}, step {self.steps}"
                 )
                 action = {
-                        "type": 6,  # 动作类型6表示发送消息
+                        "type": 6, 
                         "message":message,
                         "turns":3,
                         "des":"messages"
@@ -1016,15 +948,7 @@ class lm_agent_capo:
 
         
     def act(self, obs):
-        """
-        执行动作
-
-        参数:
-            obs: 环境观察
-
-        返回:
-            action: 要执行的动作
-        """
+        
         self.obs = obs.copy()
         self.obs["rgb"] = self.obs["rgb"].transpose(1, 2, 0)
         self.num_frames = obs["current_frames"]
@@ -1042,15 +966,13 @@ class lm_agent_capo:
             self.plan = None
             assert self.invalid_count < 10, "invalid action for 10 times"
 
-        # print(f"是否启用通信：{self.communication}")
-        # 处理通信消息
+       
         if self.communication:
 
-            # 遍历所有接收到的消息
+           
             for i in range(len(obs["messages"])):
                 if obs["messages"][i] is not None:
-                    # 将消息添加到对话历史中，格式为"智能体名称: 消息内容"
-                    # 使用copy.deepcopy确保消息内容不会被意外修改
+                   
                     self.dialogue_history.append(
                         f"{self.agent_names[i]}: {copy.deepcopy(obs['messages'][i])}"
                     )
@@ -1230,14 +1152,14 @@ class lm_agent_capo:
                 action = self.goput()
             #    self.with_character = [self.agent_id]
             elif self.plan.startswith("send a message:"):
-                # 发送消息动作
+               
                 action = {
-                    "type": 6,  # 动作类型6表示发送消息
+                    "type": 6,  
                     "message": " ".join(
                         self.plan.split(" ")[3:]
-                    ),  # 提取消息内容，去掉"send a message:"前缀
+                    ),  
                 }
-                self.plan = None  # 清除当前计划，准备执行下一个动作,other actions will maintain the plan
+                self.plan = None  
             elif self.plan.startswith("wait"):
                 action = None
                 break

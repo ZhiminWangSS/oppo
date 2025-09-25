@@ -13,11 +13,10 @@ sys.path.append(base_path)
 
 from h_agent import H_agent
 from lm_agent import lm_agent
-from lm_agent_roco import lm_agent_roco
 
 gym.envs.registration.register(
     id='transport_challenge_MA',
-    entry_point='tdw_gym_roco:TDW'
+    entry_point='tdw_gym:TDW'
 )
 
 class Challenge:
@@ -34,7 +33,7 @@ class Challenge:
         self.logger.info("done")
 
 
-        #roco
+        
     def submit(self, agents, logger, eval_episodes):
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -43,12 +42,8 @@ class Challenge:
 
         start = time.time()
         results = {}
-        total_tokens = {}
-        total_comm_counts = {}
-        total_comm_chars = {}
-
-        #roco
         
+       
         for i, episode in enumerate(eval_episodes):
             episode_logger = init_episode_logs(self.output_dir, episode)
 
@@ -76,9 +71,6 @@ class Challenge:
                     elif agent.agent_type == 'lm_agent':
                         agent.reset(obs = state[str(id)], goal_objects = info['goal_description'], output_dir = os.path.join(self.output_dir, str(episode)), env_api = curr_api, agent_color = info['agent_colors'][id], agent_id = id, rooms_name=info['rooms_name'], gt_mask = self.gt_mask, save_img = self.save_img,episode=episode,
                             episode_logger=episode_logger)
-                    elif agent.agent_type == 'lm_agent_roco':
-                        agent.reset(obs = state[str(id)], goal_objects = info['goal_description'], output_dir = os.path.join(self.output_dir, str(episode)), env_api = curr_api, agent_color = info['agent_colors'][id], agent_id = id, rooms_name=info['rooms_name'], gt_mask = self.gt_mask, save_img = self.save_img,episode=episode,
-                            episode_logger=episode_logger)
                     else:
                         raise Exception(f"{agent.agent_type} not available")
                 else:
@@ -95,43 +87,24 @@ class Challenge:
                 actions = {}
                 if self.save_img: self.env.save_images(os.path.join(self.output_dir, str(episode), 'Images'))
                 for agent_id, agent in enumerate(agents):
-                    actions[str(agent_id)] = agent.act_roco(state[str(agent_id)])
+                    actions[str(agent_id)] = agent.act(state[str(agent_id)])
                 state, reward, done, info = self.env.step(actions)
-                #print(self.env.calls)
                 local_reward += reward
                 local_finish = self.env.check_goal()
                 self.logger.info(f"Executing step {step_num} for episode: {episode}, actions: {actions}, finish: {local_finish}, frame: {self.env.num_frames}")
                 if done:
                     break
-            #count
-            for agent_id,agent in enumerate(agents):
-                total_tokens[agent_id] = agent.get_tokens() 
-                total_comm_counts[agent_id] = agent.get_comm_counts()
-                total_comm_chars[agent_id] = agent.get_comm_chars()
-
-            average_calls_per_discussion = 0
-
-            for call in self.env.calls:
-                average_calls_per_discussion += (call)
             
-            average_calls_per_discussion /= len(self.env.calls)
-            episode_total_time = time.time() - episode_start_time
+            episode_total_time = time.time() - start_time
+            
+            
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
                 "total": local_finish[1],
                 "step_num": step_num,
                 "frame": self.env.num_frames,
-                "agent_0_tokens": {"prompt":total_tokens[0][0],"completion":total_tokens[0][1]},
-                "agent_1_tokens": {"prompt":total_tokens[1][0],"completion":total_tokens[1][1]},
-                "agent_0_comm_count":total_comm_counts[0],
-                "agent_1_comm_count":total_comm_counts[1],
                 "episode_total_time": episode_total_time,
-                "api_0":agents[0].get_api_num(),
-                "api_1":agents[1].get_api_num(),
-                "agent_0_comm_chars":total_comm_chars[0],
-                "agent_1_comm_chars":total_comm_chars[1],
-                "average_calls_per_discussion":average_calls_per_discussion
             }
             with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
                 json.dump(result, f)
@@ -166,9 +139,7 @@ def init_logs(output_dir, name = 'simple_example'):
     return logger
 
 def init_episode_logs(output_dir, episode):##logger
-    """
-    初始化每个episode的日志记录器
-    """
+   
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     
@@ -205,7 +176,7 @@ def main():
     parser.add_argument("--no_gt_mask", action='store_true')
     # LLM parameters
     parser.add_argument('--source', default='openai',
-        choices=['hf', 'openai'],
+        choices=['hf', 'openai','aliyun'],
         help='openai API or load huggingface models')
     parser.add_argument('--lm_id', default='gpt-3.5-turbo',
                         help='name for openai engine or huggingface model name/path')
@@ -237,8 +208,6 @@ def main():
             agents.append(H_agent(i, logger, args.max_frames, args.output_dir))
         elif agent == 'lm_agent':
             agents.append(lm_agent(i, logger, args.max_frames, args, args.output_dir))
-        elif agent == 'lm_agent_roco':
-            agents.append(lm_agent_roco(i, logger, args.max_frames, args, args.output_dir))
         else:
             pass
     try:
