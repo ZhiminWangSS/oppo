@@ -9,7 +9,7 @@ import random
 import numpy as np
 from pathlib import Path
 
-from envs.unity_environment import UnityEnvironment
+from envs.unity_environment_origin import UnityEnvironment
 from agents.vision_LLM_agent_cobel import vision_LLM_agent_cobel
 from arguments import get_args
 from algos.arena_mp2_cobel import ArenaMP
@@ -67,6 +67,7 @@ if __name__ == '__main__':
 									'cameras': 'PERSON_FROM_BACK',
 									'modality': 'normal'},
                                 data_collection=False
+
                                 )
 
     args_agent1 = {

@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6414)
 python testing_agents/test_vision_LLMs.py \
---mode colea_vision_gpt4o_0905 \
+--mode colea_vision_gpt4o_add \
 --communication \
 --prompt_template_path LLM/prompt_com.csv \
 --obs_type normal_image \
@@ -12,4 +12,4 @@ python testing_agents/test_vision_LLMs.py \
 --max_tokens 256 \
 --num_runs 1 \
 --num-per-task 2 \
---debug
+--test_task 10

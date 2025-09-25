@@ -443,13 +443,14 @@ class UnityEnvironment(BaseUnityEnvironment):
 		if len(script_list[0]) > 0:
 			if self.recording_options['recording']:
 				# assert False, "Recording not supported"
+				
 				success, message = self.comm.render_script(script_list,
 														   recording=True,
 														   # gen_vid=False,
 														   skip_animation=False,
 														   camera_mode=self.recording_options['cameras'],
 														   file_name_prefix='task_{}'.format(self.task_id),
-														   image_synthesis=self.recording_optios['modality'])
+														   image_synthesis=self.recording_options['modality'])
 			else:
 				individual_script = script_list[0].split('|')#['<char0> [walktowards] <cabinet> (216)', '<char1> [walktowards] <kitchen> (11)']
 				for i in range(len(individual_script)):# no time delay!!!
