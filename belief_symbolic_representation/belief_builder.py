@@ -166,7 +166,7 @@ def main():
 
     challenge_cwah = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene. The objects are initially in any room or cabnet. The cabnets can contain objects, and the cabnets can be checked or unchecked. Agents can hold objects to transport them to the target table. The room's exploration state includes explored and unexplored."
     
-    challenge_tdw = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene.  The objects are initially in any room. The container can contain objects. Agents can hold objects to transport them to the bed. Agents can hold container and put objects into them to hold more objects at a time. Agent can get the rooms' exploration state."
+    challenge_tdw = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene. Agents are set randomly in the room. The objects and containers are initially IN any room. The container can CONTAIN several objects. Agents can HOLD objects to transport them to the bed, once the object arrive the bed the object disappear. Agents can hold container and put objects into them to hold more objects at a time. Agent can get the rooms' exploration state. Agent can know each others' information like which room they are in through communication"
     belief_language = '''
 Syntax:
 ?belief = ?entity PREDICATE [?entity:?confidence] OR ?entity ATTRIBUTE [?state:?confidence]
@@ -187,9 +187,30 @@ First-order belief:
 Example: agentA BELIEVE agentB BELIEVE banana IN [pantry:medium]
 
 '''
+    belief_language_no_conf = """
+Syntax:
+?belief = ?entity PREDICATE ?entity OR ?entity ATTRIBUTE ?state
+?entity - a placeholder for any agent, object, or location in the environment (e.g., agentA, apple, room3)
+?state - a placeholder descibe the entity's attributes (e.g. EXPLORED)
+ATTRIBUTE - state descriptor (e.g., EXPLORED, CLEANED, CHECKED)
+PREDICATE — a relational verb  (e.g., IN, HOLD, BELIEVE, AT, INSIDE)
+
+Zero-order belief format:
+?agent BELIEVE ?belief
+Example: 
+agentA BELIEVE apple IN <kitchen>(2000)
+agentA BELIEVE <livingroom>(1000) EXPLORED part
+
+First-order belief format:
+?agentA BELIEVE ?agentB BELIEVE ?belief
+Example: agentA BELIEVE agentB BELIEVE banana IN <bedroom>(3000)
+
+"""
+
+
     os.makedirs("./belief_rules",exist_ok=True)
-    outputfile = "./belief_rules/rules.txt" 
-    builder.build_complete_belief(challenge_tdw,outputfile,belief_language)
+    outputfile = "./belief_rules/rules_test.txt" 
+    builder.build_complete_belief(challenge_tdw,outputfile,belief_language_no_conf)
     process = builder.history
     
 
