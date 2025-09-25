@@ -428,7 +428,7 @@ class vision_LLM_agent:
 			return "[wait_for_disscussion]",{}
 
 
-		if obs["ep_id"] == 0:##TODO:check the init process
+		if obs["ep_id"] == 0:
 			if self.host:
 				metaplan = self.LLM_metaplan_init()
 				self.metaplan = metaplan
@@ -467,7 +467,7 @@ class vision_LLM_agent:
 			updater()
 			return action,info
 
-		if obs["disscussion"] == 1 and obs["turns"] == 2:#TODO:check if these messages is sent in the messages
+		if obs["disscussion"] == 1 and obs["turns"] == 2:
 			if self.host:
 				message = self.LLM_disscuss_refine(0)
 				action = "[send_message1]" + "<" + message + ">"
@@ -523,11 +523,7 @@ class vision_LLM_agent:
 
 		action = None
 
-		# if unexplored_room:
-		# 	self.action_history.pop()
-		# 	self.plan = f"[goexplore] <{self.current_room['class_name']}> ({self.current_room['id']})"
-		# 	self.action_history.append(self.plan)
-		# 	self.last_location = [0, 0, 0]
+		
 		while action is None:
 			if self.plan is None:
 				# if LM_times > 0:

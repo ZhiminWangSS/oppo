@@ -160,7 +160,7 @@ class LLM_cobel:
                                         f.write('\n')
                                 generated_samples = [
                                     choice.message.content 
-                                    for choice in response.choices  # 直接遍历 choices 对象
+                                    for choice in response.choices  
                                 ]
                                 self.api_num += 1
                                 usage = [response.usage.prompt_tokens,response.usage.completion_tokens]
@@ -288,7 +288,7 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         
-        # 记录token消耗
+      
         method_name = "prediction_zero_order"
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
@@ -296,17 +296,14 @@ class LLM_cobel:
         self.token_stats[method_name]["completion"] += completion_tokens
         self.token_stats[method_name]["call_counts"] += 1
 
-        # 使用正则表达式提取 $OPPO_NAME$'s SubPlans
-        # 使用正则表达式提取 Updated Beliefs
-        # pattern_beliefs = r'updated zero order beliefs:\s*(.*?)(?=' + re.escape("reasons:") + r'|$)'
+        
         pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
         match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
         if not match_beliefs:
             raise ValueError("Failed to extract updated beliefs from output.")
         reason = match_beliefs.group(1).strip()
 
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        # pattern_subplan = r'reasons:\s*(.*?)(?=' + re.escape("subplan:") + r'|$)'
+      
         pattern_subplan = rf"subplan:\s*(.*)"
         match_subplan = re.search(pattern_subplan, output[0], re.IGNORECASE | re.DOTALL)
         if not match_subplan:
@@ -316,9 +313,6 @@ class LLM_cobel:
             print(f"=========prompt===========: \n{prompt}")
             print(f"=========predict_zero=============: \n{output[0]}")
 
-        # episode_logger.info(
-        #     f"\n{self.agent_name}predict_first_order:\n{output[0]}"
-        # )
         return reason, my_subplan
 
 
@@ -336,7 +330,7 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 ) # usage token cost
         
-        # 记录token消耗
+  
         method_name = "prediction_first_order"
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
@@ -344,15 +338,14 @@ class LLM_cobel:
         self.token_stats[method_name]["completion"] += completion_tokens
         self.token_stats[method_name]["call_counts"] += 1
 
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
-        # 使用正则表达式提取 Updated Beliefs
+   
         pattern_beliefs = r'reasoning:\s*(.*?)(?=' + re.escape(f"subplans:") + r'|$)'
         match_beliefs = re.search(pattern_beliefs, output[0], re.IGNORECASE | re.DOTALL)
         if not match_beliefs:
             raise ValueError("Failed to extract updated beliefs from output.")
         reason = match_beliefs.group(1).strip()
 
-        # 使用正则表达式提取 $OPPO_NAME$'s Subplans
+
         pattern_subplan = rf"subplans:\s*(.*)"
         match_subplan = re.search(pattern_subplan, output[0], re.IGNORECASE | re.DOTALL)
         if not match_subplan:
@@ -383,9 +376,9 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 )   
         
-        # 记录token消耗
+     
         method_name = "cooradination_aware"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+        
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -445,9 +438,9 @@ class LLM_cobel:
                     chat_prompt, self.sampling_params
                 )
         
-        # 记录token消耗
+      
         method_name = "communication"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+        
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -496,9 +489,9 @@ class LLM_cobel:
             chat_prompt,self.sampling_params
         )
         
-        # 记录token消耗
+    
         method_name = "intuitive_planning"
-        # 使用usage.prompt_tokens和usage.completion_tokens
+       
         prompt_tokens = usage[0]
         completion_tokens = usage[1]
         self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -587,8 +580,8 @@ class LLM_cobel:
             cons = unchecked_containers[room]
             extra_obj = None
             if type(goal_location_room) is not list and goal_location_room == room:
-                extra_obj = self.goal_location#目标物体
-            #没有物体在这个房间 这个房间也没有目标物体 并且 没有记录
+                extra_obj = self.goal_location
+          
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
                 continue
@@ -674,7 +667,7 @@ class LLM_cobel:
             extra_obj = None
             if type(goal_location_room) is not list and goal_location_room == room:
                 extra_obj = self.goal_location
-            #没有物体在这个房间 这个房间也没有目标物体 并且 没有记录
+        
             if objs is None and extra_obj is None and (room_explored is None or not room_explored[room]):
                 sss[room] = f"The {room} is unexplored. "
                 continue

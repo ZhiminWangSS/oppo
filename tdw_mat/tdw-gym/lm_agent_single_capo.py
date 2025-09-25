@@ -288,13 +288,13 @@ class lm_agent:
         self.dropping_object = []
         self.steps = 0
         self.num_frames = 0
-        # print(self.obs.keys())
+       
         self.position = self.obs["agent"][:3]
         self.forward = self.obs["agent"][3:]
         self.current_room = self.env_api['belongs_to_which_room'](self.position)
         self.rotated = None
         self.rooms_explored = {}
-        #COBEL
+        
         self.comm_chars = 0
         self.comm_counts = 0
         self.plan = None
