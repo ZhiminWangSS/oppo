@@ -9,7 +9,7 @@ import random
 import numpy as np
 from pathlib import Path
 
-from envs.unity_environment import UnityEnvironment
+from envs.unity_environment_origin import UnityEnvironment
 from agents.vision_LLM_agent_cobel import vision_LLM_agent_cobel
 from arguments import get_args
 from algos.arena_mp2_cobel import ArenaMP
@@ -60,13 +60,13 @@ if __name__ == '__main__':
                                use_editor=args.use_editor,
                                executable_args=executable_args,
                                base_port=args.base_port,
-                               save_image=True,
+                               save_image=False,
                             #    recording_options={'recording': True,
 							# 		'output_folder': "./visual_cobel",
 							# 		'file_name_prefix': None,
 							# 		'cameras': 'PERSON_FROM_BACK',
 							# 		'modality': 'normal'},
-                                data_collection=True,
+                                data_collection=False,
                                 data_collection_dir='./first_cobel_img'
                                 )
 

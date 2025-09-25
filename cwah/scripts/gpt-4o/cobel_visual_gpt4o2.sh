@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6420)
 python testing_agents/test_vision_LLMs_cobel.py \
---mode get_img_cobel \
+--mode cobel_vision_gpt4o_add3 \
 --communication \
 --prompt_template_path LLM/cwah_cobel_promptsV2.2_grasp.csv \
 --obs_type normal_image \
@@ -12,4 +12,4 @@ python testing_agents/test_vision_LLMs_cobel.py \
 --max_tokens 512 \
 --num_runs 1 \
 --num-per-task 2 \
---test_task 16 20
+--test_task 10

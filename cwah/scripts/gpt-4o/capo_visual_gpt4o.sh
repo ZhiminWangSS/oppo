@@ -1,6 +1,6 @@
 kill -9 $(lsof -t -i :6415)
 python testing_agents/test_vision_LLMs_capo.py \
---mode capo_vision_gpt4o \
+--mode capo_vision_gpt4o_add \
 --communication \
 --prompt_template_path LLM/capo_prompt.csv \
 --obs_type normal_image \
@@ -11,4 +11,5 @@ python testing_agents/test_vision_LLMs_capo.py \
 --t 0.7 \
 --max_tokens 1024 \
 --num_runs 1 \
---num-per-task 2 
+--num-per-task 2 \
+--test_task 10

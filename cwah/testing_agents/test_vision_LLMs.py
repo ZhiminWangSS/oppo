@@ -9,7 +9,7 @@ import random
 import numpy as np
 from pathlib import Path
 
-from envs.unity_environment import UnityEnvironment
+from envs.unity_environment_origin import UnityEnvironment
 from agents import vision_LLM_agent
 from arguments import get_args
 from algos.arena_mp2 import ArenaMP

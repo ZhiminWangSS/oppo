@@ -1,4 +1,4 @@
-kill -9 $(lsof -t -i :6414)
+kill -9 $(lsof -t -i :641)
 python testing_agents/test_vision_LLMs.py \
 --mode get_img_coela \
 --communication \
