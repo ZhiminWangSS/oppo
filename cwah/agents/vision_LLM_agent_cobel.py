@@ -98,9 +98,7 @@ class vision_LLM_agent_cobel:
         } for _ in self.agent_names
         }
     
-        # = obj per room
-        # 为每个智能体创建一个字典列表来跟踪未抓取的物体
-        #zero + first
+      
         self.team_ungrasped_obj = {
             _:{
             "livingroom": [],
@@ -113,7 +111,7 @@ class vision_LLM_agent_cobel:
         # grasped objects {'id': None,'name':None}
         #team [[{hand},{hand2}]]
 
-        self.team_explored_rooms = { #探索了就改成"all"
+        self.team_explored_rooms = { 
             _ : {
             "livingroom": None,
             "kitchen": None,
@@ -355,7 +353,7 @@ class vision_LLM_agent_cobel:
                         )
                     if (i+1) != self.agent_id:
                         self.message_received.update(
-                            {self.agent_names[i + 1]: obs['messages'][i]} #改成字典
+                            {self.agent_names[i + 1]: obs['messages'][i]} 
                         )
         self.obs = obs
         # print(obs)
@@ -395,7 +393,7 @@ class vision_LLM_agent_cobel:
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]] = self.id2node[y]
             if x == self.agent_id:
                 if r == 'INSIDE':
-                    self.current_room = self.id2node[y] #id2node返回那个大字典
+                    self.current_room = self.id2node[y] 
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.agent_id]] = self.id2node[y]
                     #####
                 elif r in ['HOLDS_RH', 'HOLDS_LH']:
@@ -444,7 +442,7 @@ class vision_LLM_agent_cobel:
         #####
         self.team_ungrasped_obj[self.agent_names[self.agent_id]][self.current_room['class_name']] = ungrabbed_objects[:]
         
-        if self.ungrabbed_objects[self.current_room['class_name']] != ungrabbed_objects[:]: #新物体
+        if self.ungrabbed_objects[self.current_room['class_name']] != ungrabbed_objects[:]: 
             print(self.ungrabbed_objects)
             self.observe_new = True
         
@@ -479,21 +477,19 @@ class vision_LLM_agent_cobel:
         self.done_time = 0
         while action is None:
 
-            #=========================satisfied 更新 和房间地图 ================
-            #完成的物品 从所有手上删除
+           
             for obj in self.satisfied:
-                for agent_name_host, agents_graped in self.team_grasped_obj.items(): #2个人
-                    for agent_name, agent_graped in agents_graped.items(): #各自对彼此
-                        for hand_id, hand_obj in enumerate(agent_graped): #手
+                for agent_name_host, agents_graped in self.team_grasped_obj.items(): 
+                    for agent_name, agent_graped in agents_graped.items(): 
+                        for hand_id, hand_obj in enumerate(agent_graped): 
                             if obj['id'] == agent_graped[hand_id]['id']: #[{},{}]
                                 self.team_grasped_obj[agent_name_host][agent_name][hand_id] = {
                                     'id': None, 'class_name':None
                                 }
                         
-            
-            #完成的物品 从所有地图上删除
+  
             for obj in self.satisfied:
-                for agent_name_host, agent_ungraped in self.team_ungrasped_obj.items(): #2个人#各自对彼此
+                for agent_name_host, agent_ungraped in self.team_ungrasped_obj.items(): 
                     for room_name, con_list in agent_ungraped.items(): #手
                         to_remove = []
                         for idx1, obj_ungrasped in enumerate(con_list):
@@ -505,10 +501,10 @@ class vision_LLM_agent_cobel:
 
                         
                     
-            #拿到的物体从所有地图上删除 分开信念处理 grasp_zero 
+       
             hold_obj_ids = []
             for agent_name, agent_grasp_obj in self.team_grasped_obj[self.agent_names[self.agent_id]].items():
-                for hand_id, hand_obj in enumerate(agent_grasp_obj): #手循环
+                for hand_id, hand_obj in enumerate(agent_grasp_obj): 
                     hold_obj_ids.append(hand_obj['id'])
             
 
@@ -524,16 +520,16 @@ class vision_LLM_agent_cobel:
 
             
             
-            #===========================结束=========================
+          
             
             if (self.plan is None or self.observe_new) and (self.rotated == 0): #or new obj or message
                 if self.observe_new:
                     self.subplan = None
-                    self.episode_logger.info("=======新物体=======")
-                    self.plan_logger.info("=======新物体=======")
+                    self.episode_logger.info("=======new_object=======")
+                    self.plan_logger.info("=======new_object=======")
                 if self.plan == None:
-                    print("=======没计划触发重新规划=======")
-                    self.plan_logger.info("=======没计划触发重新规划=======")
+                    print("=======no plan replanning=======")
+                    self.plan_logger.info("=======no plan replanning=======")
                 # if LM_times > 0:
                 if LM_times > 10:
                     print(info)
@@ -551,7 +547,7 @@ class vision_LLM_agent_cobel:
                 # print("=========updated_zero_beliefs==========")
                 # print(updated_zero_order_beliefs)
                 if self.con == False:
-                    # print("==============不带容器更新==============")
+                   
                     if updated_first_order_beliefs != {}:
                         self.parse_belief_line_con('first',updated_first_order_beliefs)
                     if updated_zero_order_beliefs != {}:
@@ -564,14 +560,14 @@ class vision_LLM_agent_cobel:
 
                 
                 
-                self.dialogue = {} #处理完就清空
+                self.dialogue = {}
                 self.message_received = {}
 
                 self.episode_logger.info(f"\nzero update:{updated_zero_order_beliefs}\nfirst update{updated_first_order_beliefs}")
 
                 plan = None
 
-                if len(self.opponent_subplans) == len(self.work_agents) - 1: #说明所有智能体计划都知道
+                if len(self.opponent_subplans) == len(self.work_agents) - 1: 
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
@@ -579,16 +575,16 @@ class vision_LLM_agent_cobel:
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
                     self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
-                    print("=========被动更新==========")
-                    self.plan_logger.info("=========被动更新==========")
+                    print("=========passive updating==========")
+                    self.plan_logger.info("=========passive updating==========")
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                     # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     self.action_history = []
                     self.action_history_w_mes = []
                     self.opponent_subplans = None
 
-                #===== 只在更新计划的时候走 =====
-                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
+               
+                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:
                     oppo_progress = self.get_oppo_progress()
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} oppo_progress:{oppo_progress}")
@@ -596,17 +592,17 @@ class vision_LLM_agent_cobel:
                     print(self.goal_objects_name)
                     print(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
 
-                    #这个基本不可能到这
+                 
 
 
-                    if self.opponent_subplans != {}: #说明消息发送了计划
+                    if self.opponent_subplans != {}: 
                         zero_reason, self.my_subplan = self.LLM.passive_prediction_zero_order(my_progress,self.opponent_subplans)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
 
 
-                    else: #就主动
+                    else: 
                         zero_reason, self.my_subplan = self.LLM.prediction_zero_order(my_progress)
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} predict_zero:{zero_reason}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_subplan:{self.my_subplan}")
@@ -625,8 +621,8 @@ class vision_LLM_agent_cobel:
                                 self.plan_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
                                 total_progress.update({agent_name:oppo_progress})
 
-                            print("=========主动更新==========")
-                            self.plan_logger.info("=========主动更新==========")
+                            print("=========active updating ==========")
+                            self.plan_logger.info("=========active updating==========")
                         print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                         # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                         answer, reason, difference = self.LLM.coordination_aware(my_progress,total_progress,self.my_subplan,self.opponent_subplans)
@@ -634,7 +630,7 @@ class vision_LLM_agent_cobel:
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} difference:{difference}")
-                        #有必要就更新
+             
                         if "YES" in answer.upper() and self.message_time < self.max_message_time:
                             message = self.LLM.comm(difference,self.my_subplan)
                             plan =  "[send_message]" + "<" + message + ">"
@@ -642,12 +638,11 @@ class vision_LLM_agent_cobel:
                             self.comm_chars += len(message)
                             self.message_time += 1
 
-                    #subplan更新后清空
+              
                     self.action_history = [] #COBEL clean the action history
                     self.action_history_w_mes = []
 
 
-                # ======subplan规划结束=======
                 if plan is None:
                     plan = self.intuitive_planning()
 
@@ -656,7 +651,7 @@ class vision_LLM_agent_cobel:
                 if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
                     self.my_subplan = None
                     if self.done_time > 2:
-                        print("subplan done 太多次")
+                        print("subplan done too many times")
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
                         if filtered_plans == []:
@@ -667,7 +662,7 @@ class vision_LLM_agent_cobel:
                     else:
                         self.plan = None
                         self.done_time += 1
-                        # self.plan = None #其实不需要
+                        
                         
                         continue
 
@@ -679,11 +674,11 @@ class vision_LLM_agent_cobel:
 
                 if len(self.grabbed_objects) == 2:
                     self.subplan = None
-                    print("强制搬运")
+                    print("force to put")
                     plan =  f"[goput] {self.goal_location}"
                 unsatisfied_num = sum(self.unsatisfied.values())
                 if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
+                    print("last put")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
@@ -726,7 +721,7 @@ class vision_LLM_agent_cobel:
                 
             else:
                 raise ValueError(f"unavailable plan {self.plan}")
-        print("step+1 返回action")
+        print("step+1 return action")
         self.steps += 1
         info.update({"plan": self.plan,
                      })
@@ -822,9 +817,7 @@ class vision_LLM_agent_cobel:
         } for _ in self.agent_names
         }
     
-        # = obj per room
-        # 为每个智能体创建一个字典列表来跟踪未抓取的物体
-        #zero + first
+        
         self.team_ungrasped_obj = {
             _:{
             "livingroom": [],
@@ -837,7 +830,7 @@ class vision_LLM_agent_cobel:
         # grasped objects {'id': None,'name':None}
         #team [[{hand},{hand2}]]
 
-        self.team_explored_rooms = { #探索了就改成"all"
+        self.team_explored_rooms = {
             _ : {
             "livingroom": None,
             "kitchen": None,
@@ -864,7 +857,7 @@ class vision_LLM_agent_cobel:
         }
 
         
-        self.dialogue = {} #处理完就清空
+        self.dialogue = {} 
         self.message_received = {}
         self.my_subplan = None
         self.message_time = 0
@@ -881,9 +874,9 @@ class vision_LLM_agent_cobel:
         return self.LLM.token_stats
     
     def parse_belief_line(self,belief_type,beliefs):
-        print("======开始解析信念============")
+        print("======start analyse belief============")
         
-        for agent_name, update_belief in beliefs.items(): #逐个智能体更新 一阶更新各自的 0阶全部更新自己的
+        for agent_name, update_belief in beliefs.items(): 
             formatted_beliefs = []
             unchecked_container = {
                 room:[] for room in self.rooms_name
@@ -907,7 +900,7 @@ class vision_LLM_agent_cobel:
 
                 
                 if belief_type == "first": 
-                    if agent_name == self.agent_names[self.agent_id]: #自己的不更新
+                    if agent_name == self.agent_names[self.agent_id]: #
                         pass
                     if tokens.count('believe') < 2:
                         continue
@@ -915,17 +908,16 @@ class vision_LLM_agent_cobel:
                     second_believe_idx = tokens.index('believe', first_believe_idx + 1)
 
                     if first_believe_idx == 0:
-                        continue  # 没有前一个 token
+                        continue  
 
 
-                    # if tokens[first_believe_idx - 1] != self.agent_names[self.agent_id].lower():
-                    #     continue  # 不匹配 agent_name
+                    
                     
                     if second_believe_idx == 0:
-                        continue  # 不可能，但安全检查
+                        continue  
 
                     if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                        continue  
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:
@@ -945,21 +937,21 @@ class vision_LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                             
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
                             else:
-                                #检测到的肯定都是未完成的
+                            
                                 for obj_dict in self.team_unchecked_con[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                                        continue
+                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
                                 formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                                #containers_name 有一个全局的容器信息
+                              
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -991,10 +983,10 @@ class vision_LLM_agent_cobel:
 
                 else:
                     try:
-                        believe_idx = tokens.index('believe')  # 不区分大小写
+                        believe_idx = tokens.index('believe')  
                     except ValueError:
                         continue
-                    belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
+                    belief_tokens = tokens[believe_idx + 1:]     
 
                     if len(belief_tokens) < 3:
                         continue
@@ -1011,22 +1003,21 @@ class vision_LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                                
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
                             else:
-                                #检测到的肯定都是未完成的容器
+                            
                                 for obj_dict in self.team_unchecked_con[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                 unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
                                 formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                                #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                #containers_name 有一个全局的容器信息
+                                
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1066,7 +1057,7 @@ class vision_LLM_agent_cobel:
     def parse_belief_line_con(self,belief_type,beliefs):
         print("======开始解析信念============")
         
-        for agent_name, update_belief in beliefs.items(): #逐个智能体更新 一阶更新各自的 0阶全部更新自己的
+        for agent_name, update_belief in beliefs.items():
             formatted_beliefs = []
             unchecked_container = {
                 room:[] for room in self.rooms_name
@@ -1090,7 +1081,7 @@ class vision_LLM_agent_cobel:
 
                 
                 if belief_type == "first": 
-                    if agent_name == self.agent_names[self.agent_id]: #自己的不更新
+                    if agent_name == self.agent_names[self.agent_id]: 
                         pass
                     if tokens.count('believe') < 2:
                         continue
@@ -1098,17 +1089,15 @@ class vision_LLM_agent_cobel:
                     second_believe_idx = tokens.index('believe', first_believe_idx + 1)
 
                     if first_believe_idx == 0:
-                        continue  # 没有前一个 token
+                        continue  
 
 
-                    # if tokens[first_believe_idx - 1] != self.agent_names[self.agent_id].lower():
-                    #     continue  # 不匹配 agent_name
-                    
+                   
                     if second_believe_idx == 0:
-                        continue  # 不可能，但安全检查
+                        continue  
 
                     if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                        continue 
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:
@@ -1128,21 +1117,14 @@ class vision_LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                                
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            # else:
-                            #     #检测到的肯定都是未完成的
-                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                            #         if obj_dict['id'] == obj_id:
-                            #             continue #有了就跳出
-                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                            #     #containers_name 有一个全局的容器信息
+                            
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -1174,15 +1156,7 @@ class vision_LLM_agent_cobel:
 
 
 
-                            # else:
-                            #     #检测到的肯定都是未完成的
-                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                            #         if obj_dict['id'] == obj_id:
-                            #             continue #有了就跳出
-                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
-                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                            #     #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                            #     #containers_name 有一个全局的容器信息
+                           
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1219,44 +1193,26 @@ class vision_LLM_agent_cobel:
             print(formatted_beliefs)
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
     def parse_obj(self, text):
-        """
-        将类似 <livingroom>(1000) 的字符串：
-        1. 格式化为 <Livingroom> (1000)
-        2. 提取出 name 和 id
-
-        :param text: str, 如 "<livingroom>(1000)"
-        :return: tuple (formatted_str, name, id_int)
-                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
-        """
-        # 使用正则匹配 <...>(数字)
+        
         match = re.match(r'<([^>]+)>\s*\((\d+)\)', text.strip())
         if not match:
-            # raise ValueError(f"无法解析格式: {text}")
+            
             return None
 
         name_raw = match.group(1)   # 'livingroom'
         id_str = match.group(2)     # '1000'
 
-        # 名字首字母大写（其他字母保持原样，如 livingRoom → LivingRoom）
-        # 如果希望每个单词首字母大写，用 .title()；如果只第一个字母，用 .capitalize()
+       
         name_raw = name_raw.lower() # "livingroom" → "Livingroom"
         id = int(id_str)
-        # 格式化输出字符串
+ 
         formatted = f"<{name_raw}> ({id_str})"
 
         return formatted, name_raw, id
     
 
     def parse_room(self, text):
-        """
-        将类似 <livingroom>(1000) 的字符串：
-        1. 格式化为 <Livingroom> (1000)
-        2. 提取出 name 和 id
-
-        :param text: str, 如 "<livingroom>(1000)"
-        :return: tuple (formatted_str, name, id_int)
-                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
-        """
+        
         for room in self.rooms_name:
             if room in text:
                 return room

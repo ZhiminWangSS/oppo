@@ -37,7 +37,7 @@ class LLM_agent_cobel:
         self.current_room = None
         self.done_time = 0
         self.last_room = None
-        self.grabbed_objects = None #应该是列表 放的id 最后通过id2node变成用于提取progress的列表
+        self.grabbed_objects = None 
         self.opponent_grabbed_objects = [] #
         self.goal_location = None
         self.goal_location_id = None
@@ -73,9 +73,7 @@ class LLM_agent_cobel:
         } for _ in self.agent_names
         }
     
-        # = obj per room
-        # 为每个智能体创建一个字典列表来跟踪未抓取的物体
-        #zero + first
+       
         self.team_ungrasped_obj = {
             _:{
             "livingroom": [],
@@ -88,7 +86,7 @@ class LLM_agent_cobel:
         # grasped objects {'id': None,'name':None}
         #team [[{hand},{hand2}]]
 
-        self.team_explored_rooms = { #探索了就改成"all"
+        self.team_explored_rooms = { 
             _ : {
             "livingroom": None,
             "kitchen": None,
@@ -120,23 +118,14 @@ class LLM_agent_cobel:
         self.action_history_max_length = 3
         self.my_subplan = None
         self.max_message_time = 2
-        #接受到谁的消息 更新关于谁的信念 ok 一个人走一次 最多四次
-        #更新team_grasped_obj
-        #prediction first 走没有发消息的
-        #miscoordination aware： 广播消息 不同就比较我的 和 其他人的不同 
-        #passive plan 估计几乎用不到 保证其他人计划都知道才进行。plan可以维护的久一点 不用维护
-        
-          #预测走四次？ 走没有用到的
-        #passive 有一个人发消息了 我就走 用来配合
-        #进去后遍历所有人的子计划 如果没有就predict
-
+       
         
 
     @property
     def all_relative_name(self) -> list:
         return self.containers_name + self.goal_objects_name + self.rooms_name + ['character']
     
-    def goexplore(self): #== go to 到了就能看到所有的东西
+    def goexplore(self): 
         target_room_id = int(self.plan.split(' ')[-1][1:-1])
         if self.current_room['id'] == target_room_id:
             self.plan = None
@@ -145,11 +134,11 @@ class LLM_agent_cobel:
     
     
     def gocheck(self):
-        #不需要看到就能得到位置
+        
         assert len(self.grabbed_objects) < 2 # must have at least one free hands
         target_container_id = int(self.plan.split(' ')[-1][1:-1])
         target_container_name = self.plan.split(' ')[1]
-        target_container_room = self.id_inside_room[target_container_id] #可以直接更新这个字典 = ungrasped
+        target_container_room = self.id_inside_room[target_container_id] 
         if self.current_room['class_name'] != target_container_room:
             return f"[walktowards] <{target_container_room}> ({self.roomname2id[target_container_room]})"
 
@@ -164,7 +153,7 @@ class LLM_agent_cobel:
 
 
     def gograb(self):
-        #不需要看到就能得到位置
+        
         target_object_id = int(self.plan.split(' ')[-1][1:-1])
         target_object_name = self.plan.split(' ')[1]
         if target_object_id in self.grabbed_objects:
@@ -175,16 +164,16 @@ class LLM_agent_cobel:
         assert len(self.grabbed_objects) < 2 # must have at least one free hands
 
         target_object_room = self.id_inside_room[target_object_id]
-        #先走过去
+        
         if self.current_room['class_name'] != target_object_room:
             return f"[walktowards] <{target_object_room}> ({self.roomname2id[target_object_room]})"
-        #不在看到的 不在地图上 在oppo手上
+        
         if target_object_id not in self.id2node or target_object_id not in [w['id'] for w in self.ungrabbed_objects[target_object_room]] or target_object_id in [x['id'] for x in self.opponent_grabbed_objects]:
             if self.debug:
                 print(f"not here any more!")
             self.plan = None
             return None
-        if f"{target_object_name} ({target_object_id})" in self.reachable_objects: #带空格
+        if f"{target_object_name} ({target_object_id})" in self.reachable_objects: 
             return self.plan.replace('[gograb]', '[grab]')
         else:
             return self.plan.replace('[gograb]', '[walktowards]')
@@ -193,7 +182,7 @@ class LLM_agent_cobel:
         # if len(self.progress['goal_location_room']) > 1: # should be ruled out
         if len(self.grabbed_objects) == 0:
             self.plan = None
-            print("手上没东西 返回空动作")
+            print("return no plan")
             return None
         if type(self.id_inside_room[self.goal_location_id]) is list:
             if len(self.id_inside_room[self.goal_location_id]) == 0:
@@ -304,18 +293,18 @@ class LLM_agent_cobel:
             for i in range(len(observation["messages"])):
                 if observation["messages"][i] is not None:
                     #why i+1? TODO because zero is None
-                    self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")#改成多人
+                    self.dialogue_history.append(f"{self.agent_names[i + 1]}: {observation['messages'][i]}")
                     
                     self.dialogue.update(
                         {self.agent_names[i + 1]: observation['messages'][i]}
                         )
                     if (i+1) != self.agent_id:
                         self.message_received.update(
-                            {self.agent_names[i + 1]: observation['messages'][i]} #改成字典
+                            {self.agent_names[i + 1]: observation['messages'][i]} 
                         )
                     #####
         satisfied, unsatisfied = self.check_progress(observation, goal)
-        ##### 去除zero 和 first中的
+        
         self.observe_new = False
         # print(f"satisfied: {satisfied}")
         if self.satisfied != satisfied:
@@ -329,7 +318,7 @@ class LLM_agent_cobel:
         opponent_grabbed_objects = []
         self.reachable_objects = []
         self.id2node = {x['id']: x for x in obs['nodes']}
-        #自己的状态
+        
         for e in obs['edges']:
             x, r, y = e['from_id'], e['relation_type'], e['to_id']
             if x == self.opponent_agent_id:
@@ -337,7 +326,7 @@ class LLM_agent_cobel:
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]] = self.id2node[y]
             if x == self.agent_id:
                 if r == 'INSIDE':
-                    self.current_room = self.id2node[y] #id2node返回那个大字典
+                    self.current_room = self.id2node[y] 
                     self.team_current_room[self.agent_names[self.agent_id]][self.agent_names[self.agent_id]] = self.id2node[y]
                     #####
                     
@@ -346,12 +335,10 @@ class LLM_agent_cobel:
                     #######
                     self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.agent_id]].append({'id': y, 'class_name': self.id2node[y]['class_name']})
                 elif r == 'CLOSE':
-                    y = self.id2node[y] #用来做gograsp的
+                    y = self.id2node[y] 
                     self.reachable_objects.append(f"<{y['class_name']}> ({y['id']})")
             elif x == self.opponent_agent_id and r in ['HOLDS_RH', 'HOLDS_LH']:
-                #后面改成多人的
-                #####
-                #绝对准的，不需要去检索替换
+                
                 opponent_grabbed_objects.append(self.id2node[y])
         if opponent_grabbed_objects != []:
             self.team_grasped_obj[self.agent_names[self.agent_id]][self.agent_names[self.opponent_agent_id]] = opponent_grabbed_objects
@@ -368,7 +355,7 @@ class LLM_agent_cobel:
                     if j is not None:
                         ungrabbed.pop(j)
                 continue
-            self.id_inside_room[x['id']] = self.current_room['class_name'] #如果看到目标物体了
+            self.id_inside_room[x['id']] = self.current_room['class_name'] 
             if x['class_name'] in self.containers_name and 'CLOSED' in x['states'] and x['id'] != self.goal_location_id:
                 unchecked_containers.append(x)
             if any([x['class_name'] == g.split('_')[1] for g in self.unsatisfied]) and all([x['id'] != y['id'] for y in self.satisfied]) and 'GRABBABLE' in x['properties'] and x['id'] not in self.grabbed_objects and x['id'] not in [w['id'] for w in opponent_grabbed_objects]:
@@ -389,7 +376,7 @@ class LLM_agent_cobel:
         #####
         self.team_ungrasped_obj[self.agent_names[self.agent_id]][self.current_room['class_name']] = ungrabbed_objects[:]
         
-        if self.ungrabbed_objects[self.current_room['class_name']] != ungrabbed_objects[:]: #新物体
+        if self.ungrabbed_objects[self.current_room['class_name']] != ungrabbed_objects[:]: 
             self.observe_new = True
         self.ungrabbed_objects[self.current_room['class_name']] = ungrabbed_objects[:]
 
@@ -416,15 +403,13 @@ class LLM_agent_cobel:
             if self.plan is None or self.observe_new: #or new obj or message or self.message_received != {} 
                 if self.observe_new:
                     self.subplan = None
-                    print("=======新物体触发重新规划=======")
-                    self.episode_logger.info("=======新物体=======")
-                    self.plan_logger.info("=======新物体触发重新规划=======")
-                # if self.message_received != {}:
-                #     print("=======新消息触发重新规划=======")
-                #     self.plan_logger.info("=======新消息触发重新规划=======")
+                    print("=======new_object replanning=======")
+                    self.episode_logger.info("=======new_object=======")
+                    self.plan_logger.info("=======new_object replanning=======")
+                
                 if self.plan == None:
-                    print("=======没计划触发重新规划=======")
-                    self.plan_logger.info("=======没计划触发重新规划=======")
+                    print("=======no plan replanning=======")
+                    self.plan_logger.info("=======no plan replanning=======")
                 if LM_times > 0:
                     print(info)
                 plan = None
@@ -434,10 +419,10 @@ class LLM_agent_cobel:
                     if agent_state == 1:
                         work_agents_name.append(agent_name)
                 
-                self.dialogue = {} #处理完就清空
+                self.dialogue = {} #
                 self.message_received = {}
 
-                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:#TODO 发现新物体
+                if self.my_subplan is None or len(self.action_history) >= self.action_history_max_length:
                     # print("=============\n", self.LLM.token_stats)
                     my_progress = self.get_my_progress()
                     self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} my_progress:{my_progress}")
@@ -460,8 +445,8 @@ class LLM_agent_cobel:
                             self.episode_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
                             self.plan_logger.info(f"\n{agent_name} oppo_subplan:{oppo_subplan}")
 
-                        # print("=========主动更新==========")
-                        self.plan_logger.info("=========主动更新==========")
+                       
+                        self.plan_logger.info("=========active updating==========")
                     print(f"{self.agent_names[self.agent_id]}: {self.my_subplan}\n")
                     # print(f"{self.agent_names[self.opponent_agent_id]}: {self.opponent_subplans}")
                     if self.dialogue_history != []:
@@ -470,7 +455,7 @@ class LLM_agent_cobel:
                         self.plan_logger.info(f"\n{self.agent_names[self.agent_id]} answer:{answer}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} reason:{reason}")
                         self.episode_logger.info(f"\n{self.agent_names[self.agent_id]} difference:{difference}")
-                        #有必要就更新
+                        
                         if "YES" in answer.upper() and self.message_time < self.max_message_time:
                             message = self.LLM.comm(difference,self.my_subplan)
                             plan =  "[send_message]" + "<" + message + ">"
@@ -478,12 +463,10 @@ class LLM_agent_cobel:
                             self.comm_chars += len(message)
                             self.message_time += 1
 
-                    #subplan更新后清空
                     self.action_history = [] #COBEL clean the action history
                     self.action_history_w_mes = []
 
 
-                # ======subplan规划结束=======
                 if plan is None:
                     plan = self.intuitive_planning()
 
@@ -502,7 +485,7 @@ class LLM_agent_cobel:
                     if self.done_time > 3:
                         available_plans, num, available_plans_list = self.get_available_plan()
                         filtered_plans = [item for item in available_plans_list if "SUBPLAN DONE" not in item]
-                        print("================过滤计划==============")
+                        print("================filter plan==============")
                         print(filtered_plans)
                         if filtered_plans == []:
                             my_progress = self.get_my_progress()
@@ -512,7 +495,7 @@ class LLM_agent_cobel:
                     else:
                         self.plan = None
                         self.done_time += 1
-                        # self.plan = None #其实不需要
+                      
                         continue
 
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
@@ -521,13 +504,13 @@ class LLM_agent_cobel:
 
                 #如果手上满了 强制执行
                 if len(self.grabbed_objects) == 2:
-                    print("手满了强制去放")
+                    print("hand full")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 unsatisfied_num = sum(self.unsatisfied.values())
                 print(self.unsatisfied)
                 if len(self.grabbed_objects) == unsatisfied_num:
-                    print("最后几个直接放")
+                    print("last put")
                     self.subplan = None
                     plan =  f"[goput] {self.goal_location}"
                 if plan is None: # NO AVAILABLE PLANS! Explore from scratch!
@@ -639,9 +622,7 @@ class LLM_agent_cobel:
         } for _ in self.agent_names
         }
     
-        # = obj per room
-        # 为每个智能体创建一个字典列表来跟踪未抓取的物体
-        #zero + first
+        
         self.team_ungrasped_obj = {
             _:{
             "livingroom": [],
@@ -654,7 +635,7 @@ class LLM_agent_cobel:
         # grasped objects {'id': None,'name':None}
         #team [[{hand},{hand2}]]
 
-        self.team_explored_rooms = { #探索了就改成"all"
+        self.team_explored_rooms = { 
             _ : {
             "livingroom": None,
             "kitchen": None,
@@ -681,7 +662,7 @@ class LLM_agent_cobel:
         }
 
         
-        self.dialogue = {} #处理完就清空
+        self.dialogue = {} 
         self.message_received = {}
         self.my_subplan = None
         self.message_time = 0
@@ -700,9 +681,9 @@ class LLM_agent_cobel:
     
 
     def parse_belief_line(self,belief_type,beliefs):
-        print("======开始解析信念============")
+        print("======start analyse belief============")
         
-        for agent_name, update_belief in beliefs.items(): #逐个智能体更新 一阶更新各自的 0阶全部更新自己的
+        for agent_name, update_belief in beliefs.items(): 
             formatted_beliefs = []
             unchecked_container = {
                 room:[] for room in self.rooms_name
@@ -726,7 +707,7 @@ class LLM_agent_cobel:
 
                 
                 if belief_type == "first": 
-                    if agent_name == self.agent_names[self.agent_id]: #自己的不更新
+                    if agent_name == self.agent_names[self.agent_id]: 
                         continue
                     if tokens.count('believe') < 2:
                         continue
@@ -734,17 +715,16 @@ class LLM_agent_cobel:
                     second_believe_idx = tokens.index('believe', first_believe_idx + 1)
 
                     if first_believe_idx == 0:
-                        continue  # 没有前一个 token
+                        continue  
 
 
-                    # if tokens[first_believe_idx - 1] != self.agent_names[self.agent_id].lower():
-                    #     continue  # 不匹配 agent_name
+                    
                     
                     if second_believe_idx == 0:
-                        continue  # 不可能，但安全检查
+                        continue  
 
                     if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                        continue  
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:
@@ -764,21 +744,21 @@ class LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                                
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
                             else:
-                                #检测到的肯定都是未完成的
+                                
                                 for obj_dict in self.team_unchecked_con[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
-                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
+                                        continue 
+                                unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
                                 formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                                #containers_name 有一个全局的容器信息
+             
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -810,10 +790,10 @@ class LLM_agent_cobel:
 
                 else:
                     try:
-                        believe_idx = tokens.index('believe')  # 不区分大小写
+                        believe_idx = tokens.index('believe')  
                     except ValueError:
                         continue
-                    belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
+                    belief_tokens = tokens[believe_idx + 1:]    
 
                     if len(belief_tokens) < 3:
                         continue
@@ -830,22 +810,21 @@ class LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                            
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
                             else:
-                                #检测到的肯定都是未完成的容器
+                             
                                 for obj_dict in self.team_unchecked_con[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                 unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
                                 formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                                #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                                #containers_name 有一个全局的容器信息
+                               
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -883,9 +862,9 @@ class LLM_agent_cobel:
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
 
     def parse_belief_line_con(self,belief_type,beliefs):
-        print("======开始解析信念============")
+        print("======start analyse belief============")
         
-        for agent_name, update_belief in beliefs.items(): #逐个智能体更新 一阶更新各自的 0阶全部更新自己的
+        for agent_name, update_belief in beliefs.items(): 
             formatted_beliefs = []
             unchecked_container = {
                 room:[] for room in self.rooms_name
@@ -909,7 +888,7 @@ class LLM_agent_cobel:
 
                 
                 if belief_type == "first": 
-                    if agent_name == self.agent_names[self.agent_id]: #自己的不更新
+                    if agent_name == self.agent_names[self.agent_id]: 
                         pass
                     if tokens.count('believe') < 2:
                         continue
@@ -917,17 +896,15 @@ class LLM_agent_cobel:
                     second_believe_idx = tokens.index('believe', first_believe_idx + 1)
 
                     if first_believe_idx == 0:
-                        continue  # 没有前一个 token
+                        continue 
 
-
-                    # if tokens[first_believe_idx - 1] != self.agent_names[self.agent_id].lower():
-                    #     continue  # 不匹配 agent_name
+                  
                     
                     if second_believe_idx == 0:
-                        continue  # 不可能，但安全检查
+                        continue  
 
                     if tokens[second_believe_idx - 1] != self.agent_names[self.opponent_agent_id].lower():
-                        continue  # 不匹配 oppo_name
+                        continue  
                     
                     belief_tokens = tokens[second_believe_idx + 1:]
                     if len(belief_tokens) < 3:
@@ -947,21 +924,14 @@ class LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                      
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue 
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            # else:
-                            #     #检测到的肯定都是未完成的
-                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                            #         if obj_dict['id'] == obj_id:
-                            #             continue #有了就跳出
-                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")     
-                            #     #containers_name 有一个全局的容器信息
+                         
 
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
@@ -993,10 +963,10 @@ class LLM_agent_cobel:
 
                 else:
                     try:
-                        believe_idx = tokens.index('believe')  # 不区分大小写
+                        believe_idx = tokens.index('believe') 
                     except ValueError:
                         continue
-                    belief_tokens = tokens[believe_idx + 1:]      # 用原始 tokens 提取内容
+                    belief_tokens = tokens[believe_idx + 1:]      
 
                     if len(belief_tokens) < 3:
                         continue
@@ -1013,22 +983,14 @@ class LLM_agent_cobel:
                                 continue
                             obj_str,obj_name,obj_id = self.parse_obj(subject)
                             if obj_name in self.goal_objects_name:
-                                #检查是否有了
+                           
                                 for obj_dict in self.team_ungrasped_obj[agent_name][obj]:
                                     if obj_dict['id'] == obj_id:
-                                        continue #有了就跳出
+                                        continue
                                     #room
                                 self.team_ungrasped_obj[agent_name][obj].append({'id':obj_id,'class_name':obj_name})
                                 formatted_beliefs.append(f"{obj_name} is in {obj}")
-                            # else:
-                            #     #检测到的肯定都是未完成的容器
-                            #     for obj_dict in self.team_unchecked_con[agent_name][obj]:
-                            #         if obj_dict['id'] == obj_id:
-                            #             continue #有了就跳出
-                            #     unchecked_container[obj].append({'id':obj_id,'class_name':obj_name}) 
-                            #     formatted_beliefs.append(f"{obj_str} is in {obj}")  
-                            #     #需要清除检查过的的容器 这里是消息告诉我有这个容器，对但是我其实过去一下就更新了。
-                            #     #containers_name 有一个全局的容器信息
+                          
                     if 'at' in predicate:
                         if self.parse_room(obj) is None:
                             continue
@@ -1049,32 +1011,12 @@ class LLM_agent_cobel:
                             self.team_grasped_obj[agent_name][subject.capitalize()].append({'id':obj_id,'class_name':obj_name})
                         formatted_beliefs.append(f"{subject.capitalize()} is holding {obj_name}")  
                         
-            #         if 'explore' in predicate:
-            #             if self.parse_room(subject) is None:
-            #                 continue
-            #             subject = self.parse_room(subject)
-            #             if subject in self.rooms_name:
-            #                 if 'yes' in obj:
-            #                     self.team_explored_rooms[agent_name][subject] = 'all'
-            #                     formatted_beliefs.append(f"{subject} explored all")
-            # for room_name,room_con in self.team_unchecked_con[agent_name].items():
-            #     if room_name not in unchecked_container.keys():
-            #         continue
-            #     self.team_unchecked_con[agent_name][room_name] = unchecked_container[room_name]
-            #     formatted_beliefs.append(f"{room_name} unchecked containers {unchecked_container[room_name]}")
+            #        
             print(formatted_beliefs)
             self.episode_logger.info(f"{agent_name} beliefs: {formatted_beliefs}")
     def parse_obj(self, text):
-        """
-        将类似 <livingroom>(1000) 的字符串：
-        1. 格式化为 <Livingroom> (1000)
-        2. 提取出 name 和 id
-
-        :param text: str, 如 "<livingroom>(1000)"
-        :return: tuple (formatted_str, name, id_int)
-                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
-        """
-        # 使用正则匹配 <...>(数字)
+       
+      
         match = re.match(r'<([^>]+)>\s*\((\d+)\)', text.strip())
         if not match:
             # raise ValueError(f"无法解析格式: {text}")
@@ -1083,26 +1025,17 @@ class LLM_agent_cobel:
         name_raw = match.group(1)   # 'livingroom'
         id_str = match.group(2)     # '1000'
 
-        # 名字首字母大写（其他字母保持原样，如 livingRoom → LivingRoom）
-        # 如果希望每个单词首字母大写，用 .title()；如果只第一个字母，用 .capitalize()
+       
         name_raw = name_raw.lower() # "livingroom" → "Livingroom"
         id = int(id_str)
-        # 格式化输出字符串
+  
         formatted = f"<{name_raw}> ({id_str})"
 
         return formatted, name_raw, id
     
 
     def parse_room(self, text):
-        """
-        将类似 <livingroom>(1000) 的字符串：
-        1. 格式化为 <Livingroom> (1000)
-        2. 提取出 name 和 id
-
-        :param text: str, 如 "<livingroom>(1000)"
-        :return: tuple (formatted_str, name, id_int)
-                如 ('<Livingroom> (1000)', 'Livingroom', 1000)
-        """
+      
         for room in self.rooms_name:
             if room in text:
                 return room

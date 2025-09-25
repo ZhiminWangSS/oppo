@@ -54,8 +54,8 @@ class LLM:
         self.total_cost = 0
         
         if self.source == "openai":
-            api_key="sk-08ad12f500e64246af889b738db5bc3a"#os.environ.get("CHATANYWHERE_API_KEY")
-            base_url="https://api.deepseek.com/v1"#os.environ.get("CHATANYWHERE_URL")
+            api_key=os.environ.get("CHATANYWHERE_API_KEY")
+            base_url=os.environ.get("CHATANYWHERE_URL")
             client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
@@ -162,7 +162,7 @@ class LLM:
                     raise e
                 
                 method_name = "total"
-                # 使用usage.prompt_tokens和usage.completion_tokens
+              
                 prompt_tokens = usage[0]
                 completion_tokens = usage[1]
                 self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -534,9 +534,9 @@ class LLM:
                 chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": gen_prompt}]
                 outputs, usage = self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)
-                # 记录token消耗
+                
                 method_name = "communication"
-                # 使用usage.prompt_tokens和usage.completion_tokens
+              
                 prompt_tokens = usage[0]
                 completion_tokens = usage[1]
                 self.token_stats[method_name]["prompt"] += prompt_tokens

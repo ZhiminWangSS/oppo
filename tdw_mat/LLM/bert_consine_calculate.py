@@ -1,14 +1,4 @@
-"""
-使用 Sentence-BERT 计算零阶信念与一阶信念输出的语义相似度。
 
-依赖:
-    pip install -U sentence-transformers scikit-learn
-
-示例:
-    from bert_consine_calculate import BeliefSimilarityCalculator
-    calculator = BeliefSimilarityCalculator()
-    score = calculator.compare(zero_text, first_text)
-"""
 
 from __future__ import annotations
 from typing import List
@@ -37,7 +27,6 @@ class BeliefSimilarityCalculator:
         return np.mean(embeddings, axis=0, keepdims=True)
 
     def compare(self, zero_order_text: str, first_order_text: str) -> float:
-        """计算零阶信念与一阶信念之间的余弦相似度(0~1)。"""
         zero_sentences = self._load_sentences_from_text(zero_order_text)
         first_sentences = self._load_sentences_from_text(first_order_text)
 
@@ -50,7 +39,7 @@ class BeliefSimilarityCalculator:
         sim = cosine_similarity(zero_avg, first_avg)[0][0]
         return float((sim + 1) / 2)
 
-# 示例用法
+
 if __name__ == "__main__":
     zero_order_text = """
 zero_order_beliefs(Bob)

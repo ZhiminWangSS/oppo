@@ -267,7 +267,7 @@ class LLM_agent:
 			if any([x['class_name'] == g.split('_')[1] for g in self.unsatisfied]) and all([x['id'] != y['id'] for y in self.satisfied]) and 'GRABBABLE' in x['properties'] and x['id'] not in self.grabbed_objects and x['id'] not in [w['id'] for w in opponent_grabbed_objects]:
 				ungrabbed_objects.append(x)
 
-		#在这里处理 也不知道看到了阿
+	
 		if type(self.id_inside_room[self.goal_location_id]) is list and self.current_room['class_name'] in self.id_inside_room[self.goal_location_id]:
 			self.id_inside_room[self.goal_location_id].remove(self.current_room['class_name'])
 			if len(self.id_inside_room[self.goal_location_id]) == 1:

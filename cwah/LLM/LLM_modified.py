@@ -12,9 +12,9 @@ from datetime import datetime
 
 
 
-# 配置日志
+
 def setup_logger(name, log_file, level=logging.INFO):
-    """设置日志记录器"""
+
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
     handler = logging.FileHandler(log_file)
     handler.setFormatter(formatter)
@@ -26,11 +26,11 @@ def setup_logger(name, log_file, level=logging.INFO):
     return logger
 
 
-# 创建日志目录
+
 if not os.path.exists("message_logs"):
     os.makedirs("message_logs")
 
-# 创建llm日志记录器
+
 log_filename = f"message_logs/coela_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 llm_logger = setup_logger("llm_logger", log_filename)
 
@@ -83,8 +83,8 @@ class LLM:
 			#print(f"Using OpenAI API key: {os.getenv('OPENAI_KEY')}")
 			#print(f"Using OpenAI API base URL: {os.getenv('API_BASE')}")
 			client = OpenAI(
-                api_key="sk-tkQC6suw159dxQoCkSrf2pTmSbIBawo7pP15FQN7d5vfTCxO",
-                base_url="https://api.agicto.cn/v1"
+                api_key=os.getenv("openai_key"),
+                base_url=os.getenv("base_url")
             )
 			print(f"loading openai model =============={lm_id}")
 			if self.chat:
@@ -159,14 +159,13 @@ class LLM:
 									f.write('\n')
 							# generated_samples = [response['choices'][i]['message']['content'] for i in
 							# 					 range(sampling_params['n'])]
-							# 新版 SDK 的正确访问方式
+							
 							generated_samples = [
 								choice.message.content 
-								for choice in response.choices  # 直接遍历 choices 对象
+								for choice in response.choices  
 							]
 							if 'gpt-4' in self.lm_id:
-								# usage = response['usage']['prompt_tokens'] * 0.03 / 1000 + response['usage']['completion_tokens'] * 0.06 / 1000
-								# 计算费用（新版 SDK 的正确方式）
+							
 								usage_cost = (response.usage.prompt_tokens * 0.03 / 1000 + 
 										response.usage.completion_tokens * 0.06 / 1000)
 							elif 'gpt-3.5' in self.lm_id:
@@ -186,7 +185,7 @@ class LLM:
 							# 新版 SDK 的正确访问方式
 							generated_samples = [
 								choice.message.content 
-								for choice in response.choices  # 直接遍历 choices 对象
+								for choice in response.choices  
 							]
 						# mean_log_probs = [np.mean(response['choices'][i]['logprobs']['token_logprobs']) for i in
 						# 			  range(sampling_params['n'])]

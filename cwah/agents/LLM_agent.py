@@ -235,7 +235,7 @@ class LLM_agent:
             if any([x['class_name'] == g.split('_')[1] for g in self.unsatisfied]) and all([x['id'] != y['id'] for y in self.satisfied]) and 'GRABBABLE' in x['properties'] and x['id'] not in self.grabbed_objects and x['id'] not in [w['id'] for w in opponent_grabbed_objects]:
                 ungrabbed_objects.append(x)
 
-        #在这里处理 也不知道看到了阿
+
         if type(self.id_inside_room[self.goal_location_id]) is list and self.current_room['class_name'] in self.id_inside_room[self.goal_location_id]:
             self.id_inside_room[self.goal_location_id].remove(self.current_room['class_name'])
             if len(self.id_inside_room[self.goal_location_id]) == 1:
@@ -257,7 +257,7 @@ class LLM_agent:
                         },
                 }
         
-        #一个屋子就能知道
+      
         if self.id_inside_room[self.opponent_agent_id] == self.current_room['class_name']:
             self.opponent_grabbed_objects = opponent_grabbed_objects
         action = None
@@ -328,7 +328,7 @@ class LLM_agent:
         self.rooms_name = rooms_name
         self.roomname2id = {x['class_name']: x['id'] for x in room_info}
         self.id2node = {x['id']: x for x in obs['nodes']}
-        print("==================观测=======\n")
+        print("==================obs=======\n")
         print(self.id2node)
         self.stuck = 0
         self.last_room = None
@@ -336,7 +336,7 @@ class LLM_agent:
         self.satisfied = []
         self.goal_location = list(goal.keys())[0].split('_')[-1]
         self.goal_location_id = int(self.goal_location.split(' ')[-1][1:-1])
-        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None} #初始化
+        self.id_inside_room = {self.goal_location_id: self.rooms_name[:], self.opponent_agent_id: None} 
         self.comm_chars = 0
         self.comm_num = 0
         self.task_id = task_id

@@ -20,46 +20,32 @@ import subprocess
 
 #logger for metaplan, message and subplan
 def setup_logger(name=__name__, log_file='app.log', level=logging.INFO, encoding='utf-8'):
-    """
-    创建并配置一个 logger 实例，支持同时输出到文件和控制台。
-
-    参数：
-        name (str): logger 的名称（通常用模块名）
-        log_file (str): 日志文件路径，默认为 'app.log'
-        level (int): 日志级别，如 logging.INFO
-        encoding (str): 日志文件编码，推荐 utf-8 支持中文
-
-    返回：
-        logging.Logger: 配置好的 logger 实例
-    """
-    # 创建一个 logger 对象
+  
     logger = logging.getLogger(name)
     
-    # 避免重复添加 handler（防止日志重复输出）
+   
     if logger.hasHandlers():
         logger.handlers.clear()
 
-    # 设置日志等级
+
     logger.setLevel(level)
 
-    # 定义日志格式
+
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # 确保日志目录存在
     log_dir = os.path.dirname(log_file)
     if log_dir and not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    # 文件处理器：写入日志文件
     file_handler = logging.FileHandler(log_file, encoding=encoding)
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # 控制台处理器：输出到终端
+  
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
@@ -69,7 +55,7 @@ def setup_logger(name=__name__, log_file='app.log', level=logging.INFO, encoding
 # kill the process
 def kill_process_on_port(port):
     try:
-        # 执行 lsof 命令获取占用指定端口的进程 PID
+     
         result = subprocess.run(
             ['lsof', '-t', '-i', f':{port}'],
             stdout=subprocess.PIPE,
@@ -78,25 +64,24 @@ def kill_process_on_port(port):
         )
         
         if result.returncode != 0:
-            print(f"端口 {port} 上没有进程被占用或 lsof 执行失败。")
+            
             return
         
         pids = result.stdout.strip().split('\n')
-        pids = [pid for pid in pids if pid]  # 过滤空行
+        pids = [pid for pid in pids if pid]  
 
         if not pids:
-            print(f"没有找到占用端口 {port} 的进程。")
             return
 
-        print(f"找到占用端口 {port} 的进程 PID: {pids}")
+      
 
-        # 使用 kill -9 终止每个进程
+
         for pid in pids:
             subprocess.run(['kill', '-9', pid])
-            print(f"已终止 PID {pid} 的进程。")
+           
 
     except Exception as e:
-        print(f"发生错误: {e}")
+        print(f"{e}")
 
 if __name__ == '__main__':
     args = get_args()

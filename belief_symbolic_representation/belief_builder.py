@@ -5,9 +5,6 @@ import openai
 from typing import Dict, Any, Optional
 import re
 
-# 设置OpenAI API密钥
-# 请替换为您的实际API密钥
-
 api_key=os.environ.get("CHATANYWHERE_API_KEY")
 base_url=os.environ.get("CHATANYWHERE_URL")
 
@@ -16,15 +13,10 @@ client = openai.OpenAI(
     base_url=base_url,
 )
 
-#Done: construct + refine  to generate rules, a advocator and refiner multi-round until satisfatory, 
-#TODO: templates generate generated rules and challenge des to one tage containing zero and first belief,first stage belief contain other b 
+
 class BeliefBuilder:
     def __init__(self, csv_path: str):
-        """初始化Belief构建器
-
-        Args:
-            csv_path: CSV文件路径，包含各阶段的提示词
-        """
+       
         self._load_prompts(csv_path)
         self.belief = None
         self.history = []
@@ -35,23 +27,16 @@ class BeliefBuilder:
 
         self.prompts = {}
         try:
-            # 使用pandas读取CSV文件
+          
             df = pd.read_csv(csv_path, encoding="utf-8")
-            # 将DataFrame转换为字典
             self.prompts["init"] = df['prompt'][0]
             self.prompts['debate'] = df["prompt"][1]
             self.prompts['refine'] = df['prompt'][2]
         except Exception as e:
-            print(f"读取CSV文件时出错: {e}")
+            print(e)
 
     def _call_openai_api(self, prompt: str) -> str:
-        """调用OpenAI API
-        Args:
-            prompt: 提示词
-            user_input: 用户输入，如果有的话
-        Returns:
-            API返回的文本响应
-        """
+       
         self.history.append({"role": "user", "content": prompt})
         messages = [{"role": "user", "content": prompt}]
 
@@ -61,14 +46,14 @@ class BeliefBuilder:
                 model="gpt-4o",
                 messages=messages,
                 temperature=0,
-                # 较低的温度以获得更确定性的输出
+               
                 max_tokens=2000,
             )
             output = response.choices[0].message.content
             self.history.append({"role": "assistant", "content": output})
             return output
         except Exception as e:
-            print(f"调用OpenAI API时出错: {e}")
+            print(e)
             return ""
 
     def init_construction(self, challenge_description: str,belief_language):
@@ -78,8 +63,8 @@ class BeliefBuilder:
         prompt = prompt.replace("$Belief_language$", belief_language)
         print("=================init prompt===================\n",prompt)
         if not prompt:
-            raise ValueError("未找到init提示词")
-        # 调用API
+            raise ValueError("unfound init prompt")
+       
         response = self._call_openai_api(prompt)
         print(response)
         return response
@@ -88,8 +73,8 @@ class BeliefBuilder:
         
         prompt = self.prompts.get("debate", "")
         if not prompt:
-            raise ValueError("未找到check-refine提示词")
-        # 调用API
+            raise ValueError("unfound discussion prompt")
+    
         prompt = prompt.replace("$Task_description$", challenge_description)
         prompt = prompt.replace('$Alice_content$',content)
         prompt = prompt.replace("$Belief_language$", belief_language)
@@ -107,8 +92,8 @@ class BeliefBuilder:
         prompt = prompt.replace("$Belief_language$", belief_language)
         prompt = prompt.replace('$suggestions$',suggestions)
         if not prompt:
-            raise ValueError("未找到one-stage提示词")
-        # 调用API
+            raise ValueError("prompt unfound")
+    
         response = self._call_openai_api(prompt)
         print("=================refine prompt===================\n",prompt)
         print(response)
@@ -137,7 +122,6 @@ class BeliefBuilder:
             if satisfied.lower() == 'yes':
                 break
         final_construction = self.previous_content
-        # 提取 "zero order belief rules:" 及之后所有内容
         match = re.search(r'zero order belief rules:\s*(.*)', final_construction, re.DOTALL | re.IGNORECASE)
         if match:
             final_construction = match.group(1).strip()
@@ -145,23 +129,17 @@ class BeliefBuilder:
         self.save_belief(final_construction,outputfile)
 
     def save_belief(self, belief, output_path: str) -> None:
-        """保存belief到JSON文件
-
-        Args:
-            belief: belief字典
-            output_path: 输出文件路径
-        """
+        
         with open(output_path, 'w') as f:
             f.write(str(belief))
             f.write("\n")
 
 
-# 使用示例
+
 def main():
-    # CSV文件路径
+
     csv_path = r"./belief_symbolic_representation/construct.csv"
-    
-    # 创建BeliefBuilder实例
+
     builder = BeliefBuilder(csv_path)
 
     challenge_cwah = "In this task, multi agents cooperate to finish a housework in a multiple-room household scene. The objects are initially in any room or cabnet. The cabnets can contain objects, and the cabnets can be checked or unchecked. Agents can hold objects to transport them to the target table. The room's exploration state includes explored and unexplored."

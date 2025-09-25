@@ -21,14 +21,7 @@ from openai import OpenAI
 from datetime import datetime
 
 class LLM_oppo:
-    """
-    大语言模型接口类
-    主要功能：
-    1. 支持多种大语言模型（OpenAI、DeepSeek、HuggingFace）
-    2. 处理提示词模板
-    3. 生成和执行规划
-    4. 管理对话历史
-    """
+    
 
     def __init__(
         self,
@@ -40,32 +33,20 @@ class LLM_oppo:
         sampling_parameters,
         agent_id,
     ):
-        """
-        初始化大语言模型接口
+    
+       
+        self.rooms_explored = None  
+        self.goal_desc = None 
+        self.agent_id = agent_id  
+        self.agent_name = "Alice" if agent_id == 0 else "Bob" 
+        self.oppo_name = "Alice" if agent_id == 1 else "Bob"  
+        self.oppo_pronoun = "she" if agent_id == 1 else "he" 
 
-        参数:
-            source: 模型来源 ('huggingface', 'openai', 'deepseek')
-            lm_id: 模型ID
-            prompt_template_path: 提示词模板路径
-            communication: 是否启用通信
-            cot: 是否使用思维链
-            sampling_parameters: 采样参数
-            agent_id: 智能体ID
-        """
-        # 智能体基本信息
-        self.rooms_explored = None  # 已探索的房间
-        self.goal_desc = None  # 目标描述
-        self.agent_id = agent_id  # 智能体ID
-        self.agent_name = "Alice" if agent_id == 0 else "Bob"  # 智能体名称
-        self.oppo_name = "Alice" if agent_id == 1 else "Bob"  # 对手名称
-        self.oppo_pronoun = "she" if agent_id == 1 else "he"  # 对手代词
+       
+        self.debug = False  
+        self.rooms = []  
 
-        # 调试和配置
-        # self.debug = sampling_parameters.debug  # 调试模式
-        self.debug = False  # 调试模式
-        self.rooms = []  # 房间列表
 
-        # 提示词模板相关
         self.prompt_template_path = prompt_template_path
         self.single = "single" in self.prompt_template_path
         df = pd.read_csv(self.prompt_template_path)
@@ -83,23 +64,23 @@ class LLM_oppo:
         else:
             self.generator_prompt_template = None
 
-        # 模型配置
-        self.communication = communication  # 是否启用通信
-        self.cot = cot  # 是否使用思维链
-        self.source = source  # 模型来源
-        self.model = None  # 模型实例
-        self.tokenizer = None  # 分词器
-        self.lm_id = lm_id  # 模型ID
+    
+        self.communication = communication  
+        self.cot = cot  
+        self.source = source 
+        self.model = None 
+        self.tokenizer = None  
+        self.lm_id = lm_id  
         self.chat = (
             "gpt-3.5-turbo" in lm_id or "gpt-4" in lm_id or "chat" in lm_id
-        )  # 是否为聊天模型
-        self.OPENAI_KEY = None  # OpenAI API密钥
-        self.total_cost = 0  # 总花费
-        self.communication_cost = 0  # 通信花费
+        ) 
+        self.OPENAI_KEY = None  
+        self.total_cost = 0 
+        self.communication_cost = 0  
 
-        # 根据不同来源初始化模型
+   
         if self.source == "openai":
-            # OpenAI模型初始化
+      
             client = AzureOpenAI()
             if self.chat:
                 self.sampling_params = {
@@ -118,10 +99,10 @@ class LLM_oppo:
                     "echo": sampling_parameters.echo,
                 }
         elif self.source == "deepseek":
-            # DeepSeek模型初始化
+           
             client = OpenAI(
-                api_key="sk-fcb978b480de4ab48fa0031403decb34",
-                base_url="https://api.deepseek.com/v1",
+                api_key=os.getenv(),
+                base_url=os.getenv(),
             )
             if self.chat:
                 self.sampling_params = {
@@ -140,7 +121,7 @@ class LLM_oppo:
                     "echo": sampling_parameters.echo,
                 }
         elif self.source == "hf":
-            # HuggingFace模型初始化
+          
             self.tokenizer = LlamaTokenizer.from_pretrained(self.lm_id, use_fast=True)
             self.model = LlamaForCausalLM.from_pretrained(
                 self.lm_id, device_map="auto", load_in_4bit=True
@@ -303,26 +284,12 @@ class LLM_oppo:
         self.obj_per_room = None
 
     def reset(self, rooms_name, goal_objects):
-        """
-        重置模型状态
-
-        参数:
-            rooms_name: 房间名称列表
-            goal_objects: 目标物体
-        """
+       
         self.rooms = rooms_name
         self.goal_desc = self.goal2description(goal_objects)
 
     def goal2description(self, goals):  # {predicate: count}
-        """
-        将目标转换为描述文本
-
-        参数:
-            goals: 目标字典 {predicate: count}
-
-        返回:
-            目标描述文本
-        """
+       
         s = "Transport "
         r = None
         for object_name, count in goals.items():
@@ -332,16 +299,7 @@ class LLM_oppo:
         return s
 
     def parse_answer(self, available_actions, text):
-        """
-        解析模型回答
-
-        参数:
-            available_actions: 可用动作列表 = action list
-            text: 模型生成的文本
-
-        返回:
-            解析后的动作
-        """
+       
         flags = "AC"
         for i in range(len(available_actions)):
             action = available_actions[i]
@@ -439,18 +397,7 @@ class LLM_oppo:
         opponent_grabbed_objects,
         opponent_last_room,
     ):
-        """
-        将进度转换为文本描述
-
-        参数:
-            current_step: 当前步骤
-            satisfied: 已完成的物体
-            opponent_grabbed_objects: 对手抓取的物体
-            opponent_last_room: 对手最后所在的房间
-
-        返回:
-            进度描述文本
-        """
+        
         s = f"I've taken {current_step}/3000 steps. "
 
         sss = {}
@@ -611,16 +558,7 @@ class LLM_oppo:
         return s
 
     def get_available_plans(self):
-        # TODO:更改逻辑，不输入message
-        """
-        获取可用的规划
-
-        参数:
-            message: 消息文本
-
-        返回:
-            可用规划列表
-        """
+        
         """
         go to room {}
         explore current room {}
@@ -630,10 +568,10 @@ class LLM_oppo:
         send a message: ""
         """
         available_plans = []
-        # DONE 不传入message
+      
         if self.communication is not None:
             available_plans.append("send a message")
-        # 增加
+      
         if (
             self.holding_objects[0]["type"] is None
             or self.holding_objects[1]["type"] is None
@@ -672,7 +610,7 @@ class LLM_oppo:
             and len(self.object_list[2]) != 0
         ):
             available_plans.append(f"transport objects I'm holding to the bed")
-        # 增加去哪个屋子的动作
+      
         for room in self.rooms:
             if room == self.current_room or room is None or room == "None":
                 continue
@@ -690,36 +628,22 @@ class LLM_oppo:
         return plans, len(available_plans), available_plans
 
     def parse_model_response(self, text):
-        """
-        解析模型响应文本，提取四个关键部分：
-        1. 对手推理内容 ([opponent reasoning begin] 到 [opponent reasoning end])
-        2. 预测的对手行动 ([predict opponent action] 开头的内容)
-        3. 自身推理内容 ([reasoning begin] 到 [reasoning end])
-        4. 选择的动作 ([my action]: 开头的内容)
-
-        参数:
-        text (str): 模型生成的完整响应文本
-
-        返回:
-        tuple: (opponent_reasoning, predicted_opponent_action, 
-                self_reasoning, chosen_action)
-        """
-        # 1. 解析对手推理部分
+      
         oppo_reasoning_pattern = r"\[opponent reasoning begin\](.*?)\[opponent reasoning end\]"
         oppo_match = re.search(oppo_reasoning_pattern, text, re.DOTALL)
         opponent_reasoning = oppo_match.group(1).strip() if oppo_match else None
 
-        # 2. 解析预测的对手行动
+      
         pred_oppo_pattern = r"\[predict opponent action\]\s*(.*?)(?=\n|$|\[)"
         pred_match = re.search(pred_oppo_pattern, text)
         predicted_opponent_action = pred_match.group(1).strip() if pred_match else None
 
-        # 3. 解析自身推理部分
+   
         self_reasoning_pattern = r"\[reasoning begin\](.*?)\[reasoning end\]"
         self_reasoning_match = re.search(self_reasoning_pattern, text, re.DOTALL)
         self_reasoning = self_reasoning_match.group(1).strip() if self_reasoning_match else None
 
-        # 4. 解析选择的动作
+  
         action_pattern = r"\[my action\s*\]\s*(.*?)(?=\n|$)"
         action_match = re.search(action_pattern, text)
         chosen_action = action_match.group(1).strip() if action_match else None
@@ -740,25 +664,7 @@ class LLM_oppo:
         opponent_grabbed_objects=None,
         opponent_last_room=None,
     ):
-        """
-        运行模型生成规划
-
-        参数:
-            current_step: 当前步骤
-            current_room: 当前房间
-            rooms_explored: 已探索的房间
-            holding_objects: 持有的物体
-            satisfied: 已完成的物体
-            object_list: 物体列表
-            obj_per_room: 每个房间的物体
-            action_history: 动作历史
-            dialogue_history: 对话历史
-            opponent_grabbed_objects: 对手抓取的物体
-            opponent_last_room: 对手最后所在的房间
-
-        返回:
-            生成的规划和相关信息
-        """
+       
         info = {}
         print("current_step", current_step)
         self.current_room = current_room
@@ -780,40 +686,7 @@ class LLM_oppo:
         prompt = prompt.replace("$ACTION_HISTORY$", action_history_desc)
         prompt = prompt.replace("$DIALOGUE_HISTORY$", dialogue_history_desc)
 
-        # message = None
-
-        # 注释掉原本的通信部分
-
-        # if self.communication:
-        #     print("++++++++++本次调用进行了通信!!+++++++++++++++")
-        #     prompt = prompt.replace("$DIALOGUE_HISTORY$", dialogue_history_desc)
-        #     if not action_history[-1].startswith("send a message"):
-        #         gen_prompt = self.generator_prompt_template.replace(
-        #             "$GOAL$", self.goal_desc
-        #         )
-        #         gen_prompt = gen_prompt.replace("$PROGRESS$", progress_desc)
-        #         gen_prompt = gen_prompt.replace("$ACTION_HISTORY$", action_history_desc)
-        #         gen_prompt = gen_prompt.replace(
-        #             "$DIALOGUE_HISTORY$", dialogue_history_desc
-        #         )
-        #         gen_prompt = gen_prompt + f"\n{self.agent_name}:"
-        #         chat_prompt = [{"role": "user", "content": gen_prompt}]
-        #         outputs, usage = self.generator(
-        #             chat_prompt if self.chat else gen_prompt, self.sampling_params
-        #         )
-        #         self.total_cost += usage
-        #         message = outputs[0]
-        #         if len(message) > 0 and message[0] != '"':
-        #             message = re.search(r'"([^"]+)"', message)
-        #             if message:
-        #                 message = '"' + message.group(1) + '"'
-        #         info["prompt_comm"] = gen_prompt
-        #         info["output_comm"] = outputs
-        #         info["usage_comm"] = usage
-        #         if self.debug:
-        #             print(f"prompt_comm:\n{gen_prompt}")
-        #             print(f"output_comm:\n{message}")
-        # # 获取可用的动作列表
+        
         available_plans, num, available_plans_list = self.get_available_plans()
         if num == 0 or (num == 1):
             print("Warning! No available plans!")
@@ -863,7 +736,7 @@ class LLM_oppo:
                 chat_prompt if self.chat else normal_prompt, self.sampling_params
             )
             output = outputs[0]
-            # 使用token量
+           
             self.total_cost += usage
             # info['usage_plan_stage_2'] = usage
             if self.debug:
@@ -883,15 +756,15 @@ class LLM_oppo:
             if self.debug:
                 print(f"output_plan_stage_1:\n{output}")
 
-        # 解析模型的回答
-        print("原始回答:\n", output)
+        
+        print(":\n", output)
         opponent_reasoning, predicted_opponent_action, self_reasoning, chosen_action = self.parse_model_response(output)
         if chosen_action.startswith("send a message"):
             plan = f"send a message: {chosen_action[14:].strip()}"
             flags = "Communication"
         else:
             plan, flags = self.parse_answer(available_plans_list, chosen_action)
-            oppo_logger.info(f"{self.agent_name}当前计划: {plan}\n")
+            oppo_logger.info(f"{self.agent_name}current plan: {plan}\n")
 
         # plan, flags = self.parse_answer(available_plans_list, output)
         

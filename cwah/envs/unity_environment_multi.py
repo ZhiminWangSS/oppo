@@ -426,7 +426,7 @@ class UnityEnvironment(BaseUnityEnvironment):
 					assert False, "Error: Object already open"
 			# Add randomness on 'walktowards' action, since the env's walktowards action might stuck
 			if action == 'walktowards' and self.keep_move_steps[i] > 4:
-				print("随机移动")
+				print("random move")
 				if self.range_distance(self.location[i][max(0, self.steps - 4) : self.steps + 1]) < 0.5:
 					random_place = self.rooms[np.random.randint(0, len(self.rooms) - 1)]
 					action_dict_tobe_changed[i] = '[walktowards] <{}> ({})'.format(random_place[0], random_place[1])

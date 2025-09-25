@@ -174,7 +174,9 @@ if __name__ == '__main__':
             test_results[episode_id] = {'S': S[episode_id],
                                         'L': L[episode_id],
                                         'cnt_subgoal': cnt_subgoal[episode_id]}
-                                        
+            json_path = os.path.join(args.record_dir, f"{episode_id}_result.json")                           
+            with open(json_path, "w") as f_json:
+                json.dump( test_results[episode_id], f_json, indent=4)
         pickle.dump(test_results, open(args.record_dir + '/results.pik', 'wb'))
         print('average steps (finishing the tasks):', np.array(steps_list).mean() if len(steps_list) > 0 else None)
         print('failed_tasks:', failed_tasks)
