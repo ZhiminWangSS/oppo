@@ -24,10 +24,7 @@ BEHAVIOR_DETECT_INTERVAL = 15
 #Some wall may be detected as object, so we need to remove them from the wall map
 class AgentMemory():
     def __init__(self, agent_id, agent_color, output_dir = None, gt_mask = False, gt_behavior = False, env_api = None, constraint_type = None, map_size = None, scene_bounds = None):
-        """
-        初始化AgentMemory对象，设置各种地图、状态、历史记录等变量。
-        包括占用地图、已知地图、目标对象、障碍物、行为检测模型等。
-        """
+        
         self.map_size = map_size
         self.env_api = env_api
         self.turn_around_count = 0
@@ -100,9 +97,7 @@ class AgentMemory():
         ]
 
     def detect(self, rgb):
-        """
-        使用检测模型对输入的RGB图像进行目标检测，返回检测到的物体信息和分割掩码。
-        """
+       
         detect_result = self.detection_model(rgb[..., [2, 1, 0]])['predictions'][0]
         obj_infos = []
         curr_seg_mask = np.zeros((rgb.shape[0], rgb.shape[1], 3)).astype(np.int32)
@@ -120,10 +115,7 @@ class AgentMemory():
         return obj_infos, curr_seg_mask
 
     def behavior(self, img_list_len = 50):
-        """
-        使用行为检测模型对对手代理的行为进行识别，返回行为名称和是否成功。
-        只在agent_id为1时有效。
-        """
+        
         assert self.agent_id == 1
         if not self.oppo_this_step:
             return None
@@ -148,10 +140,7 @@ class AgentMemory():
         return action_name, success
 
     def ignore_logic(self, current_frames, ignore_ids = [], ignore_obstacles = []):
-        """
-        忽略指定的物体和障碍物一段时间（500帧），并从记忆和地图中移除。
-        超时后自动恢复。
-        """
+        
         # Ignore logic: if the object is not there, remove it from the memory and do not add it in the future 500 frames
         for ignore_id in ignore_ids:
             self.ignore_id_times[ignore_id] = current_frames
@@ -179,10 +168,7 @@ class AgentMemory():
                 self.ignore_obstacles.remove(ignore_obstacle)
     
     def update(self, obs, ignore_ids = [], ignore_obstacles = [], save_img = False):
-        """
-        更新agent的观测信息、已知地图、物体列表、行为检测、历史记录等。
-        可选择保存当前地图图片。
-        """
+        
         self.obs = obs
         self.ignore_logic(self.obs['current_frames'], ignore_ids, ignore_obstacles)
         self.local_step += 1
@@ -227,25 +213,19 @@ class AgentMemory():
                 self.oppo_held_objects_history.append(self.obs['oppo_held_objects'])
 
     def pos2map(self, x, z):
-        """
-        将世界坐标(x, z)转换为地图上的(i, j)索引。
-        """
+        
         i = int(round((x - self._scene_bounds["x_min"]) / CELL_SIZE))
         j = int(round((z - self._scene_bounds["z_min"]) / CELL_SIZE))
         return i, j
         
     def map2pos(self, i, j):
-        """
-        将地图索引(i, j)转换为世界坐标(x, z)。
-        """
+       
         x = i * CELL_SIZE + self._scene_bounds["x_min"]
         z = j * CELL_SIZE + self._scene_bounds["z_min"]
         return x, z
     
     def get_pc(self, color) -> np.ndarray:
-        """
-        根据分割颜色获取该物体的点云（相机坐标系下）。
-        """
+        
         depth = self.obs['depth'].copy()
         mask = np.any(self.obs['seg_mask'] != color, axis=-1)
         depth[mask] = 1e9
@@ -285,9 +265,7 @@ class AgentMemory():
         return rpc[:3]
     
     def cal_object_position(self, o_dict):
-        """
-        计算物体的三维位置（取点云均值），返回位置和点云。
-        """
+       
         pc = self.get_pc(o_dict['seg_color'])
         if pc.shape[1] < 5:
             return None, None
@@ -296,9 +274,7 @@ class AgentMemory():
         return position[:3], pc
     
     def get_object_list(self):
-        """
-        遍历当前可见物体，更新物体信息、地图、对手/第三代理的位置等。
-        """
+        
         self.oppo_this_step = False
         self.third_agent_this_step = False
         self.visible_objects = self.obs['visible_objects']
@@ -357,9 +333,7 @@ class AgentMemory():
 
     
     def color2id_fc_vectorized(self, seg_mask):
-        """
-        将分割掩码中的颜色批量转换为物体ID（向量化实现）。
-        """
+        
         # Flatten the seg_mask for vectorized operation
         flat_seg_mask = seg_mask.reshape(-1, seg_mask.shape[-1])
         # Convert colors to a tuple for dictionary key lookups
@@ -380,9 +354,7 @@ class AgentMemory():
         return color_ids.reshape(seg_mask.shape[:2])
 
     def color2id_fc(self, color):
-        """
-        将单个颜色转换为物体ID。
-        """
+       
         if color not in self.color2id:
             if (color != self.agent_color).any():
                 # Wall or opposite agent
@@ -393,9 +365,7 @@ class AgentMemory():
         else:
             return self.color2id[color]
     def dep2map(self):
-        """
-        根据深度图和分割掩码，更新已知地图、占用地图、墙体地图等。
-        """
+        
         local_known_map = np.zeros_like(self.occupancy_map, np.int32)
         depth = self.obs['depth']
 
@@ -513,15 +483,11 @@ class AgentMemory():
         return local_known_map
         
     def get_object_position(self, object_id):
-        """
-        获取指定物体的三维位置。
-        """
+        
         return self.object_info[object_id]['position']
     
     def l2_distance(self, st, g):
-        """
-        计算两个点之间的欧氏距离（支持2D或3D）。
-        """
+        
         if len(st) == 2:
             st_x, st_z = st
         elif len(st) == 3:
@@ -537,9 +503,7 @@ class AgentMemory():
         return np.sqrt((st_x - g_x) ** 2 + (st_z - g_z) ** 2)
     
     def get_angle(self, forward, origin, position):
-        """
-        计算当前位置到目标位置与当前朝向的夹角（度）。
-        """
+        
         p0 = np.array([origin[0], origin[2]])
         p1 = np.array([position[0], position[2]])
         d = p1 - p0
@@ -556,17 +520,13 @@ class AgentMemory():
         return angle
     
     def conv2d(self, map, kernel=3):
-        """
-        对输入的二维地图做卷积操作（用于膨胀/腐蚀等）。
-        """
+        
         from scipy.signal import convolve2d
         conv = np.ones((kernel, kernel))
         return convolve2d(map, conv, mode='same', boundary='fill')
     
     def find_shortest_path(self, st, goal):
-        """
-        使用A*算法在当前地图上寻找从st到goal的最短路径，返回路径和总代价。
-        """
+        
         if len(st) == 2:
             st_x, st_z = st
         elif len(st) == 3:
@@ -605,9 +565,7 @@ class AgentMemory():
         return path, distance
     
     def have_wall(self, st_pos, de_pos):
-        """
-        判断两点之间是否有墙体阻挡。
-        """
+        
         for i in range(min(st_pos[0], de_pos[0]), max(st_pos[0], de_pos[0])):
             for j in range(min(st_pos[1], de_pos[1]), max(st_pos[1], de_pos[1])):
                 if self.wall_map[i, j] > 0:
@@ -615,9 +573,7 @@ class AgentMemory():
         return False
 
     def move_to_pos(self, pos, explore = False, follow = False, follow_main_agent = False, follow_third_agent = False, nav_step = 0):
-        """
-        规划移动到指定位置的动作（可选跟随、探索等），返回动作和路径长度。
-        """
+       
         local_known_map = self.dep2map()
         self.known_map = np.maximum(self.known_map, local_known_map)
         path, cost = self.find_shortest_path(self.position, pos)
@@ -700,9 +656,7 @@ class AgentMemory():
         return action, len(path) 
     
     def draw_map(self, previous_name, save = True):
-        """
-        绘制当前的地图状态并保存为图片。
-        """
+       
         # Draw the map
         #with open("map.txt", "a") as f:
         #    for i in range(self.map_size[0]):
@@ -742,18 +696,14 @@ class AgentMemory():
         return draw_map
 
     def visualize_depth_filter(self):
-        """
-        可视化深度过滤（未实现）。
-        """
+        
         pass
         #TODO: not implemented
         # depth_img = Image.fromarray(100 / depth).convert('RGB')
         # depth_img.save(f'{self.output_dir}/Images/{self.agent_id}/{self.num_step}_depth_filter.png')
 
     def sum_circle(self, map, i, j, radius):
-        """
-        计算以(i, j)为中心、指定半径的圆内的地图值之和。
-        """
+        
         sum = 0
         for x in range(-int(radius / CELL_SIZE), int(radius / CELL_SIZE) + 1):
             for y in range(-int(radius / CELL_SIZE), int(radius / CELL_SIZE) + 1):
@@ -765,9 +715,7 @@ class AgentMemory():
         return sum
     
     def ignored_filter_object_info(self):
-        """
-        过滤掉被忽略的物体，只返回未被忽略的物体信息。
-        """
+        
         filtered_object_info = {}
         for object_type in [0, 1, 2, 4]:
             obj_map_indices = np.where(self.object_map == object_type + 1)
@@ -784,10 +732,7 @@ class AgentMemory():
         return filtered_object_info
 
     def explore(self, random_prob = 0.1, run_away = False, main_agent_pos = None):
-        """
-        探索未知区域，返回一个未探索的目标点坐标。
-        支持随机探索和远离主代理的逃离探索。
-        """
+       
         r"""
             return a unexplored place
             10%: random

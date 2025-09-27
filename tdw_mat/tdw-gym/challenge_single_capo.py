@@ -33,7 +33,7 @@ class Challenge:
         self.logger.info("done")
 
 
-        #COBEL
+      
     def submit(self, agents, logger, eval_episodes):
         total_finish = 0.0
         if eval_episodes[0] == -1:
@@ -94,30 +94,14 @@ class Challenge:
                 self.logger.info(f"Executing step {step_num} for episode: {episode}, actions: {actions}, finish: {local_finish}, frame: {self.env.num_frames}")
                 if done:
                     break
-            #COBEL episode count
-            # episode_total_time = time.time() - start_time
-            # #COBEL episode count
-            # episode_0_comm_chars = agents[0].comm_chars
-            # episode_1_comm_chars = agents[1].comm_chars
-            # episode_0_com = agents[0].get_com_counts()
-            # episode_1_com = agents[1].get_com_counts()
-            # episode_0_tokens = agents[0].get_tokens()
-            # episode_1_tokens = agents[1].get_tokens()
-            # 记录结果
-            #COBEL - TODO
+           
             total_finish += local_finish[0] / local_finish[1]
             result = {
                 "finish": local_finish[0],
                 "total": local_finish[1],
                 "step_num": step_num,
                 "frame": self.env.num_frames,
-                # "communication num_0": episode_0_com,
-                # "communication num_1": episode_1_com,
-                # "comm_chars_0":episode_0_comm_chars,
-                # "comm_chars_1":episode_1_comm_chars,
-                # "episode_total_time": episode_total_time,
-                # "tokens_0":episode_0_tokens,
-                # "tokens_1":episode_1_tokens,
+               
             }
             with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
                 json.dump(result, f)
@@ -151,10 +135,8 @@ def init_logs(output_dir, name = 'simple_example'):
     logger.addHandler(ch)
     return logger
 
-def init_episode_logs(output_dir, episode):##logger
-    """
-    初始化每个episode的日志记录器
-    """
+def init_episode_logs(output_dir, episode):
+    
     episode_dir = os.path.join(output_dir, str(episode))
     os.makedirs(episode_dir, exist_ok=True)
     

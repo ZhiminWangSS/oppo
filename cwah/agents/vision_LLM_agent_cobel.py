@@ -490,7 +490,7 @@ class vision_LLM_agent_cobel:
   
             for obj in self.satisfied:
                 for agent_name_host, agent_ungraped in self.team_ungrasped_obj.items(): 
-                    for room_name, con_list in agent_ungraped.items(): #手
+                    for room_name, con_list in agent_ungraped.items(): 
                         to_remove = []
                         for idx1, obj_ungrasped in enumerate(con_list):
                             if obj_ungrasped['id'] == obj['id']:

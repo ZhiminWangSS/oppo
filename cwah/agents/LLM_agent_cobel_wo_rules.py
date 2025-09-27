@@ -1019,7 +1019,7 @@ class LLM_agent_cobel:
       
         match = re.match(r'<([^>]+)>\s*\((\d+)\)', text.strip())
         if not match:
-            # raise ValueError(f"无法解析格式: {text}")
+           
             return None
 
         name_raw = match.group(1)   # 'livingroom'

@@ -163,7 +163,7 @@ class LLM:
                     raise e
                 
                 method_name = "total"
-                # 使用usage.prompt_tokens和usage.completion_tokens
+              
                 prompt_tokens = usage[0]
                 completion_tokens = usage[1]
                 self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -363,7 +363,7 @@ class LLM:
         return random.choice(available_actions), flags
 
 
-    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,): #TODO 看一下他们的其应敲击
+    def progress2text(self, current_step, satisfied, opponent_grabbed_objects, opponent_last_room,): 
         s = f"I've taken {current_step}/3000 steps. "
 
         sss = {}
@@ -571,9 +571,9 @@ class LLM:
                 chat_prompt = [{"role": "system", "content": system_prompt},
                                {"role": "user", "content": gen_prompt}]
                 outputs, usage = self.generator(chat_prompt if self.chat else gen_prompt, self.sampling_params)
-                # 记录token消耗
+          
                 method_name = "communication"
-                # 使用usage.prompt_tokens和usage.completion_tokens
+              
                 prompt_tokens = usage[0]
                 completion_tokens = usage[1]
                 self.token_stats[method_name]["prompt"] += prompt_tokens
@@ -643,7 +643,7 @@ class LLM:
             output = outputs[0]
 
             method_name = "planning"
-            # 使用usage.prompt_tokens和usage.completion_tokens
+           
             prompt_tokens = usage[0]
             completion_tokens = usage[1]
             self.token_stats[method_name]["prompt"] += prompt_tokens

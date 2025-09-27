@@ -1338,14 +1338,14 @@ class lm_agent_cobel:
 
                 
                     
-                if "SUBPLAN DONE" in plan: #TODO:have to program a fuzzy match in parse
+                if "SUBPLAN DONE" in plan: 
                     self.my_subplan = None
                     if self.done_time > 3:
                         plan = self.LLM.random_planning()
                     else:
                         self.plan = None
                         self.done_time += 1
-                        # self.plan = None #其实不需要
+                       
                         continue
 
                 if plan is None:  # NO AVAILABLE PLANS! Explore from scratch!
@@ -1802,7 +1802,7 @@ class lm_agent_cobel:
             print(belief_formatted,"\n")
             belief_string += belief_formatted
             belief_string += "\n"
-        self.episode_logger.info(f"{belief_type}信念更新:\n{belief_string}") 
+        self.episode_logger.info(f"{belief_type}belief update:\n{belief_string}") 
        
     def parse_room(self, text):
        
